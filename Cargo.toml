@@ -20,6 +20,7 @@ imnodes = { git = "https://github.com/Diegovsky/imnodes-rs.git", branch = "ode-d
 
 [dependencies.imgui]
 version = "0.11.0"
+features = ["docking"]
 optional = true
 
 [dependencies.imgui-glium-renderer]
@@ -33,7 +34,7 @@ optional = true
 [dependencies.winit]
 version = "0.27.5"
 optional = true
-features = ["x11"]
+features = ["wayland", "x11"]
 
 [dependencies.egui]
 version = "0.21.0"

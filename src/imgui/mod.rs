@@ -12,6 +12,7 @@ use crate::app::App;
 
 // mod clipboard;
 mod app;
+mod style;
 
 pub struct System {
     pub event_loop: EventLoop<()>,
@@ -24,14 +25,17 @@ pub struct System {
 
 pub fn make_window(title: &str, size: LogicalSize<f32>) -> System {
     let event_loop = EventLoop::new();
-    let context = glutin::ContextBuilder::new().with_vsync(true);
+    let context = glutin::ContextBuilder::new()
+        .with_vsync(true);
     let builder = WindowBuilder::new()
         .with_title(title.to_owned())
+        .with_transparent(false)
         .with_inner_size(size);
     let display =
         Display::new(builder, context, &event_loop).expect("Failed to initialize display");
 
     let mut imgui = Context::create();
+    imgui.io_mut().config_flags |= imgui::ConfigFlags::DOCKING_ENABLE;
     imgui.set_ini_filename(None);
 
     /* if let Some(backend) = clipboard::init() {
@@ -74,7 +78,7 @@ pub fn make_window(title: &str, size: LogicalSize<f32>) -> System {
 }
 
 impl System {
-    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, [f32; 2]) + 'static>(self, mut run_ui: F) {
+    pub fn main_loop<F: FnMut(&mut bool, &mut Ui) + 'static>(self, mut run_ui: F) {
         let System {
             event_loop,
             display,
@@ -102,15 +106,14 @@ impl System {
                 let ui = imgui.frame();
 
                 let mut run = true;
-                let size = imgui.main_viewport().size;
-                run_ui(&mut run, ui, size);
+                run_ui(&mut run, ui);
                 if !run {
                     *control_flow = ControlFlow::Exit;
                 }
 
                 let gl_window = display.gl_window();
                 let mut target = display.draw();
-                target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
                 platform.prepare_render(ui, gl_window.window());
                 let draw_data = imgui.render();
                 renderer
@@ -122,10 +125,6 @@ impl System {
                 event: WindowEvent::CloseRequested,
                 ..
             } => *control_flow = ControlFlow::Exit,
-            /* Event::WindowEvent { event: WindowEvent::Resized(new_size), .. } => {
-                // TODO: Acutally use the current scale
-                size = dbg!(new_size.to_logical(1.0));
-            } */
             event => {
                 let gl_window = display.gl_window();
                 platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
@@ -138,8 +137,8 @@ pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
     let system = make_window("ODE Editor", LogicalSize::new(1024.0, 768.0));
     let nodesctx = imnodes::Context::new();
     let mut nodeseditor = nodesctx.create_editor();
-    system.main_loop(move |_, ui, size| {
-        app.draw(ui, &mut nodeseditor, size);
+    system.main_loop(move |_, ui| {
+        app.draw(ui, &mut nodeseditor);
     });
     Ok(())
 }
