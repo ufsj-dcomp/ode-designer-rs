@@ -3,6 +3,7 @@ use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
 use glium::{Display, Surface, glutin};
+use imgui::internal::RawCast;
 use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
@@ -13,6 +14,18 @@ use crate::app::App;
 // mod clipboard;
 mod app;
 mod style;
+
+pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
+    let mut system = make_window("ODE Editor", LogicalSize::new(1024.0, 768.0));
+    // SAFETY: The pointer is valid for the lifetime of the function.
+    style::set_eel_style(unsafe { system.imgui.style_mut().raw_mut() });
+    let nodesctx = imnodes::Context::new();
+    let mut nodeseditor = nodesctx.create_editor();
+    system.main_loop(move |_, ui| {
+        app.draw(ui, &mut nodeseditor);
+    });
+    Ok(())
+}
 
 pub struct System {
     pub event_loop: EventLoop<()>,
@@ -131,14 +144,4 @@ impl System {
             }
         })
     }
-}
-
-pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
-    let system = make_window("ODE Editor", LogicalSize::new(1024.0, 768.0));
-    let nodesctx = imnodes::Context::new();
-    let mut nodeseditor = nodesctx.create_editor();
-    system.main_loop(move |_, ui| {
-        app.draw(ui, &mut nodeseditor);
-    });
-    Ok(())
 }
