@@ -1,4 +1,3 @@
-
 use std::{collections::HashMap, sync::atomic::AtomicI32};
 
 use derive_more::From;
@@ -20,7 +19,6 @@ pub enum PinClass {
     Output,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Pin {
     id: PinId,
@@ -31,7 +29,12 @@ pub struct Pin {
 
 impl Pin {
     pub fn new_of_class(node_id: &NodeId, class: PinClass) -> Self {
-        Self { id: next_id(), node_id: *node_id, class, linked_to: None }
+        Self {
+            id: next_id(),
+            node_id: *node_id,
+            class,
+            linked_to: None,
+        }
     }
     pub fn new_output(node_id: &NodeId) -> Self {
         Self::new_of_class(node_id, PinClass::Output)
@@ -54,7 +57,6 @@ impl Pin {
     pub fn class(&self) -> &PinClass {
         &self.class
     }
-
 }
 
 #[derive(Debug)]
@@ -69,29 +71,37 @@ pub struct Node {
 #[derive(Debug, Default, Clone)]
 pub struct Population {
     pub name: String,
-    pub initial_value: f64
+    pub initial_value: f64,
 }
 
 #[derive(Debug, Default)]
 pub struct Combinator {
     pub operation: char,
-    pub input_exprs: HashMap<NodeId, Data>
+    pub input_exprs: HashMap<NodeId, Data>,
 }
 
 impl Combinator {
     pub fn expression_string(&self) -> String {
-        self.input_exprs.values().map(|value| match value {
-            Data::Number(num) => num.to_string(),
-            Data::Name(name) => name.to_string(),
-        }).collect::<Vec<_>>().join(&self.operation.to_string())
+        self.input_exprs
+            .values()
+            .map(|value| match value {
+                Data::Number(num) => num.to_string(),
+                Data::Name(name) => name.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(&self.operation.to_string())
     }
 }
 
 #[derive(Debug, Default)]
-pub struct Constant {pub value: f64}
+pub struct Constant {
+    pub value: f64,
+}
 
 impl Constant {
-    pub fn new(value: f64) -> Self { Self { value } }
+    pub fn new(value: f64) -> Self {
+        Self { value }
+    }
 }
 
 #[derive(From, Debug, strum::EnumVariantNames, strum::EnumDiscriminants, strum::FromRepr)]
@@ -109,6 +119,11 @@ pub enum Data {
     Name(String),
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Pin not found: {0}")]
+    PinNotFound(PinId),
+}
 
 impl Node {
     pub fn new_of_class(name: impl Into<String>, class: NodeClass) -> Self {
@@ -123,8 +138,8 @@ impl Node {
                 outputs.push(Pin::new_output(&id));
             }
             NodeClass::Combinator(_) => {
-                outputs.push(dbg!(Pin::new_output(&id)));
-                inputs.push(dbg!(Pin::new_input(&id)));
+                outputs.push(Pin::new_output(&id));
+                inputs.push(Pin::new_input(&id));
             }
         };
         Self {
@@ -144,29 +159,64 @@ impl Node {
     pub fn new_constant(name: impl Into<String>, constant: Constant) -> Self {
         Self::new_of_class(name, NodeClass::Constant(constant))
     }
-    pub fn receive_data(&mut self, input_pin_id: &PinId, data: Data) {
-        let input = self.inputs.iter().find(|pin| pin.id() == input_pin_id).expect("PinId not found");
+    pub fn receive_data(&mut self, input_pin_id: &PinId, data: Data) -> Vec<Message> {
+        self.get_input(input_pin_id).expect("Pin not found");
         match &mut self.class {
-            NodeClass::Combinator(combinator) => { combinator.input_exprs.insert(input.id, data); },
+            NodeClass::Combinator(combinator) => {
+                combinator.input_exprs.insert(*input_pin_id, data);
+            }
             NodeClass::Population(_) => todo!(),
-            NodeClass::Constant(_) => unreachable!("Constant nodes don't have inputs")
+            NodeClass::Constant(_) => unreachable!("Constant nodes don't have inputs"),
         }
+        self.send_data()
     }
 
     pub fn id(&self) -> &NodeId {
         &self.id
     }
 
-    pub fn send_data(&self, data: Data) -> Vec<Message> {
-        self.outputs.iter().filter_map(|output| Some(SendData { data: data.clone(), from_output: output.id, to_input: output.linked_to? })).map(Message::from).collect()
+    pub fn send_data(&self) -> Vec<Message> {
+        let data = match &self.class {
+            NodeClass::Combinator(combinator) => combinator.expression_string().into(),
+            NodeClass::Population(population) => Data::Number(population.initial_value),
+            NodeClass::Constant(constant) => Data::Number(constant.value),
+        };
+
+        self.outputs
+            .iter()
+            .filter_map(|output| {
+                Some(SendData {
+                    data: data.clone(),
+                    from_output: output.id,
+                    to_input: output.linked_to?,
+                })
+            })
+            .map(Message::from)
+            .collect()
     }
 
+    pub fn on_input_linked(&self, input_pin_id: &PinId) -> bool {
+        self.get_input(input_pin_id).is_some()
+    }
+
+    pub fn on_input_unlinked(&self, input_pin_id: &PinId) -> bool {
+        self.get_input(input_pin_id).is_some()
+    }
+
+    // Boilerplate stuff
+
     pub fn get_pin_mut(&mut self, pin_id: &PinId) -> Option<&mut Pin> {
-        self.inputs.iter_mut().find(|pin| pin.id() == pin_id).or_else(|| self.outputs.iter_mut().find(|pin| pin.id() == pin_id))
+        self.inputs
+            .iter_mut()
+            .find(|pin| pin.id() == pin_id)
+            .or_else(|| self.outputs.iter_mut().find(|pin| pin.id() == pin_id))
     }
 
     pub fn get_pin(&self, pin_id: &PinId) -> Option<&Pin> {
-        self.inputs.iter().find(|pin| pin.id() == pin_id).or_else(|| self.outputs.iter().find(|pin| pin.id() == pin_id))
+        self.inputs
+            .iter()
+            .find(|pin| pin.id() == pin_id)
+            .or_else(|| self.outputs.iter().find(|pin| pin.id() == pin_id))
     }
 
     pub fn inputs_mut(&mut self) -> &mut [Pin] {
@@ -187,7 +237,7 @@ impl Node {
     pub fn get_input_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
         self.inputs.iter_mut().find(|pin| pin.id() == id)
     }
-    
+
     pub fn get_output_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
         self.outputs.iter_mut().find(|pin| pin.id() == id)
     }

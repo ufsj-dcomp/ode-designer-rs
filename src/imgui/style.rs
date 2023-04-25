@@ -152,4 +152,8 @@ pub fn set_eel_style(_style: &mut ImGuiStyle) {
     colors[imgui::StyleColor::CheckMark]     = ImVec4::new(0.28, 0.56, 1.00, 1.00);
     colors[imgui::StyleColor::PlotHistogram] = ImVec4::new(0.90, 0.70, 0.00, 1.00);
     colors[imgui::StyleColor::HeaderHovered] = colors[imgui::StyleColor::ButtonHovered];
+
+    colors[imgui::StyleColor::Button]                = ImVec4::new(0.20, 0.25, 0.29, 1.00);
+    colors[imgui::StyleColor::ButtonHovered]         = ImVec4::new(0.28, 0.56, 1.00, 1.00);
+    colors[imgui::StyleColor::ButtonActive]          = ImVec4::new(0.06, 0.53, 0.98, 1.00);
 }

@@ -1,7 +1,7 @@
 
 use derive_more::From;
 
-use crate::nodes::{Data, PinId};
+use crate::{nodes::{Data, PinId}, app::Link};
 
 #[derive(Debug, Clone)]
 pub struct SendData {
@@ -12,5 +12,6 @@ pub struct SendData {
 
 #[derive(Debug, Clone, From)]
 pub enum Message {
-    SendData(SendData)
+    SendData(SendData),
+    AddLink(Link),
 }

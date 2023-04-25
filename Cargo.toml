@@ -17,6 +17,7 @@ log = "0.4.17"
 strum = { version = "0.24.1", features = ["strum_macros", "derive"] }
 glium = { version = "0.32.1", optional = true }
 imnodes = { git = "https://github.com/Diegovsky/imnodes-rs.git", branch = "ode-designer" }
+thiserror = "1.0.40"
 
 [dependencies.imgui]
 version = "0.11.0"

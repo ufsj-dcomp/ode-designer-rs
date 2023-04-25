@@ -1957,6 +1957,7 @@ dependencies = [
  "imnodes",
  "log",
  "strum",
+ "thiserror",
  "winit 0.27.5",
 ]
 

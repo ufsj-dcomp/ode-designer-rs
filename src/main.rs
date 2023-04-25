@@ -1,5 +1,7 @@
+#![feature(map_many_mut)]
+#![feature(try_blocks)]
 use app::App;
-use nodes::{Node, Constant, Combinator};
+use nodes::{Node, Constant, Combinator, Population};
 
 mod message;
 
@@ -18,9 +20,7 @@ fn main() {
     let mut app = App::new();
     app.add_node(Node::new_constant("K", Constant::new(40.0)));
     app.add_node(Node::new_combinator("comb", Combinator::default()));
-    let node_const = *app.get_node(0).unwrap().outputs()[0].id();
-    let node_pop = *app.get_node(2).unwrap().inputs()[0].id();
-    app.add_link(&node_const, &node_pop);
+    app.add_node(Node::new_population("pop", Population::default()));
 
     #[cfg(feature="egui")]
     crate::egui::main(app).unwrap();

@@ -1,4 +1,4 @@
-use imgui::Ui;
+use imgui::{Ui, StyleVar, StyleColor};
 use strum::VariantNames;
 
 use crate::{nodes::{Node, PinClass, Pin, NodeClass, NodeClassDiscriminant }, app::{App, AppState}};
@@ -9,8 +9,7 @@ pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
 
 impl Pin {
     fn draw(&self, ui: &Ui, ui_node: &mut imnodes::NodeScope) {
-        let shape = imnodes::PinShape::Circle;
-        self.id();
+        let shape = if self.linked_to().is_none() { imnodes::PinShape::Circle } else { imnodes::PinShape::CircleFilled };
         match self.class() {
             PinClass::Input => ui_node.add_input(imnodes::InputPinId(*self.id()), shape, || {}),
             PinClass::Output => ui_node.add_output(imnodes::OutputPinId(*self.id()), shape, || {}),
@@ -54,13 +53,17 @@ enum StateAction {
 impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
         match self {
-            AppState::AddingNode { name, index, .. } => {
+            AppState::AddingNode { name, index } => {
+                let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
+                let _token = ui.push_style_var(StyleVar::WindowPadding([10.0; 2]));
                 if let Some(_popup) = ui.begin_popup("Create Node") {
                     ui.text("Name");
-                    ui.new_line();
+                    ui.same_line();
                     ui.input_text("##Name", name).build();
-                    ui.new_line();
-                    ui.list_box("Node Type", index, NodeClass::VARIANTS, NodeClass::VARIANTS.len() as i32);
+                    ui.text("Node type");
+                    ui.same_line();
+                    ui.combo("##Node Type", index, NodeClass::VARIANTS, |type_| (*type_).into());
+                    let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
                         let node = Node::new_of_class(name.clone(), NodeClass::from_repr(*index as usize).expect("Invalid index"));
                         app.add_node(node);
@@ -80,6 +83,7 @@ impl AppState {
 
 impl App {
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
+        editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
         for (id, node) in self.nodes.iter() {
             editor.add_node(imnodes::NodeId(*id), |mut ui_node| {
                 node.draw(ui, &mut ui_node);
@@ -117,8 +121,6 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
         // let mut bg = ui.clone_style().colors[imgui::sys::ImGuiCol_WindowBg as usize];
-        let bg = rgb(40, 40, 50);
-        let _bg = ui.push_style_color(imgui::StyleColor::WindowBg, bg);
         ui.window("ode designer")
             .size(ui.io().display_size, imgui::Condition::Always)
             .position([0.0, 0.0], imgui::Condition::Always)
@@ -128,8 +130,11 @@ impl App {
                     self.draw_editor(ui, &mut editor)
                 });
                 if let Some(link) = scope.links_created() {
-                    self.add_link(&link.start_node.0, &link.end_pin.0);
+                    self.add_link(&link.start_pin.0, &link.end_pin.0)
                 }
             });
+
+        self.update();
+    
     }
 }
