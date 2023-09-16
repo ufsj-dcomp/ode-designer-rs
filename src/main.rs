@@ -5,7 +5,6 @@ use nodes::{Node, Constant, Combinator, Population};
 
 mod message;
 
-
 #[cfg(feature="egui")]
 mod egui;
 
@@ -17,10 +16,30 @@ pub mod nodes;
 
 fn main() {
     color_eyre::install().unwrap();
+
     let mut app = App::new();
-    app.add_node(Node::new_constant("K", Constant::new(40.0)));
-    app.add_node(Node::new_combinator("comb", Combinator::default()));
-    app.add_node(Node::new_population("pop", Population::default()));
+    /* if let Ok(file) = std::fs::read("model.json") {
+        let model = odeir::ffi::model_from_json(&file);
+        for (id, n) in model.nodes {
+            match n {
+                odeir::Node::Population { id, name, related_constant_name, links } => {
+                    app.add_node(Node::new_population(n.name(), Population::new()));
+                },
+                odeir::Node::Combinator => {
+                    app.add_node(Node::new_combinator(n.name(), Combinator::default()));
+                },
+            
+            }
+        }
+        for c in model.constants {
+            app.add_node(Node::new_constant(&c.name, Constant::new(c.value)));
+        }
+    } else */ {
+        app.add_node(Node::new_constant("K", Constant::new(40.0)));
+        app.add_node(Node::new_combinator("comb", Combinator::default()));
+        app.add_node(Node::new_combinator("comb2", Combinator::default()));
+    }
+
 
     #[cfg(feature="egui")]
     crate::egui::main(app).unwrap();

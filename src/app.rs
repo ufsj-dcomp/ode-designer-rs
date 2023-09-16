@@ -1,10 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use eframe::epaint::ahash::HashMapExt;
+use crate::nodes::{self, Node, NodeClass, NodeId, Pin, PinId};
 
-use crate::nodes::{Node, NodeId, Pin, PinId, NodeClass, self};
-
-use crate::message::{ Message, SendData };
+use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 
 pub type LinkId = i32;
 
@@ -16,7 +14,13 @@ pub struct Link {
 }
 
 impl Link {
-    pub fn new(input_pin_id: &PinId, output_pin_id: &PinId) -> Self { Self { id: nodes::next_id(), input_pin_id: *input_pin_id, output_pin_id: *output_pin_id } }
+    pub fn new(input_pin_id: &PinId, output_pin_id: &PinId) -> Self {
+        Self {
+            id: nodes::next_id(),
+            input_pin_id: *input_pin_id,
+            output_pin_id: *output_pin_id,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -25,11 +29,12 @@ pub struct App {
     pub(crate) pins: HashMap<PinId, NodeId>,
     pub(crate) links: Vec<Link>,
     pub state: Option<AppState>,
-    pub messages: Vec<Message>,
+    pub messages: MessageQueue,
+    pub received_messages: HashMap<NodeId, HashSet<usize>>,
 }
 
 pub enum AppState {
-    AddingNode{ name: String, index: usize },
+    AddingNode { name: String, index: usize },
 }
 
 impl App {
@@ -67,7 +72,9 @@ impl App {
     }
 
     pub fn get_link(&self, input_id: &PinId) -> Option<&Link> {
-        self.links.iter().find(|link| link.input_pin_id == *input_id)
+        self.links
+            .iter()
+            .find(|link| link.input_pin_id == *input_id)
     }
 
     pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
@@ -81,23 +88,45 @@ impl App {
         Some(node)
     }
 
-    fn handle_message(&mut self, message: Message) -> Vec<Message> {
-        match message {
-            Message::SendData(SendData {data, from_output, to_input}) => {
+    fn handle_message(&mut self, tagged: TaggedMessage) -> Vec<Message> {
+        match tagged.message {
+            Message::SendData(SendData {
+                data,
+                from_output,
+                to_input,
+            }) => {
                 let node_id = self.pins.get_mut(&to_input).unwrap();
                 let node = self.nodes.get_mut(&node_id).unwrap();
+                let input_pin = node.get_input(&to_input).unwrap();
+                let received_msgs = self.received_messages.entry(*node_id).or_default();
+                if received_msgs.contains(&tagged.tag) {
+                    return vec![];
+                }
+                received_msgs.insert(tagged.tag);
                 node.receive_data(&to_input, data.clone())
             }
             Message::AddLink(link) => {
                 if self.get_link(&link.input_pin_id).is_some() {
-                    return vec![]
+                    return vec![];
                 }
                 let result: Option<Vec<Message>> = try {
-                    let Link { input_pin_id, output_pin_id, .. } = &link;
+                    let Link {
+                        input_pin_id,
+                        output_pin_id,
+                        ..
+                    } = &link;
                     let node_ids = [self.pins.get(input_pin_id)?, self.pins.get(output_pin_id)?];
-                    let [input_node, output_node ] = self.nodes.get_many_mut(node_ids)?;
-                    input_node.get_input_mut(input_pin_id)?.link_to(output_pin_id);
-                    output_node.get_output_mut(output_pin_id)?.link_to(input_pin_id);
+                    let [input_node, output_node] = self.nodes.get_many_mut(node_ids)?;
+                    if !input_node.should_link(input_pin_id) {
+                        // Poor man's early return
+                        None?
+                    }
+                    input_node
+                        .get_input_mut(input_pin_id)?
+                        .link_to(output_pin_id);
+                    output_node
+                        .get_output_mut(output_pin_id)?
+                        .link_to(input_pin_id);
                     self.links.push(link);
                     output_node.send_data()
                 };
@@ -111,11 +140,35 @@ impl App {
     }
 
     pub fn update(&mut self) {
-        let mut new_messages = Vec::new();
-        for message in std::mem::take(&mut self.messages) {
-            new_messages.extend(self.handle_message(message));
+        let mut new_messages = MessageQueue::with_tag(self.messages.current_tag());
+        for tagged in std::mem::take(&mut self.messages) {
+            let tag = tagged.tag;
+            let newmsgs = self.handle_message(tagged);
+            for newmsg in newmsgs {
+                new_messages.push_tagged(newmsg, tag);
+            }
         }
         self.messages = new_messages;
     }
 }
 
+/* impl App {
+    pub fn as_model(&self) -> odeir::Model {
+        let nodes = self
+            .nodes
+            .iter()
+            .filter_map(|(id, n)| Some((*id as u32, n.as_odeir_node()?)))
+            .collect();
+        let constants = self
+            .nodes
+            .iter()
+            .filter_map(|(_, n)| Some(n.as_odeir_constant()?))
+            .collect();
+        odeir::Model {
+            nodes,
+            constants,
+            // !TODO: implement medatada
+            meta_data: odeir::MetaData::default(),
+        }
+    }
+} */
