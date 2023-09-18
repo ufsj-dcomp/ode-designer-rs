@@ -62,8 +62,8 @@ impl Node {
                 }
             }
         }
-        changed = changed |
-            match &mut self.class {
+        changed = changed
+            | match &mut self.class {
                 NodeClass::Constant(constant) => {
                     ui.text(&*self.name);
                     ui.same_line();

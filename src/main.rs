@@ -1,14 +1,11 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 use app::App;
-use nodes::{Node, Constant, Combinator, Population};
+use nodes::{Combinator, Constant, Node, Population};
 
 mod message;
 
-#[cfg(feature="egui")]
-mod egui;
-
-#[cfg(feature="imgui")]
+#[cfg(feature = "imgui")]
 mod imgui;
 
 pub mod app;
@@ -28,21 +25,18 @@ fn main() {
                 odeir::Node::Combinator => {
                     app.add_node(Node::new_combinator(n.name(), Combinator::default()));
                 },
-            
+
             }
         }
         for c in model.constants {
             app.add_node(Node::new_constant(&c.name, Constant::new(c.value)));
         }
-    } else */ {
+    } else */
+    {
         app.add_node(Node::new_constant("K", Constant::new(40.0)));
         app.add_node(Node::new_combinator("comb", Combinator::default()));
         app.add_node(Node::new_combinator("comb2", Combinator::default()));
     }
-
-
-    #[cfg(feature="egui")]
-    crate::egui::main(app).unwrap();
 
     #[cfg(feature = "imgui")]
     crate::imgui::main(app).unwrap();

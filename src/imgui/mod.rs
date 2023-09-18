@@ -2,7 +2,7 @@ use glium::glutin::dpi::LogicalSize;
 use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
-use glium::{Display, Surface, glutin};
+use glium::{glutin, Display, Surface};
 use imgui::internal::RawCast;
 use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
@@ -38,8 +38,7 @@ pub struct System {
 
 pub fn make_window(title: &str, size: LogicalSize<f32>) -> System {
     let event_loop = EventLoop::new();
-    let context = glutin::ContextBuilder::new()
-        .with_vsync(true);
+    let context = glutin::ContextBuilder::new().with_vsync(true);
     let builder = WindowBuilder::new()
         .with_title(title.to_owned())
         .with_transparent(false)
@@ -62,7 +61,7 @@ pub fn make_window(title: &str, size: LogicalSize<f32>) -> System {
         let gl_window = display.gl_window();
         let window = gl_window.window();
 
-        let dpi_mode = HiDpiMode::Default; 
+        let dpi_mode = HiDpiMode::Default;
 
         platform.attach_window(imgui.io_mut(), window, dpi_mode);
     }
@@ -74,9 +73,9 @@ pub fn make_window(title: &str, size: LogicalSize<f32>) -> System {
     // value (as the scaling is handled by winit)
     let font_size = 13.0;
 
-    imgui.fonts().add_font(&[
-        FontSource::DefaultFontData { config: None },
-    ]);
+    imgui
+        .fonts()
+        .add_font(&[FontSource::DefaultFontData { config: None }]);
 
     let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 

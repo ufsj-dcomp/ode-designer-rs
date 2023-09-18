@@ -1,7 +1,9 @@
-
 use derive_more::From;
 
-use crate::{nodes::{Data, PinId}, app::Link};
+use crate::{
+    app::Link,
+    nodes::{Data, PinId},
+};
 
 #[derive(Debug, Clone)]
 pub struct SendData {
@@ -45,7 +47,10 @@ impl MessageQueue {
     }
 
     pub fn push(&mut self, message: Message) {
-        self.messages.push(TaggedMessage { tag: self.current_tag, message });
+        self.messages.push(TaggedMessage {
+            tag: self.current_tag,
+            message,
+        });
         self.current_tag += 1;
     }
 
