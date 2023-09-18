@@ -27,7 +27,7 @@ impl Sign {
         }
     }
 
-    fn to_multiplier(&self) -> f64 {
+    fn to_multiplier(self) -> f64 {
         match self {
             Sign::Positive => 1.0,
             Sign::Negative => -1.0,
@@ -89,7 +89,7 @@ impl Pin {
         &self.id
     }
     pub fn is_linked_to(&self, pin_id: &PinId) -> bool {
-        self.linked_to.iter().find(|id| *id == pin_id).is_some()
+        self.linked_to.iter().any(|id| id == pin_id)
     }
     pub fn has_links(&self) -> bool {
         !self.linked_to.is_empty()
@@ -286,20 +286,19 @@ impl Node {
                 };
                 expr.into()
             }
-            NodeClass::Population(population) => Data::Text(self.name.to_string()),
+            NodeClass::Population(_) => Data::Text(self.name.to_string()),
             NodeClass::Constant(constant) => Data::Number(constant.value),
         };
 
         self.outputs
             .iter()
-            .map(|output| {
+            .flat_map(|output| {
                 output.linked_to.iter().copied().map(|to_input| SendData {
                     data: data.clone(),
                     from_output: output.id,
                     to_input,
                 })
             })
-            .flatten()
             .map(Message::from)
             .collect()
     }
@@ -347,7 +346,7 @@ impl Node {
         self.outputs.iter_mut().find(|pin| pin.id() == id)
     }
 
-    pub fn pins_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Pin> {
+    pub fn pins_mut(&mut self) -> impl Iterator<Item = &mut Pin> {
         self.inputs.iter_mut().chain(self.outputs.iter_mut())
     }
 

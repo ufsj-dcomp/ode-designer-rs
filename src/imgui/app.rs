@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use imgui::{StyleColor, StyleVar, Ui};
 use strum::{IntoEnumIterator, VariantNames};
@@ -6,7 +6,7 @@ use strum::{IntoEnumIterator, VariantNames};
 use crate::{
     app::{App, AppState},
     message::Message,
-    nodes::{Node, NodeClass, NodeClassDiscriminant, Operation, Pin, PinClass, PinId, Sign},
+    nodes::{Node, NodeClass, Operation, PinClass, PinId, Sign},
 };
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
@@ -62,8 +62,7 @@ impl Node {
                 }
             }
         }
-        changed = changed
-            | match &mut self.class {
+        changed |= match &mut self.class {
                 NodeClass::Constant(constant) => {
                     ui.text(&*self.name);
                     ui.same_line();
@@ -125,7 +124,7 @@ impl AppState {
                     if ui.button("Add") {
                         let node = Node::new_of_class(
                             name.clone(),
-                            NodeClass::from_repr(*index as usize).expect("Invalid index"),
+                            NodeClass::from_repr(*index).expect("Invalid index"),
                         );
                         app.add_node(node);
                         StateAction::Clear
@@ -142,7 +141,7 @@ impl AppState {
 
 impl App {
     pub fn save_sate(&self, folder: impl AsRef<Path>) -> std::io::Result<()> {
-        let folder = folder.as_ref();
+        // let folder = folder.as_ref();
         // let model = self.as_model();
         /* let model = odeir::model_into_json(&model);
         let ui: &imnodes::EditorScope = todo!();

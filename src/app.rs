@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::nodes::{self, Node, NodeClass, NodeId, Pin, PinId};
+use crate::nodes::{self, Node, NodeId, Pin, PinId};
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 
@@ -59,14 +59,14 @@ impl App {
 
     pub fn get_pin(&self, id: &PinId) -> Option<&Pin> {
         // Find the node that owns the pin
-        let node_id = self.pins.get(&id)?;
+        let node_id = self.pins.get(id)?;
         let node = self.nodes.get(node_id)?;
         node.get_pin(id)
     }
 
     pub fn get_pin_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
         // Find the node that owns the pin
-        let node_id = self.pins.get(&id)?;
+        let node_id = self.pins.get(id)?;
         let node = self.nodes.get_mut(node_id)?;
         node.get_pin_mut(id)
     }
@@ -83,7 +83,7 @@ impl App {
             self.pins.remove(input.id());
         }
         for output in node.outputs() {
-            self.pins.remove(&output.id());
+            self.pins.remove(output.id());
         }
         Some(node)
     }
@@ -92,12 +92,12 @@ impl App {
         match tagged.message {
             Message::SendData(SendData {
                 data,
-                from_output,
+                from_output: _,
                 to_input,
             }) => {
                 let node_id = self.pins.get_mut(&to_input).unwrap();
-                let node = self.nodes.get_mut(&node_id).unwrap();
-                let input_pin = node.get_input(&to_input).unwrap();
+                let node = self.nodes.get_mut(node_id).unwrap();
+                // let input_pin = node.get_input(&to_input).unwrap();
                 let received_msgs = self.received_messages.entry(*node_id).or_default();
                 if received_msgs.contains(&tagged.tag) {
                     return vec![];

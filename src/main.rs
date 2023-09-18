@@ -1,7 +1,7 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 use app::App;
-use nodes::{Combinator, Constant, Node, Population};
+use nodes::{Combinator, Constant, Node};
 
 mod message;
 
