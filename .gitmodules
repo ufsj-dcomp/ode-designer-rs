@@ -1,0 +1,4 @@
+[submodule "crates/imnodes"]
+	path = crates/imnodes
+	url = https://github.com/Diegovsky/imnodes-rs
+	branch = ode-designer

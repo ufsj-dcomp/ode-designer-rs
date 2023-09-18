@@ -625,7 +625,6 @@ dependencies = [
 [[package]]
 name = "imnodes"
 version = "0.2.1"
-source = "git+https://github.com/Diegovsky/imnodes-rs.git?branch=ode-designer#4d2be1106d722c48164962c0b5144020b4779747"
 dependencies = [
  "imgui",
  "imnodes-sys",
@@ -634,7 +633,6 @@ dependencies = [
 [[package]]
 name = "imnodes-sys"
 version = "0.1.0"
-source = "git+https://github.com/Diegovsky/imnodes-rs.git?branch=ode-designer#4d2be1106d722c48164962c0b5144020b4779747"
 dependencies = [
  "cc",
  "imgui-sys",
