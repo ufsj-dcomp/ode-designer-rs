@@ -1,7 +1,6 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 use app::App;
-use nodes::{Combinator, Constant, Node};
 
 mod message;
 
@@ -9,12 +8,13 @@ mod message;
 mod imgui;
 
 pub mod app;
+mod id_gen;
 pub mod nodes;
 
 fn main() {
     color_eyre::install().unwrap();
 
-    let mut app = App::new();
+    let app = App::new();
     /* if let Ok(file) = std::fs::read("model.json") {
         let model = odeir::ffi::model_from_json(&file);
         for (id, n) in model.nodes {
@@ -32,11 +32,11 @@ fn main() {
             app.add_node(Node::new_constant(&c.name, Constant::new(c.value)));
         }
     } else */
-    {
-        app.add_node(Node::new_constant("K", Constant::new(40.0)));
-        app.add_node(Node::new_combinator("comb", Combinator::default()));
-        app.add_node(Node::new_combinator("comb2", Combinator::default()));
-    }
+    // {
+    //     app.add_node(Node::new_constant("K", Constant::new(40.0)));
+    //     app.add_node(Node::new_combinator("comb", Combinator::default()));
+    //     app.add_node(Node::new_combinator("comb2", Combinator::default()));
+    // }
 
     #[cfg(feature = "imgui")]
     crate::imgui::main(app).unwrap();

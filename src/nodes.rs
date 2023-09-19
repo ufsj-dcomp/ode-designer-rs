@@ -1,11 +1,12 @@
 use std::{collections::HashMap, fmt::Write, sync::atomic::AtomicI32};
 
 use derive_more::From;
+use imnodes::{InputPinId, NodeId, OutputPinId};
 
-use crate::message::{Message, SendData};
-
-pub type NodeId = i32;
-pub type PinId = i32;
+use crate::{
+    id_gen::GeneratesId,
+    message::{Message, SendData},
+};
 
 pub fn next_id() -> i32 {
     NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
@@ -48,17 +49,20 @@ pub enum PinClass {
 }
 
 #[derive(Debug, Clone)]
-pub struct Pin {
-    id: PinId,
+pub struct Pin<SelfIdType, LinkedToIdType> {
+    id: SelfIdType,
     node_id: NodeId,
     pub class: PinClass,
-    linked_to: Vec<PinId>,
+    linked_to: Vec<LinkedToIdType>,
 }
 
-impl Pin {
+pub type InputPin = Pin<InputPinId, OutputPinId>;
+pub type OutputPin = Pin<OutputPinId, InputPinId>;
+
+impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, LinkedToIdType> {
     pub fn new_of_class(node_id: &NodeId, class: PinClass) -> Self {
         Self {
-            id: next_id(),
+            id: SelfIdType::generate(),
             node_id: *node_id,
             class,
             linked_to: vec![],
@@ -73,10 +77,10 @@ impl Pin {
     pub fn new_signed(node_id: &NodeId, sign: Sign) -> Self {
         Self::new_of_class(node_id, PinClass::Input(InputClass::Signed(sign)))
     }
-    pub fn link_to(&mut self, pin_id: &PinId) {
+    pub fn link_to(&mut self, pin_id: &LinkedToIdType) {
         self.linked_to.push(*pin_id);
     }
-    pub fn unlink(&mut self, pin_id: &PinId) -> bool {
+    pub fn unlink(&mut self, pin_id: &LinkedToIdType) -> bool {
         let o: Option<_> = {
             try {
                 let i = self.linked_to.iter().position(|id| id == pin_id)?;
@@ -85,14 +89,21 @@ impl Pin {
         };
         o.is_some()
     }
-    pub fn id(&self) -> &PinId {
+    pub fn id(&self) -> &SelfIdType {
         &self.id
     }
-    pub fn is_linked_to(&self, pin_id: &PinId) -> bool {
+    pub fn is_linked_to(&self, pin_id: &LinkedToIdType) -> bool {
         self.linked_to.iter().any(|id| id == pin_id)
     }
     pub fn has_links(&self) -> bool {
         !self.linked_to.is_empty()
+    }
+    pub fn get_shape(&self) -> imnodes::PinShape {
+        if self.has_links() {
+            imnodes::PinShape::CircleFilled
+        } else {
+            imnodes::PinShape::Circle
+        }
     }
     pub fn class(&self) -> &PinClass {
         &self.class
@@ -112,8 +123,8 @@ impl Pin {
 pub struct Node {
     id: NodeId,
     pub name: String,
-    pub inputs: Vec<Pin>,
-    outputs: Vec<Pin>,
+    pub inputs: Vec<InputPin>,
+    outputs: Vec<OutputPin>,
     pub class: NodeClass,
 }
 
@@ -171,11 +182,11 @@ impl std::fmt::Display for Operation {
 #[derive(Debug, Default)]
 pub struct Combinator {
     pub operation: Operation,
-    pub input_exprs: HashMap<PinId, Data>,
+    pub input_exprs: HashMap<InputPinId, Data>,
 }
 
 impl Combinator {
-    pub fn expression_string(&self, slice: &[Pin]) -> String {
+    pub fn expression_string(&self, slice: &[InputPin]) -> String {
         let search_pin = |pin_id| slice.iter().find(|pin| pin.id() == pin_id);
         self.input_exprs
             .iter()
@@ -219,14 +230,20 @@ pub enum Data {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Pin not found: {0}")]
-    PinNotFound(PinId),
+    #[error("InpuPin not found: {0:?}")]
+    InputPinNotFound(InputPinId),
+
+    #[error("Pin not found: {0:?}")]
+    OutputPinNotFound(OutputPinId),
 }
 
 impl Node {
-    pub fn new(name: impl Into<String>, class: NodeClass, id: NodeId) -> Self {
+    pub fn new(name: impl Into<String>, class: NodeClass) -> Self {
         let mut outputs = vec![];
         let mut inputs = vec![];
+
+        let id = NodeId::generate();
+
         match &class {
             NodeClass::Population(_) => {
                 outputs.push(Pin::new_output(&id));
@@ -241,15 +258,15 @@ impl Node {
             }
         };
         Self {
+            id,
             name: name.into(),
             inputs,
             outputs,
-            id,
             class,
         }
     }
     pub fn new_of_class(name: impl Into<String>, class: NodeClass) -> Self {
-        Self::new(name, class, next_id())
+        Self::new(name, class)
     }
     pub fn new_combinator(name: impl Into<String>, combinator: Combinator) -> Self {
         Self::new_of_class(name, NodeClass::Combinator(combinator))
@@ -260,7 +277,7 @@ impl Node {
     pub fn new_constant(name: impl Into<String>, constant: Constant) -> Self {
         Self::new_of_class(name, NodeClass::Constant(constant))
     }
-    pub fn receive_data(&mut self, input_pin_id: &PinId, data: Data) -> Vec<Message> {
+    pub fn receive_data(&mut self, input_pin_id: &InputPinId, data: Data) -> Vec<Message> {
         let input_pin = self.get_input(input_pin_id).expect("Pin not found");
         let data = input_pin.map_data(data);
         match &mut self.class {
@@ -303,57 +320,57 @@ impl Node {
             .collect()
     }
 
-    pub fn should_link(&self, input_pin_id: &PinId) -> bool {
+    pub fn should_link(&self, input_pin_id: &InputPinId) -> bool {
         self.get_input(input_pin_id).is_some()
     }
 
     // Boilerplate stuff
 
-    pub fn get_pin_mut(&mut self, pin_id: &PinId) -> Option<&mut Pin> {
-        self.inputs
-            .iter_mut()
-            .find(|pin| pin.id() == pin_id)
-            .or_else(|| self.outputs.iter_mut().find(|pin| pin.id() == pin_id))
-    }
+    // pub fn get_pin_mut(&mut self, pin_id: &PinId) -> Option<&mut Pin> {
+    //     self.inputs
+    //         .iter_mut()
+    //         .find(|pin| pin.id() == pin_id)
+    //         .or_else(|| self.outputs.iter_mut().find(|pin| pin.id() == pin_id))
+    // }
 
-    pub fn get_pin(&self, pin_id: &PinId) -> Option<&Pin> {
-        self.inputs
-            .iter()
-            .find(|pin| pin.id() == pin_id)
-            .or_else(|| self.outputs.iter().find(|pin| pin.id() == pin_id))
-    }
+    // pub fn get_pin(&self, pin_id: &PinId) -> Option<&Pin> {
+    //     self.inputs
+    //         .iter()
+    //         .find(|pin| pin.id() == pin_id)
+    //         .or_else(|| self.outputs.iter().find(|pin| pin.id() == pin_id))
+    // }
 
-    pub fn inputs_mut(&mut self) -> &mut [Pin] {
+    pub fn inputs_mut(&mut self) -> &mut [InputPin] {
         &mut self.inputs
     }
-    pub fn outputs_mut(&mut self) -> &mut [Pin] {
+    pub fn outputs_mut(&mut self) -> &mut [OutputPin] {
         &mut self.outputs
     }
 
-    pub fn get_input(&self, id: &PinId) -> Option<&Pin> {
+    pub fn get_input(&self, id: &InputPinId) -> Option<&InputPin> {
         self.inputs.iter().find(|pin| pin.id() == id)
     }
 
-    pub fn get_output(&self, id: &PinId) -> Option<&Pin> {
+    pub fn get_output(&self, id: &OutputPinId) -> Option<&OutputPin> {
         self.outputs.iter().find(|pin| pin.id() == id)
     }
 
-    pub fn get_input_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
+    pub fn get_input_mut(&mut self, id: &InputPinId) -> Option<&mut InputPin> {
         self.inputs.iter_mut().find(|pin| pin.id() == id)
     }
 
-    pub fn get_output_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
+    pub fn get_output_mut(&mut self, id: &OutputPinId) -> Option<&mut OutputPin> {
         self.outputs.iter_mut().find(|pin| pin.id() == id)
     }
 
-    pub fn pins_mut(&mut self) -> impl Iterator<Item = &mut Pin> {
-        self.inputs.iter_mut().chain(self.outputs.iter_mut())
-    }
+    // pub fn pins_mut(&mut self) -> impl Iterator<Item = &mut Pin> {
+    //     self.inputs.iter_mut().chain(self.outputs.iter_mut())
+    // }
 
-    pub fn inputs(&self) -> &[Pin] {
+    pub fn inputs(&self) -> &[InputPin] {
         &self.inputs
     }
-    pub fn outputs(&self) -> &[Pin] {
+    pub fn outputs(&self) -> &[OutputPin] {
         &self.outputs
     }
 }

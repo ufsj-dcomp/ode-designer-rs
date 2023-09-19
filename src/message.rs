@@ -1,15 +1,13 @@
 use derive_more::From;
+use imnodes::{InputPinId, OutputPinId};
 
-use crate::{
-    app::Link,
-    nodes::{Data, PinId},
-};
+use crate::{app::Link, nodes::Data};
 
 #[derive(Debug, Clone)]
 pub struct SendData {
     pub data: Data,
-    pub from_output: PinId,
-    pub to_input: PinId,
+    pub from_output: OutputPinId,
+    pub to_input: InputPinId,
 }
 
 #[derive(Debug, Clone, From)]

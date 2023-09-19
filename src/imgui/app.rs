@@ -6,7 +6,7 @@ use strum::{IntoEnumIterator, VariantNames};
 use crate::{
     app::{App, AppState},
     message::Message,
-    nodes::{Node, NodeClass, Operation, PinClass, PinId, Sign},
+    nodes::{Node, NodeClass, Operation, PinClass, Sign},
 };
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
@@ -20,7 +20,7 @@ fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
         .build()
 }
 
-fn sign_pin_button(ui: &Ui, id: PinId, sign: &Sign) -> bool {
+fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
     let (txt, col) = match sign {
         Sign::Positive => ("+", rgb(40, 200, 40)),
         Sign::Negative => ("-", rgb(200, 50, 50)),
@@ -38,18 +38,14 @@ impl Node {
     fn draw(&mut self, ui: &Ui, ui_node: &mut imnodes::NodeScope) -> Vec<Message> {
         ui_node.add_titlebar(|| ui.text(&self.name));
         let mut changed = false;
-        for pin in self.pins_mut() {
-            let shape = if !pin.has_links() {
-                imnodes::PinShape::Circle
-            } else {
-                imnodes::PinShape::CircleFilled
-            };
+        for pin in self.inputs_mut() {
+            let shape = pin.get_shape();
             let id = *pin.id();
             match &mut pin.class {
                 PinClass::Input(input_class) => {
-                    ui_node.add_input(imnodes::InputPinId(id), shape, || match input_class {
+                    ui_node.add_input(id, shape, || match input_class {
                         crate::nodes::InputClass::Signed(sign) => {
-                            if sign_pin_button(ui, id, sign) {
+                            if sign_pin_button(ui, id.into(), sign) {
                                 sign.toggle();
                                 changed = true;
                             }
@@ -58,40 +54,50 @@ impl Node {
                     })
                 }
                 PinClass::Output => {
-                    ui_node.add_output(imnodes::OutputPinId(*pin.id()), shape, || {})
+                    unreachable!("we're iterating over the inputs list, noone can be an output")
                 }
             }
         }
+        for pin in self.outputs_mut() {
+            let shape = pin.get_shape();
+            let id = *pin.id();
+            match &mut pin.class {
+                PinClass::Input(_) => {
+                    unreachable!("we're iterating over the outputs list, noone can be an input")
+                }
+                PinClass::Output => ui_node.add_output(id, shape, || {}),
+            }
+        }
         changed |= match &mut self.class {
-                NodeClass::Constant(constant) => {
-                    ui.text(&*self.name);
-                    ui.same_line();
-                    input_num(ui, "##constant input", &mut constant.value)
+            NodeClass::Constant(constant) => {
+                ui.text(&*self.name);
+                ui.same_line();
+                input_num(ui, "##constant input", &mut constant.value)
+            }
+            NodeClass::Population(pop) => {
+                ui.text("Initial Value: ");
+                ui.same_line();
+                input_num(ui, "##population initial value", &mut pop.initial_value)
+            }
+            NodeClass::Combinator(comb) => {
+                let ops = Operation::iter().collect::<Vec<_>>();
+                let mut selected = ops.iter().position(|o| o == &comb.operation).unwrap_or(0);
+                let mut changed = false;
+                let _width = ui.push_item_width(50.0);
+                if ui.combo("##combinator operation select", &mut selected, &ops, |o| {
+                    o.to_string().into()
+                }) {
+                    comb.operation = ops[selected];
+                    changed = true
                 }
-                NodeClass::Population(pop) => {
-                    ui.text("Initial Value: ");
-                    ui.same_line();
-                    input_num(ui, "##population initial value", &mut pop.initial_value)
+                let mut expr = comb.expression_string(&self.inputs);
+                if expr.is_empty() {
+                    expr = "Nothing yet".to_string();
                 }
-                NodeClass::Combinator(comb) => {
-                    let ops = Operation::iter().collect::<Vec<_>>();
-                    let mut selected = ops.iter().position(|o| o == &comb.operation).unwrap_or(0);
-                    let mut changed = false;
-                    let _width = ui.push_item_width(50.0);
-                    if ui.combo("##combinator operation select", &mut selected, &ops, |o| {
-                        o.to_string().into()
-                    }) {
-                        comb.operation = ops[selected];
-                        changed = true
-                    }
-                    let mut expr = comb.expression_string(&self.inputs);
-                    if expr.is_empty() {
-                        expr = "Nothing yet".to_string();
-                    }
-                    ui.text(expr);
-                    changed
-                }
-            };
+                ui.text(expr);
+                changed
+            }
+        };
         if changed {
             self.send_data()
         } else {
@@ -154,7 +160,7 @@ impl App {
 
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
-            editor.add_node(imnodes::NodeId(*id), |mut ui_node| {
+            editor.add_node(*id, |mut ui_node| {
                 let msgs = node.draw(ui, &mut ui_node);
                 for msg in msgs {
                     self.messages.push(msg)
@@ -162,11 +168,7 @@ impl App {
             });
         }
         for link in self.links.iter() {
-            editor.add_link(
-                imnodes::LinkId(link.id),
-                imnodes::InputPinId(link.input_pin_id),
-                imnodes::OutputPinId(link.output_pin_id),
-            );
+            editor.add_link(link.id, link.input_pin_id, link.output_pin_id);
         }
         // Enters "Create Node Popup" state
         if editor.is_hovered()
@@ -211,7 +213,7 @@ impl App {
                 let scope =
                     imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
                 if let Some(link) = scope.links_created() {
-                    self.add_link(&link.start_pin.0, &link.end_pin.0)
+                    self.add_link(&link.start_pin, &link.end_pin)
                 }
             });
 

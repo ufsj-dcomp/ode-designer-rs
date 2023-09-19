@@ -1,24 +1,25 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::nodes::{self, Node, NodeId, Pin, PinId};
+use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
+
+use crate::id_gen::GeneratesId;
+use crate::nodes::Node;
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-
-pub type LinkId = i32;
 
 #[derive(Debug, Clone)]
 pub struct Link {
     pub id: LinkId,
-    pub input_pin_id: PinId,
-    pub output_pin_id: PinId,
+    pub input_pin_id: InputPinId,
+    pub output_pin_id: OutputPinId,
 }
 
 impl Link {
-    pub fn new(input_pin_id: &PinId, output_pin_id: &PinId) -> Self {
+    pub fn new(input_pin_id: InputPinId, output_pin_id: OutputPinId) -> Self {
         Self {
-            id: nodes::next_id(),
-            input_pin_id: *input_pin_id,
-            output_pin_id: *output_pin_id,
+            id: LinkId::generate(),
+            input_pin_id,
+            output_pin_id,
         }
     }
 }
@@ -26,7 +27,8 @@ impl Link {
 #[derive(Default)]
 pub struct App {
     pub(crate) nodes: HashMap<NodeId, Node>,
-    pub(crate) pins: HashMap<PinId, NodeId>,
+    pub(crate) input_pins: HashMap<InputPinId, NodeId>,
+    pub(crate) output_pins: HashMap<OutputPinId, NodeId>,
     pub(crate) links: Vec<Link>,
     pub state: Option<AppState>,
     pub messages: MessageQueue,
@@ -45,10 +47,10 @@ impl App {
     pub fn add_node(&mut self, node: Node) {
         let node_id = *node.id();
         for input in node.inputs() {
-            self.pins.insert(*input.id(), node_id);
+            self.input_pins.insert(*input.id(), node_id);
         }
         for output in node.outputs() {
-            self.pins.insert(*output.id(), node_id);
+            self.output_pins.insert(*output.id(), node_id);
         }
         self.nodes.insert(node_id, node);
     }
@@ -57,21 +59,21 @@ impl App {
         self.nodes.get(&id)
     }
 
-    pub fn get_pin(&self, id: &PinId) -> Option<&Pin> {
-        // Find the node that owns the pin
-        let node_id = self.pins.get(id)?;
-        let node = self.nodes.get(node_id)?;
-        node.get_pin(id)
-    }
+    // pub fn get_pin(&self, id: &PinId) -> Option<&Pin> {
+    //     // Find the node that owns the pin
+    //     let node_id = self.pins.get(id)?;
+    //     let node = self.nodes.get(node_id)?;
+    //     node.get_pin(id)
+    // }
 
-    pub fn get_pin_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
-        // Find the node that owns the pin
-        let node_id = self.pins.get(id)?;
-        let node = self.nodes.get_mut(node_id)?;
-        node.get_pin_mut(id)
-    }
+    // pub fn get_pin_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
+    //     // Find the node that owns the pin
+    //     let node_id = self.pins.get(id)?;
+    //     let node = self.nodes.get_mut(node_id)?;
+    //     node.get_pin_mut(id)
+    // }
 
-    pub fn get_link(&self, input_id: &PinId) -> Option<&Link> {
+    pub fn get_link(&self, input_id: &InputPinId) -> Option<&Link> {
         self.links
             .iter()
             .find(|link| link.input_pin_id == *input_id)
@@ -80,10 +82,10 @@ impl App {
     pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
         let node = self.nodes.remove(id)?;
         for input in node.inputs() {
-            self.pins.remove(input.id());
+            self.input_pins.remove(input.id());
         }
         for output in node.outputs() {
-            self.pins.remove(output.id());
+            self.output_pins.remove(output.id());
         }
         Some(node)
     }
@@ -95,7 +97,7 @@ impl App {
                 from_output: _,
                 to_input,
             }) => {
-                let node_id = self.pins.get_mut(&to_input).unwrap();
+                let node_id = self.input_pins.get_mut(&to_input).unwrap();
                 let node = self.nodes.get_mut(node_id).unwrap();
                 // let input_pin = node.get_input(&to_input).unwrap();
                 let received_msgs = self.received_messages.entry(*node_id).or_default();
@@ -115,7 +117,10 @@ impl App {
                         output_pin_id,
                         ..
                     } = &link;
-                    let node_ids = [self.pins.get(input_pin_id)?, self.pins.get(output_pin_id)?];
+                    let node_ids = [
+                        self.input_pins.get(input_pin_id)?,
+                        self.output_pins.get(output_pin_id)?,
+                    ];
                     let [input_node, output_node] = self.nodes.get_many_mut(node_ids)?;
                     if !input_node.should_link(input_pin_id) {
                         // Poor man's early return
@@ -135,8 +140,8 @@ impl App {
         }
     }
 
-    pub fn add_link(&mut self, start_pin: &PinId, end_pin: &PinId) {
-        self.messages.push(Link::new(end_pin, start_pin).into());
+    pub fn add_link(&mut self, start_pin: &OutputPinId, end_pin: &InputPinId) {
+        self.messages.push(Link::new(*end_pin, *start_pin).into());
     }
 
     pub fn update(&mut self) {

@@ -10,6 +10,8 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
 
 use crate::app::App;
+use crate::id_gen::initialize_id_generator;
+use crate::nodes::{Combinator, Constant, Node};
 
 // mod clipboard;
 mod app;
@@ -21,6 +23,13 @@ pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
     style::set_eel_style(unsafe { system.imgui.style_mut().raw_mut() });
     let nodesctx = imnodes::Context::new();
     let mut nodeseditor = nodesctx.create_editor();
+
+    unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
+
+    app.add_node(Node::new_constant("K", Constant::new(40.0)));
+    app.add_node(Node::new_combinator("comb", Combinator::default()));
+    app.add_node(Node::new_combinator("comb2", Combinator::default()));
+
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor);
     });
