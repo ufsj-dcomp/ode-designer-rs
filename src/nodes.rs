@@ -8,12 +8,6 @@ use crate::{
     message::{Message, SendData},
 };
 
-pub fn next_id() -> i32 {
-    NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-}
-
-static NEXT_ID: AtomicI32 = AtomicI32::new(0);
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sign {
     Positive,
