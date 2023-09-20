@@ -6,8 +6,7 @@ use strum::{IntoEnumIterator, VariantNames};
 use crate::{
     app::{App, AppState},
     message::Message,
-    nodes::{Node, NodeClass, Operation},
-    pins::{InputClass, PinClass, Sign},
+    nodes::{Node, NodeClass, Operation}, pins::{Sign, PinClass, InputClass},
 };
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
@@ -36,7 +35,7 @@ fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
 
 impl Node {
     #[must_use]
-    fn draw(&mut self, ui: &Ui, ui_node: &mut imnodes::NodeScope) -> Vec<Message> {
+    fn draw(&mut self, ui: &Ui, ui_node: &mut imnodes::NodeScope) -> Option<Vec<Message>> {
         ui_node.add_titlebar(|| ui.text(&self.name));
         let mut changed = false;
         for pin in self.inputs_mut() {
@@ -100,9 +99,9 @@ impl Node {
             }
         };
         if changed {
-            self.send_data()
+            Some(self.send_data())
         } else {
-            vec![]
+            None
         }
     }
 }
@@ -162,9 +161,10 @@ impl App {
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
             editor.add_node(*id, |mut ui_node| {
-                let msgs = node.draw(ui, &mut ui_node);
-                for msg in msgs {
-                    self.messages.push(msg)
+                if let Some(msgs) = node.draw(ui, &mut ui_node) {
+                    for msg in msgs {
+                        self.messages.push(msg)
+                    }
                 }
             });
         }
