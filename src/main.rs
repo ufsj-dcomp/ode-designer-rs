@@ -10,6 +10,7 @@ mod imgui;
 pub mod app;
 mod id_gen;
 pub mod nodes;
+pub mod pins;
 
 fn main() {
     color_eyre::install().unwrap();

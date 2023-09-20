@@ -6,7 +6,8 @@ use strum::{IntoEnumIterator, VariantNames};
 use crate::{
     app::{App, AppState},
     message::Message,
-    nodes::{Node, NodeClass, Operation, PinClass, Sign},
+    nodes::{Node, NodeClass, Operation},
+    pins::{InputClass, PinClass, Sign},
 };
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
@@ -44,13 +45,13 @@ impl Node {
             match &mut pin.class {
                 PinClass::Input(input_class) => {
                     ui_node.add_input(id, shape, || match input_class {
-                        crate::nodes::InputClass::Signed(sign) => {
+                        InputClass::Signed(sign) => {
                             if sign_pin_button(ui, id.into(), sign) {
                                 sign.toggle();
                                 changed = true;
                             }
                         }
-                        crate::nodes::InputClass::Normal => {}
+                        InputClass::Normal => {}
                     })
                 }
                 PinClass::Output => {
