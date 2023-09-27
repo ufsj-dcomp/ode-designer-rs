@@ -1,26 +1,29 @@
 use std::path::Path;
 
 use imgui::{StyleColor, StyleVar, Ui};
-use strum::{IntoEnumIterator, VariantNames};
 
 use crate::{
     app::{App, AppState},
     message::Message,
-    nodes::{Node, NodeClass, Operation}, pins::{Sign, PinClass, InputClass},
+    nodes::{
+        specialization::{ParentContext, NODE_SPECIALIZATIONS},
+        Node,
+    },
+    pins::Sign,
 };
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
     [r as f32, b as f32, g as f32, 255.0].map(|x| x / 255.0)
 }
 
-fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
+pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
     let _width = ui.push_item_width(50.0);
     ui.input_scalar(label, value)
         .display_format("%.2lf")
         .build()
 }
 
-fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
+pub fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
     let (txt, col) = match sign {
         Sign::Positive => ("+", rgb(40, 200, 40)),
         Sign::Negative => ("-", rgb(200, 50, 50)),
@@ -36,73 +39,8 @@ fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
 impl Node {
     #[must_use]
     fn draw(&mut self, ui: &Ui, ui_node: &mut imnodes::NodeScope) -> Option<Vec<Message>> {
-        ui_node.add_titlebar(|| ui.text(&self.name));
-        let mut changed = false;
-        for pin in self.inputs_mut() {
-            let shape = pin.get_shape();
-            let id = *pin.id();
-            match &mut pin.class {
-                PinClass::Input(input_class) => {
-                    ui_node.add_input(id, shape, || match input_class {
-                        InputClass::Signed(sign) => {
-                            if sign_pin_button(ui, id.into(), sign) {
-                                sign.toggle();
-                                changed = true;
-                            }
-                        }
-                        InputClass::Normal => {}
-                    })
-                }
-                PinClass::Output => {
-                    unreachable!("we're iterating over the inputs list, noone can be an output")
-                }
-            }
-        }
-        for pin in self.outputs_mut() {
-            let shape = pin.get_shape();
-            let id = *pin.id();
-            match &mut pin.class {
-                PinClass::Input(_) => {
-                    unreachable!("we're iterating over the outputs list, noone can be an input")
-                }
-                PinClass::Output => ui_node.add_output(id, shape, || {}),
-            }
-        }
-        changed |= match &mut self.class {
-            NodeClass::Constant(constant) => {
-                ui.text(&*self.name);
-                ui.same_line();
-                input_num(ui, "##constant input", &mut constant.value)
-            }
-            NodeClass::Population(pop) => {
-                ui.text("Initial Value: ");
-                ui.same_line();
-                input_num(ui, "##population initial value", &mut pop.initial_value)
-            }
-            NodeClass::Combinator(comb) => {
-                let ops = Operation::iter().collect::<Vec<_>>();
-                let mut selected = ops.iter().position(|o| o == &comb.operation).unwrap_or(0);
-                let mut changed = false;
-                let _width = ui.push_item_width(50.0);
-                if ui.combo("##combinator operation select", &mut selected, &ops, |o| {
-                    o.to_string().into()
-                }) {
-                    comb.operation = ops[selected];
-                    changed = true
-                }
-                let mut expr = comb.expression_string(&self.inputs);
-                if expr.is_empty() {
-                    expr = "Nothing yet".to_string();
-                }
-                ui.text(expr);
-                changed
-            }
-        };
-        if changed {
-            Some(self.send_data())
-        } else {
-            None
-        }
+        self.spec
+            .process_node(ui, ui_node, &[ParentContext::String(&self.name)])
     }
 }
 
@@ -123,14 +61,24 @@ impl AppState {
                     ui.input_text("##Name", name).build();
                     ui.text("Node type");
                     ui.same_line();
-                    ui.combo("##Node Type", index, NodeClass::VARIANTS, |type_| {
-                        (*type_).into()
-                    });
+
+                    ui.combo(
+                        "##Node Type",
+                        index,
+                        NODE_SPECIALIZATIONS.static_slice(),
+                        |names_and_specs| names_and_specs.0.into(),
+                    );
+
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
-                        let node = Node::new_of_class(
+                        let node = Node::new_with_specialization(
                             name.clone(),
-                            NodeClass::from_repr(*index).expect("Invalid index"),
+                            NODE_SPECIALIZATIONS
+                                .get(*index)
+                                .expect(
+                                    "User tried to construct an out-of-index node specialization",
+                                )
+                                .1,
                         );
                         app.add_node(node);
                         StateAction::Clear
@@ -146,7 +94,7 @@ impl AppState {
 }
 
 impl App {
-    pub fn save_sate(&self, folder: impl AsRef<Path>) -> std::io::Result<()> {
+    pub fn save_sate(&self, _folder: impl AsRef<Path>) -> std::io::Result<()> {
         // let folder = folder.as_ref();
         // let model = self.as_model();
         /* let model = odeir::model_into_json(&model);

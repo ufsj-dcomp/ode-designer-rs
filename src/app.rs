@@ -6,6 +6,7 @@ use crate::id_gen::GeneratesId;
 use crate::nodes::Node;
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
+use crate::nodes::specialization::ParentContext;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -46,10 +47,10 @@ impl App {
 
     pub fn add_node(&mut self, node: Node) {
         let node_id = *node.id();
-        for input in node.inputs() {
+        for input in node.spec.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
         }
-        for output in node.outputs() {
+        for output in node.spec.outputs().unwrap_or_default() {
             self.output_pins.insert(*output.id(), node_id);
         }
         self.nodes.insert(node_id, node);
@@ -59,20 +60,6 @@ impl App {
         self.nodes.get(&id)
     }
 
-    // pub fn get_pin(&self, id: &PinId) -> Option<&Pin> {
-    //     // Find the node that owns the pin
-    //     let node_id = self.pins.get(id)?;
-    //     let node = self.nodes.get(node_id)?;
-    //     node.get_pin(id)
-    // }
-
-    // pub fn get_pin_mut(&mut self, id: &PinId) -> Option<&mut Pin> {
-    //     // Find the node that owns the pin
-    //     let node_id = self.pins.get(id)?;
-    //     let node = self.nodes.get_mut(node_id)?;
-    //     node.get_pin_mut(id)
-    // }
-
     pub fn get_link(&self, input_id: &InputPinId) -> Option<&Link> {
         self.links
             .iter()
@@ -81,16 +68,16 @@ impl App {
 
     pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
         let node = self.nodes.remove(id)?;
-        for input in node.inputs() {
+        for input in node.spec.inputs().unwrap_or_default() {
             self.input_pins.remove(input.id());
         }
-        for output in node.outputs() {
+        for output in node.spec.outputs().unwrap_or_default() {
             self.output_pins.remove(output.id());
         }
         Some(node)
     }
 
-    fn handle_message(&mut self, tagged: TaggedMessage) -> Vec<Message> {
+    fn handle_message(&mut self, tagged: TaggedMessage) -> Option<Vec<Message>> {
         match tagged.message {
             Message::SendData(SendData {
                 data,
@@ -102,16 +89,17 @@ impl App {
                 // let input_pin = node.get_input(&to_input).unwrap();
                 let received_msgs = self.received_messages.entry(*node_id).or_default();
                 if received_msgs.contains(&tagged.tag) {
-                    return vec![];
+                    return None;
                 }
                 received_msgs.insert(tagged.tag);
-                node.receive_data(&to_input, data.clone())
+                node.spec
+                    .receive_data(to_input, data.clone(), &[ParentContext::String(&node.name)])
             }
             Message::AddLink(link) => {
                 if self.get_link(&link.input_pin_id).is_some() {
-                    return vec![];
+                    return None;
                 }
-                let result: Option<Vec<Message>> = try {
+                try {
                     let Link {
                         input_pin_id,
                         output_pin_id,
@@ -127,15 +115,16 @@ impl App {
                         None?
                     }
                     input_node
+                        .spec
                         .get_input_mut(input_pin_id)?
                         .link_to(output_pin_id);
                     output_node
+                        .spec
                         .get_output_mut(output_pin_id)?
                         .link_to(input_pin_id);
                     self.links.push(link);
-                    output_node.send_data()
-                };
-                result.unwrap()
+                    output_node.spec.broadcast_data(&[])
+                }
             }
         }
     }
@@ -149,7 +138,7 @@ impl App {
         for tagged in std::mem::take(&mut self.messages) {
             let tag = tagged.tag;
             let newmsgs = self.handle_message(tagged);
-            for newmsg in newmsgs {
+            for newmsg in newmsgs.unwrap_or_default() {
                 new_messages.push_tagged(newmsg, tag);
             }
         }

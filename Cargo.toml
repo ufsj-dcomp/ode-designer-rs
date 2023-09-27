@@ -12,12 +12,13 @@ imgui = ["dep:imgui-glium-renderer", "dep:imgui-winit-support", "dep:winit", "de
 color-eyre = "0.6.2"
 derive_more = "0.99.17"
 log = "0.4.17"
-strum = { version = "0.24.1", features = ["strum_macros", "derive"] }
+strum = { git = "https://github.com/Syndelis/strum/", branch = "feat/static-variants-array", features = ["strum_macros", "derive"] }
 glium = { version = "0.32.1", optional = true }
 imnodes = { path = "./crates/imnodes" }
 # odeir = { path = "../odeir" }
 thiserror = "1.0.40"
 sorted-vec = "0.8.2"
+linkme = "0.3.15"
 
 [dependencies.imgui]
 version = "0.11.0"
