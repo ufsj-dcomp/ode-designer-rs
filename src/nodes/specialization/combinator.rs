@@ -1,11 +1,11 @@
 use std::{collections::HashMap, fmt::Write};
 
-use imnodes::InputPinId;
+use imnodes::{InputPinId, NodeId};
 use linkme::distributed_slice;
 use strum::StaticVariantsArray;
 
 use crate::{
-    nodes::Data,
+    nodes::{Data, Node},
     pins::{InputPin, OutputPin, Pin, Sign},
 };
 
@@ -18,6 +18,7 @@ static COMBINATOR_SPECIALIZATION: NameAndConstructor = ("Combinator", Combinator
 
 #[derive(Debug)]
 pub struct Combinator {
+    node: Node,
     operation: Operation,
     input_exprs: HashMap<InputPinId, Data>,
     inputs: Vec<InputPin>,
@@ -42,7 +43,15 @@ impl Combinator {
 }
 
 impl NodeSpecialization for Combinator {
-    fn send_data(&self, ctx: &[super::ParentContext]) -> Data {
+    fn id(&self) -> NodeId {
+        self.node.id()
+    }
+
+    fn name(&self) -> &str {
+        &self.node.name
+    }
+
+    fn send_data(&self) -> Data {
         let mut expr = self.expression_string();
         if !expr.is_empty() {
             expr = format!("({})", expr)
@@ -55,7 +64,7 @@ impl NodeSpecialization for Combinator {
         true
     }
 
-    fn draw(&mut self, ui: &imgui::Ui, ctx: &[super::ParentContext]) -> bool {
+    fn draw(&mut self, ui: &imgui::Ui) -> bool {
         let mut selected = self.operation as usize;
         let mut changed = false;
 
@@ -105,15 +114,18 @@ impl NodeSpecialization for Combinator {
 }
 
 impl NodeSpecializationInitializer for Combinator {
-    fn new(node_id: imnodes::NodeId) -> Self {
+    fn new(node: Node) -> Self {
+        let node_id = node.id();
+
         Self {
+            node,
             operation: Operation::default(),
             input_exprs: HashMap::new(),
             inputs: vec![
-                Pin::new_signed(Some(node_id), Sign::Positive),
-                Pin::new_signed(Some(node_id), Sign::Positive),
+                Pin::new_signed(node_id, Sign::Positive),
+                Pin::new_signed(node_id, Sign::Positive),
             ],
-            output: Pin::new_output(Some(node_id)),
+            output: Pin::new_output(node_id),
         }
     }
 }

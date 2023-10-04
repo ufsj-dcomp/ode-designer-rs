@@ -1,36 +1,41 @@
 use imgui::Ui;
+use imnodes::NodeId;
 use linkme::distributed_slice;
 
 use crate::{
     imgui::app::input_num,
-    nodes::Data,
+    nodes::{Data, Node},
     pins::{OutputPin, Pin},
 };
 
 use super::{
-    NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, ParentContext,
-    NODE_SPECIALIZATIONS,
+    NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
 };
 
 #[distributed_slice(NODE_SPECIALIZATIONS)]
 static POPULATION_SPECIALIZATION: NameAndConstructor = ("Population", Population::new_boxed);
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Population {
-    name: String,
+    node: Node,
     initial_value: f64,
     output: OutputPin,
 }
 
 impl NodeSpecialization for Population {
-    fn send_data(&self, ctx: &[ParentContext]) -> Data {
-        // let Some(ParentContext::String(parent_name)) = ctx.get(0) else {
-        //     panic!("Population Node Specialization didn't receive context from its parent during a call to `send_data`")
-        // };
-        Data::Text(self.name.to_string())
+    fn id(&self) -> NodeId {
+        self.node.id()
     }
 
-    fn draw(&mut self, ui: &Ui, ctx: &[ParentContext]) -> bool {
+    fn name(&self) -> &str {
+        &self.node.name
+    }
+
+    fn send_data(&self) -> Data {
+        Data::Text(self.node.name.clone())
+    }
+
+    fn draw(&mut self, ui: &Ui) -> bool {
         ui.text("Initial Value: ");
         ui.same_line();
         input_num(ui, "##population initial value", &mut self.initial_value)
@@ -46,11 +51,12 @@ impl NodeSpecialization for Population {
 }
 
 impl NodeSpecializationInitializer for Population {
-    fn new(node_id: imnodes::NodeId) -> Self {
+    fn new(node: Node) -> Self {
+        let node_id = node.id();
         Self {
-            name: "TODO".to_string(),
+            node,
             initial_value: 0.00,
-            output: Pin::new_output(Some(node_id)),
+            output: Pin::new_output(node_id),
         }
     }
 }

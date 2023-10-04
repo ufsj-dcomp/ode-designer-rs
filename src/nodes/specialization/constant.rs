@@ -1,8 +1,9 @@
+use imnodes::NodeId;
 use linkme::distributed_slice;
 
 use crate::{
     imgui::app::input_num,
-    nodes::Data,
+    nodes::{Data, Node},
     pins::{OutputPin, Pin},
 };
 
@@ -15,17 +16,26 @@ static COMBINATOR_SPECIALIZATION: NameAndConstructor = ("Constant", Constant::ne
 
 #[derive(Debug)]
 pub struct Constant {
+    node: Node,
     value: f64,
     output: OutputPin,
 }
 
 impl NodeSpecialization for Constant {
-    fn send_data(&self, ctx: &[super::ParentContext]) -> Data {
+    fn id(&self) -> NodeId {
+        self.node.id()
+    }
+
+    fn name(&self) -> &str {
+        &self.node.name
+    }
+
+    fn send_data(&self) -> Data {
         Data::Number(self.value)
     }
 
-    fn draw(&mut self, ui: &imgui::Ui, ctx: &[super::ParentContext]) -> bool {
-        ui.text("TODO");
+    fn draw(&mut self, ui: &imgui::Ui) -> bool {
+        ui.text(&self.node.name);
         ui.same_line();
         input_num(ui, "##constant input", &mut self.value)
     }
@@ -40,10 +50,12 @@ impl NodeSpecialization for Constant {
 }
 
 impl NodeSpecializationInitializer for Constant {
-    fn new(node_id: imnodes::NodeId) -> Self {
+    fn new(node: Node) -> Self {
+        let node_id = node.id();
         Self {
+            node,
             value: 0.0,
-            output: Pin::new_output(Some(node_id)),
+            output: Pin::new_output(node_id),
         }
     }
 }

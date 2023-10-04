@@ -4,11 +4,7 @@ use imgui::{StyleColor, StyleVar, Ui};
 
 use crate::{
     app::{App, AppState},
-    message::Message,
-    nodes::{
-        specialization::{ParentContext, NODE_SPECIALIZATIONS},
-        Node,
-    },
+    nodes::specialization::NODE_SPECIALIZATIONS,
     pins::Sign,
 };
 
@@ -34,14 +30,6 @@ pub fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
     let _fc = ui.push_style_color(StyleColor::ButtonHovered, hover_col);
     let _hc = ui.push_style_color(StyleColor::ButtonActive, pressed_col);
     ui.button(format!("  {}  ##{}", txt, id))
-}
-
-impl Node {
-    #[must_use]
-    fn draw(&mut self, ui: &Ui, ui_node: &mut imnodes::NodeScope) -> Option<Vec<Message>> {
-        self.spec
-            .process_node(ui, ui_node, &[ParentContext::String(&self.name)])
-    }
 }
 
 enum StateAction {
@@ -71,15 +59,23 @@ impl AppState {
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
-                        let node = Node::new_with_specialization(
-                            name.clone(),
-                            NODE_SPECIALIZATIONS
-                                .get(*index)
-                                .expect(
-                                    "User tried to construct an out-of-index node specialization",
-                                )
-                                .1,
-                        );
+                        // let node = Node::new_with_specialization(
+                        //     name.clone(),
+                        //     NODE_SPECIALIZATIONS
+                        //         .get(*index)
+                        //         .expect(
+                        //             "User tried to construct an out-of-index node specialization",
+                        //         )
+                        //         .1,
+                        // );
+
+                        let node_ctor = NODE_SPECIALIZATIONS
+                            .get(*index)
+                            .expect("User tried to construct an out-of-index node specialization")
+                            .1;
+
+                        let node = node_ctor(name.clone());
+
                         app.add_node(node);
                         StateAction::Clear
                     } else {
@@ -109,7 +105,7 @@ impl App {
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
             editor.add_node(*id, |mut ui_node| {
-                if let Some(msgs) = node.draw(ui, &mut ui_node) {
+                if let Some(msgs) = node.process_node(ui, &mut ui_node) {
                     for msg in msgs {
                         self.messages.push(msg)
                     }

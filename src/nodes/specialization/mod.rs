@@ -16,24 +16,25 @@ use crate::{
     pins::{InputClass, InputPin, OutputPin, PinClass},
 };
 
-use super::Data;
+use super::{Data, Node};
 
-pub type NameAndConstructor = (&'static str, fn(NodeId) -> Box<dyn NodeSpecialization>);
+pub type NameAndConstructor = (&'static str, fn(String) -> Box<dyn NodeSpecialization>);
 
 #[distributed_slice]
 pub static NODE_SPECIALIZATIONS: [NameAndConstructor] = [..];
 
-pub enum ParentContext<'dc> {
-    String(&'dc str),
-}
-
 pub trait NodeSpecialization: std::fmt::Debug {
+    fn id(&self) -> NodeId;
+
+    fn name(&self) -> &str;
+
     fn on_data_received(&mut self, from_pin_id: InputPinId, data: Data) -> bool {
         false
     }
-    fn send_data(&self, ctx: &[ParentContext]) -> Data;
 
-    fn draw(&mut self, ui: &Ui, ctx: &[ParentContext]) -> bool;
+    fn send_data(&self) -> Data;
+
+    fn draw(&mut self, ui: &Ui) -> bool;
 
     fn inputs(&self) -> Option<&[InputPin]> {
         None
@@ -49,8 +50,8 @@ pub trait NodeSpecialization: std::fmt::Debug {
         None
     }
 
-    fn broadcast_data(&self, ctx: &[ParentContext]) -> Vec<Message> {
-        let data = self.send_data(ctx);
+    fn broadcast_data(&self) -> Vec<Message> {
+        let data = self.send_data();
         self.outputs()
             .expect("Tried broadcasting data to node without any output pins")
             .iter()
@@ -65,26 +66,16 @@ pub trait NodeSpecialization: std::fmt::Debug {
             .collect()
     }
 
-    fn receive_data(
-        &mut self,
-        from_pin_id: InputPinId,
-        data: Data,
-        ctx: &[ParentContext],
-    ) -> Option<Vec<Message>> {
+    fn receive_data(&mut self, from_pin_id: InputPinId, data: Data) -> Option<Vec<Message>> {
         if self.on_data_received(from_pin_id, data) {
-            Some(self.broadcast_data(ctx))
+            Some(self.broadcast_data())
         } else {
             None
         }
     }
 
-    fn process_node(
-        &mut self,
-        ui: &Ui,
-        ui_node: &mut NodeScope,
-        ctx: &[ParentContext],
-    ) -> Option<Vec<Message>> {
-        ui_node.add_titlebar(|| ui.text("TODO"));
+    fn process_node(&mut self, ui: &Ui, ui_node: &mut NodeScope) -> Option<Vec<Message>> {
+        ui_node.add_titlebar(|| ui.text(self.name()));
 
         let mut input_changed = false;
 
@@ -120,10 +111,10 @@ pub trait NodeSpecialization: std::fmt::Debug {
             }
         }
 
-        let inner_content_changed = self.draw(ui, ctx);
+        let inner_content_changed = self.draw(ui);
 
         if inner_content_changed || input_changed {
-            Some(self.broadcast_data(ctx))
+            Some(self.broadcast_data())
         } else {
             None
         }
@@ -156,15 +147,20 @@ pub trait NodeSpecialization: std::fmt::Debug {
             .iter_mut()
             .find(|pin| pin.id() == output_pin_id)
     }
+
+    fn should_link(&self, input_pin_id: &InputPinId) -> bool {
+        self.get_input(input_pin_id).is_some()
+    }
 }
 
 pub trait NodeSpecializationInitializer {
-    fn new(node_id: NodeId) -> Self;
+    fn new(node: Node) -> Self;
 
-    fn new_boxed(node_id: NodeId) -> Box<dyn NodeSpecialization>
+    fn new_boxed(name: String) -> Box<dyn NodeSpecialization>
     where
         Self: NodeSpecialization + Sized + 'static,
     {
-        Box::new(Self::new(node_id))
+        let node = Node::new(name);
+        Box::new(Self::new(node))
     }
 }

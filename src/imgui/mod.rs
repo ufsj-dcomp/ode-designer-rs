@@ -12,10 +12,7 @@ use std::time::Instant;
 use crate::app::App;
 use crate::id_gen::initialize_id_generator;
 use crate::nodes::specialization::NodeSpecializationInitializer;
-use crate::nodes::{
-    specialization::{Combinator, Constant},
-    Node,
-};
+use crate::nodes::specialization::{Combinator, Constant};
 
 // mod clipboard;
 pub mod app;
@@ -30,12 +27,9 @@ pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
 
     unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
 
-    app.add_node(Node::new_with_specialization("K", Constant::new_boxed));
-    app.add_node(Node::new_with_specialization("comb", Combinator::new_boxed));
-    app.add_node(Node::new_with_specialization(
-        "comb2",
-        Combinator::new_boxed,
-    ));
+    app.add_node(Constant::new_boxed("K".into()));
+    app.add_node(Combinator::new_boxed("comb".into()));
+    app.add_node(Combinator::new_boxed("comb2".into()));
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor);

@@ -39,7 +39,7 @@ pub enum PinClass {
 #[derive(Debug, Clone)]
 pub struct Pin<SelfIdType, LinkedToIdType> {
     pub id: SelfIdType,
-    node_id: Option<NodeId>,
+    node_id: NodeId,
     pub class: PinClass,
     pub linked_to: Vec<LinkedToIdType>,
 }
@@ -48,7 +48,7 @@ pub type InputPin = Pin<InputPinId, OutputPinId>;
 pub type OutputPin = Pin<OutputPinId, InputPinId>;
 
 impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, LinkedToIdType> {
-    pub fn new_of_class(node_id: Option<NodeId>, class: PinClass) -> Self {
+    pub fn new_of_class(node_id: NodeId, class: PinClass) -> Self {
         Self {
             id: SelfIdType::generate(),
             node_id,
@@ -56,13 +56,13 @@ impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, 
             linked_to: vec![],
         }
     }
-    pub fn new_output(node_id: Option<NodeId>) -> Self {
+    pub fn new_output(node_id: NodeId) -> Self {
         Self::new_of_class(node_id, PinClass::Output)
     }
-    pub fn new_input(node_id: Option<NodeId>) -> Self {
+    pub fn new_input(node_id: NodeId) -> Self {
         Self::new_of_class(node_id, PinClass::Input(InputClass::Normal))
     }
-    pub fn new_signed(node_id: Option<NodeId>, sign: Sign) -> Self {
+    pub fn new_signed(node_id: NodeId, sign: Sign) -> Self {
         Self::new_of_class(node_id, PinClass::Input(InputClass::Signed(sign)))
     }
     pub fn link_to(&mut self, pin_id: &LinkedToIdType) {

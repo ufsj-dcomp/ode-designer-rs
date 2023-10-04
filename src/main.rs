@@ -1,5 +1,6 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
+
 use app::App;
 
 mod message;

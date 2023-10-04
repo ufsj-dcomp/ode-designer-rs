@@ -3,10 +3,9 @@ use std::collections::{HashMap, HashSet};
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use crate::id_gen::GeneratesId;
-use crate::nodes::Node;
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::specialization::ParentContext;
+use crate::nodes::specialization::NodeSpecialization;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -27,7 +26,7 @@ impl Link {
 
 #[derive(Default)]
 pub struct App {
-    pub(crate) nodes: HashMap<NodeId, Node>,
+    pub(crate) nodes: HashMap<NodeId, Box<dyn NodeSpecialization>>,
     pub(crate) input_pins: HashMap<InputPinId, NodeId>,
     pub(crate) output_pins: HashMap<OutputPinId, NodeId>,
     pub(crate) links: Vec<Link>,
@@ -45,19 +44,19 @@ impl App {
         Self::default()
     }
 
-    pub fn add_node(&mut self, node: Node) {
-        let node_id = *node.id();
-        for input in node.spec.inputs().unwrap_or_default() {
+    pub fn add_node(&mut self, node: Box<dyn NodeSpecialization>) {
+        let node_id = node.id();
+        for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
         }
-        for output in node.spec.outputs().unwrap_or_default() {
+        for output in node.outputs().unwrap_or_default() {
             self.output_pins.insert(*output.id(), node_id);
         }
         self.nodes.insert(node_id, node);
     }
 
-    pub fn get_node(&self, id: NodeId) -> Option<&Node> {
-        self.nodes.get(&id)
+    pub fn get_node(&self, id: NodeId) -> Option<&dyn NodeSpecialization> {
+        self.nodes.get(&id).map(Box::as_ref)
     }
 
     pub fn get_link(&self, input_id: &InputPinId) -> Option<&Link> {
@@ -66,12 +65,12 @@ impl App {
             .find(|link| link.input_pin_id == *input_id)
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
+    pub fn remove_node(&mut self, id: &NodeId) -> Option<Box<dyn NodeSpecialization>> {
         let node = self.nodes.remove(id)?;
-        for input in node.spec.inputs().unwrap_or_default() {
+        for input in node.inputs().unwrap_or_default() {
             self.input_pins.remove(input.id());
         }
-        for output in node.spec.outputs().unwrap_or_default() {
+        for output in node.outputs().unwrap_or_default() {
             self.output_pins.remove(output.id());
         }
         Some(node)
@@ -92,8 +91,7 @@ impl App {
                     return None;
                 }
                 received_msgs.insert(tagged.tag);
-                node.spec
-                    .receive_data(to_input, data.clone(), &[ParentContext::String(&node.name)])
+                node.receive_data(to_input, data.clone())
             }
             Message::AddLink(link) => {
                 if self.get_link(&link.input_pin_id).is_some() {
@@ -115,15 +113,13 @@ impl App {
                         None?
                     }
                     input_node
-                        .spec
                         .get_input_mut(input_pin_id)?
                         .link_to(output_pin_id);
                     output_node
-                        .spec
                         .get_output_mut(output_pin_id)?
                         .link_to(input_pin_id);
                     self.links.push(link);
-                    output_node.spec.broadcast_data(&[])
+                    output_node.broadcast_data()
                 }
             }
         }
