@@ -164,3 +164,15 @@ pub trait NodeSpecializationInitializer {
         Box::new(Self::new(node))
     }
 }
+
+
+#[macro_export]
+macro_rules! declare_node {
+    ( $node:ident ) => {
+        use paste::paste;
+        paste! {
+            #[distributed_slice(NODE_SPECIALIZATIONS)]
+            static [<$node:upper _SPECIALIZATION>]: NameAndConstructor = (stringify!($node), $node::new_boxed);
+        }
+    };
+}

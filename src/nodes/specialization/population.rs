@@ -5,15 +5,14 @@ use linkme::distributed_slice;
 use crate::{
     imgui::app::input_num,
     nodes::{Data, Node},
-    pins::{OutputPin, Pin},
+    pins::{OutputPin, Pin}, declare_node,
 };
 
 use super::{
     NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
 };
 
-#[distributed_slice(NODE_SPECIALIZATIONS)]
-static POPULATION_SPECIALIZATION: NameAndConstructor = ("Population", Population::new_boxed);
+declare_node!(Population);
 
 #[derive(Debug)]
 pub struct Population {
