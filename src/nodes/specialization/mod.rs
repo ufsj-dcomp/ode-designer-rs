@@ -13,7 +13,7 @@ use linkme::distributed_slice;
 use crate::{
     imgui::app::sign_pin_button,
     message::{Message, SendData},
-    pins::{InputClass, InputPin, OutputPin, PinClass},
+    pins::{InputPin, OutputPin},
 };
 
 use super::{Data, Node};
@@ -82,33 +82,18 @@ pub trait NodeSpecialization: std::fmt::Debug {
         for input in self.inputs_mut().unwrap_or_default() {
             let shape = input.get_shape();
             let id = *input.id();
-            match &mut input.class {
-                PinClass::Input(input_class) => {
-                    ui_node.add_input(id, shape, || match input_class {
-                        InputClass::Signed(sign) => {
-                            if sign_pin_button(ui, id.into(), sign) {
-                                sign.toggle();
-                                input_changed = true;
-                            }
-                        }
-                        InputClass::Normal => {}
-                    })
+            ui_node.add_input(id, shape, || {
+                if sign_pin_button(ui, id.into(), input.sign) {
+                    input.sign.toggle();
+                    input_changed = true;
                 }
-                PinClass::Output => {
-                    unreachable!("we're iterating over the inputs list, noone can be an output")
-                }
-            }
+            })
         }
 
         for output in self.outputs_mut().unwrap_or_default() {
             let shape = output.get_shape();
             let id = *output.id();
-            match &mut output.class {
-                PinClass::Input(_) => {
-                    unreachable!("we're iterating over the outputs list, noone can be an input")
-                }
-                PinClass::Output => ui_node.add_output(id, shape, || {}),
-            }
+            ui_node.add_output(id, shape, || {});
         }
 
         let inner_content_changed = self.draw(ui);

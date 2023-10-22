@@ -25,22 +25,10 @@ impl Sign {
 }
 
 #[derive(Debug, Clone)]
-pub enum InputClass {
-    Normal,
-    Signed(Sign),
-}
-
-#[derive(Debug, Clone)]
-pub enum PinClass {
-    Input(InputClass),
-    Output,
-}
-
-#[derive(Debug, Clone)]
 pub struct Pin<SelfIdType, LinkedToIdType> {
     pub id: SelfIdType,
     node_id: NodeId,
-    pub class: PinClass,
+    pub sign: Sign,
     pub linked_to: Vec<LinkedToIdType>,
 }
 
@@ -48,22 +36,16 @@ pub type InputPin = Pin<InputPinId, OutputPinId>;
 pub type OutputPin = Pin<OutputPinId, InputPinId>;
 
 impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, LinkedToIdType> {
-    pub fn new_of_class(node_id: NodeId, class: PinClass) -> Self {
+    pub fn new(node_id: NodeId) -> Self {
+        Self::new_signed(node_id, Sign::Positive)
+    }
+    pub fn new_signed(node_id: NodeId, sign: Sign) -> Self {
         Self {
             id: SelfIdType::generate(),
             node_id,
-            class,
+            sign: Sign::Positive,
             linked_to: vec![],
         }
-    }
-    pub fn new_output(node_id: NodeId) -> Self {
-        Self::new_of_class(node_id, PinClass::Output)
-    }
-    pub fn new_input(node_id: NodeId) -> Self {
-        Self::new_of_class(node_id, PinClass::Input(InputClass::Normal))
-    }
-    pub fn new_signed(node_id: NodeId, sign: Sign) -> Self {
-        Self::new_of_class(node_id, PinClass::Input(InputClass::Signed(sign)))
     }
     pub fn link_to(&mut self, pin_id: &LinkedToIdType) {
         self.linked_to.push(*pin_id);
@@ -93,16 +75,11 @@ impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, 
             imnodes::PinShape::Circle
         }
     }
-    pub fn class(&self) -> &PinClass {
-        &self.class
-    }
     pub fn map_data(&self, data: Data) -> Data {
-        match self.class() {
-            PinClass::Input(InputClass::Signed(sign)) => match data {
-                Data::Number(n) => Data::Number(n * sign.to_multiplier()),
-                d => d,
-            },
-            PinClass::Input(InputClass::Normal) | PinClass::Output => data,
+        match (data, self.sign) {
+            (Data::Number(n), sign) => Data::Number(n * sign.to_multiplier()),
+            (Data::Text(t), Sign::Negative) => Data::Text(format!("(-{t})")),
+            (data, _) => data,
         }
     }
 }

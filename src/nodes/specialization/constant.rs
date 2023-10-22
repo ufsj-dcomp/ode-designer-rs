@@ -54,7 +54,7 @@ impl NodeSpecializationInitializer for Constant {
         Self {
             node,
             value: 0.0,
-            output: Pin::new_output(node_id),
+            output: Pin::new(node_id),
         }
     }
 }

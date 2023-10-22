@@ -55,7 +55,7 @@ impl NodeSpecializationInitializer for Population {
         Self {
             node,
             initial_value: 0.00,
-            output: Pin::new_output(node_id),
+            output: Pin::new(node_id),
         }
     }
 }

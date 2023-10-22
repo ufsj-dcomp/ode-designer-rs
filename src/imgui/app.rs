@@ -19,7 +19,7 @@ pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
         .build()
 }
 
-pub fn sign_pin_button(ui: &Ui, id: i32, sign: &Sign) -> bool {
+pub fn sign_pin_button(ui: &Ui, id: i32, sign: Sign) -> bool {
     let (txt, col) = match sign {
         Sign::Positive => ("+", rgb(40, 200, 40)),
         Sign::Negative => ("-", rgb(200, 50, 50)),

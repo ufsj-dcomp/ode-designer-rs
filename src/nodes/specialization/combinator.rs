@@ -124,7 +124,7 @@ impl NodeSpecializationInitializer for Combinator {
                 Pin::new_signed(node_id, Sign::Positive),
                 Pin::new_signed(node_id, Sign::Positive),
             ],
-            output: Pin::new_output(node_id),
+            output: Pin::new(node_id),
         }
     }
 }
