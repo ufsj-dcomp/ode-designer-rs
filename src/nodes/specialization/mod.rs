@@ -18,11 +18,6 @@ use crate::{
 
 use super::{Data, Node};
 
-pub type NameAndConstructor = (&'static str, fn(String) -> Box<dyn NodeSpecialization>);
-
-#[distributed_slice]
-pub static NODE_SPECIALIZATIONS: [NameAndConstructor] = [..];
-
 pub trait NodeSpecialization: std::fmt::Debug {
     fn id(&self) -> NodeId;
 
@@ -150,9 +145,13 @@ pub trait NodeSpecializationInitializer {
     }
 }
 
+pub type NameAndConstructor = (&'static str, fn(String) -> Box<dyn NodeSpecialization>);
+
+#[distributed_slice]
+pub static NODE_SPECIALIZATIONS: [NameAndConstructor] = [..];
 
 #[macro_export]
-macro_rules! declare_node {
+macro_rules! register_node {
     ( $node:ident ) => {
         use paste::paste;
         paste! {

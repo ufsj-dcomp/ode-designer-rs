@@ -5,14 +5,14 @@ use linkme::distributed_slice;
 use crate::{
     imgui::app::input_num,
     nodes::{Data, Node},
-    pins::{OutputPin, Pin}, declare_node,
+    pins::{OutputPin, Pin}, register_node,
 };
 
 use super::{
     NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
 };
 
-declare_node!(Population);
+register_node!(Population);
 
 #[derive(Debug)]
 pub struct Population {

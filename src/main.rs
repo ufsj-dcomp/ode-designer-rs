@@ -33,12 +33,7 @@ fn main() {
         for c in model.constants {
             app.add_node(Node::new_constant(&c.name, Constant::new(c.value)));
         }
-    } else */
-    // {
-    //     app.add_node(Node::new_constant("K", Constant::new(40.0)));
-    //     app.add_node(Node::new_combinator("comb", Combinator::default()));
-    //     app.add_node(Node::new_combinator("comb2", Combinator::default()));
-    // }
+    } */
 
     #[cfg(feature = "imgui")]
     crate::imgui::main(app).unwrap();

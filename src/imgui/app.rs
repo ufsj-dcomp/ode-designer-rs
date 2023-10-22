@@ -59,16 +59,6 @@ impl AppState {
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
-                        // let node = Node::new_with_specialization(
-                        //     name.clone(),
-                        //     NODE_SPECIALIZATIONS
-                        //         .get(*index)
-                        //         .expect(
-                        //             "User tried to construct an out-of-index node specialization",
-                        //         )
-                        //         .1,
-                        // );
-
                         let node_ctor = NODE_SPECIALIZATIONS
                             .get(*index)
                             .expect("User tried to construct an out-of-index node specialization")

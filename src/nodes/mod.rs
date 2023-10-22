@@ -27,19 +27,6 @@ pub enum Error {
 }
 
 impl Node {
-    // pub fn new_with_specialization(
-    //     name: impl Into<String>,
-    //     spec_ctor: fn(NodeId) -> Box<dyn NodeSpecialization>,
-    // ) -> Self {
-    //     let id = NodeId::generate();
-    //     let spec = spec_ctor(id);
-    //     Self {
-    //         id,
-    //         name: name.into(),
-    //         spec,
-    //     }
-    // }
-
     pub fn new(name: String) -> Self {
         Self {
             id: NodeId::generate(),
@@ -50,10 +37,6 @@ impl Node {
     pub fn id(&self) -> NodeId {
         self.id
     }
-
-    // pub fn should_link(&self, input_pin_id: &InputPinId) -> bool {
-    //     self.spec.get_input(input_pin_id).is_some()
-    // }
 }
 
 /* impl Node {

@@ -6,14 +6,14 @@ use strum::StaticVariantsArray;
 
 use crate::{
     nodes::{Data, Node},
-    pins::{InputPin, OutputPin, Pin, Sign}, declare_node,
+    pins::{InputPin, OutputPin, Pin, Sign}, register_node,
 };
 
 use super::{
     NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
 };
 
-declare_node!(Combinator);
+register_node!(Combinator);
 
 #[derive(Debug)]
 pub struct Combinator {

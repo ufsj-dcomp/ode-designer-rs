@@ -85,7 +85,6 @@ impl App {
             }) => {
                 let node_id = self.input_pins.get_mut(&to_input).unwrap();
                 let node = self.nodes.get_mut(node_id).unwrap();
-                // let input_pin = node.get_input(&to_input).unwrap();
                 let received_msgs = self.received_messages.entry(*node_id).or_default();
                 if received_msgs.contains(&tagged.tag) {
                     return None;
