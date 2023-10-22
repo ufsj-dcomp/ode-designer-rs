@@ -5,7 +5,8 @@ use linkme::distributed_slice;
 use crate::{
     imgui::app::input_num,
     nodes::{Data, Node},
-    pins::{OutputPin, Pin}, register_node,
+    pins::{OutputPin, Pin},
+    register_node,
 };
 
 use super::{

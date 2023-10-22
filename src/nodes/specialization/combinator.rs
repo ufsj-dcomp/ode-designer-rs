@@ -6,7 +6,8 @@ use strum::StaticVariantsArray;
 
 use crate::{
     nodes::{Data, Node},
-    pins::{InputPin, OutputPin, Pin, Sign}, register_node,
+    pins::{InputPin, OutputPin, Pin, Sign},
+    register_node,
 };
 
 use super::{
