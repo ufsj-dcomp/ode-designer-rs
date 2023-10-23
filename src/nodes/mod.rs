@@ -12,7 +12,7 @@ pub struct Node {
 }
 
 #[derive(Debug, Clone, From)]
-pub enum Data {
+pub enum LinkPayload {
     Number(f64),
     Text(String),
 }

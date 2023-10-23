@@ -7,6 +7,7 @@ use imgui::internal::RawCast;
 use imgui::{Context, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
+use imnodes::AttributeFlag;
 use std::time::Instant;
 
 use crate::app::App;
@@ -26,6 +27,9 @@ pub fn main(mut app: App) -> Result<(), Box<dyn std::error::Error>> {
     let mut nodeseditor = nodesctx.create_editor();
 
     unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
+
+    let _link_detach = nodeseditor.push(AttributeFlag::EnableLinkDetachWithDragClick);
+    let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
 
     app.add_node(Constant::new_boxed("K".into()));
     app.add_node(Combinator::new_boxed("comb".into()));

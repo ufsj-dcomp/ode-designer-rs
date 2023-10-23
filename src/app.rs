@@ -5,7 +5,7 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 use crate::id_gen::GeneratesId;
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::specialization::NodeSpecialization;
+use crate::nodes::specialization::{LinkEvent, NodeSpecialization};
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -90,7 +90,10 @@ impl App {
                     return None;
                 }
                 received_msgs.insert(tagged.tag);
-                node.receive_data(to_input, data.clone())
+                node.notify(LinkEvent::Push {
+                    from_pin_id: to_input,
+                    payload: data.clone(),
+                })
             }
             Message::AddLink(link) => {
                 if self.get_link(&link.input_pin_id).is_some() {
@@ -121,11 +124,39 @@ impl App {
                     output_node.broadcast_data()
                 }
             }
+            Message::RemoveLink(link) => {
+                let Link {
+                    input_pin_id,
+                    output_pin_id,
+                    ..
+                } = &link;
+                let node_ids = [
+                    self.input_pins.get(input_pin_id)?,
+                    self.output_pins.get(output_pin_id)?,
+                ];
+                let [input_node, output_node] = self.nodes.get_many_mut(node_ids)?;
+                input_node
+                    .get_input_mut(input_pin_id)?
+                    .unlink(output_pin_id);
+                output_node
+                    .get_output_mut(output_pin_id)?
+                    .unlink(input_pin_id);
+                input_node.notify(LinkEvent::Pop(*input_pin_id))
+            }
         }
     }
 
-    pub fn add_link(&mut self, start_pin: &OutputPinId, end_pin: &InputPinId) {
-        self.messages.push(Link::new(*end_pin, *start_pin).into());
+    pub fn add_link(&mut self, start_pin: OutputPinId, end_pin: InputPinId) {
+        self.messages
+            .push(Message::AddLink(Link::new(end_pin, start_pin)));
+    }
+
+    pub fn remove_link(&mut self, link_id: LinkId) {
+        let Some(index) = self.links.iter().position(|link| link.id == link_id) else {
+            return;
+        };
+        let link = self.links.swap_remove(index);
+        self.messages.push(Message::RemoveLink(link));
     }
 
     pub fn update(&mut self) {

@@ -1,6 +1,6 @@
 use imnodes::{InputPinId, NodeId, OutputPinId};
 
-use crate::{id_gen::GeneratesId, nodes::Data};
+use crate::{id_gen::GeneratesId, nodes::LinkPayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sign {
@@ -75,10 +75,10 @@ impl<SelfIdType: GeneratesId, LinkedToIdType: PartialEq + Copy> Pin<SelfIdType, 
             imnodes::PinShape::Circle
         }
     }
-    pub fn map_data(&self, data: Data) -> Data {
+    pub fn map_data(&self, data: LinkPayload) -> LinkPayload {
         match (data, self.sign) {
-            (Data::Number(n), sign) => Data::Number(n * sign.to_multiplier()),
-            (Data::Text(t), Sign::Negative) => Data::Text(format!("(-{t})")),
+            (LinkPayload::Number(n), sign) => LinkPayload::Number(n * sign.to_multiplier()),
+            (LinkPayload::Text(t), Sign::Negative) => LinkPayload::Text(format!("(-{t})")),
             (data, _) => data,
         }
     }

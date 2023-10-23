@@ -148,7 +148,9 @@ impl App {
                 let scope =
                     imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
                 if let Some(link) = scope.links_created() {
-                    self.add_link(&link.start_pin, &link.end_pin)
+                    self.add_link(link.start_pin, link.end_pin);
+                } else if let Some(link_id) = scope.get_dropped_link() {
+                    self.remove_link(link_id);
                 }
             });
 

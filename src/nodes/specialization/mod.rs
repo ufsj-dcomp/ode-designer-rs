@@ -16,18 +16,26 @@ use crate::{
     pins::{InputPin, OutputPin},
 };
 
-use super::{Data, Node};
+use super::{LinkPayload, Node};
+
+pub enum LinkEvent {
+    Push {
+        from_pin_id: InputPinId,
+        payload: LinkPayload,
+    },
+    Pop(InputPinId),
+}
 
 pub trait NodeSpecialization: std::fmt::Debug {
     fn id(&self) -> NodeId;
 
     fn name(&self) -> &str;
 
-    fn on_data_received(&mut self, from_pin_id: InputPinId, data: Data) -> bool {
+    fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
         false
     }
 
-    fn send_data(&self) -> Data;
+    fn send_data(&self) -> LinkPayload;
 
     fn draw(&mut self, ui: &Ui) -> bool;
 
@@ -57,12 +65,12 @@ pub trait NodeSpecialization: std::fmt::Debug {
                     to_input,
                 })
             })
-            .map(Message::from)
+            .map(Message::SendData)
             .collect()
     }
 
-    fn receive_data(&mut self, from_pin_id: InputPinId, data: Data) -> Option<Vec<Message>> {
-        if self.on_data_received(from_pin_id, data) {
+    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
+        if self.on_link_event(link_event) {
             Some(self.broadcast_data())
         } else {
             None

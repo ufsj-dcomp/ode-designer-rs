@@ -5,13 +5,14 @@ use linkme::distributed_slice;
 use strum::StaticVariantsArray;
 
 use crate::{
-    nodes::{Data, Node},
+    nodes::{LinkPayload, Node},
     pins::{InputPin, OutputPin, Pin, Sign},
     register_node,
 };
 
 use super::{
-    NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
+    LinkEvent, NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer,
+    NODE_SPECIALIZATIONS,
 };
 
 register_node!(Combinator);
@@ -20,7 +21,7 @@ register_node!(Combinator);
 pub struct Combinator {
     node: Node,
     operation: Operation,
-    input_exprs: HashMap<InputPinId, Data>,
+    input_exprs: HashMap<InputPinId, LinkPayload>,
     inputs: Vec<InputPin>,
     output: OutputPin,
 }
@@ -33,8 +34,8 @@ impl Combinator {
             .map(|(key, value)| {
                 let input_pin = search_pin(key).unwrap();
                 match input_pin.map_data(value.clone()) {
-                    Data::Number(num) => num.to_string(),
-                    Data::Text(name) => name.to_string(),
+                    LinkPayload::Number(num) => num.to_string(),
+                    LinkPayload::Text(name) => name.to_string(),
                 }
             })
             .collect::<Vec<_>>()
@@ -51,7 +52,7 @@ impl NodeSpecialization for Combinator {
         &self.node.name
     }
 
-    fn send_data(&self) -> Data {
+    fn send_data(&self) -> LinkPayload {
         let mut expr = self.expression_string();
         if !expr.is_empty() {
             expr = format!("({})", expr)
@@ -59,8 +60,14 @@ impl NodeSpecialization for Combinator {
         expr.into()
     }
 
-    fn on_data_received(&mut self, from_pin_id: InputPinId, data: Data) -> bool {
-        self.input_exprs.insert(from_pin_id, data);
+    fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
+        match link_event {
+            LinkEvent::Push {
+                from_pin_id,
+                payload,
+            } => self.input_exprs.insert(from_pin_id, payload),
+            LinkEvent::Pop(from_pin_id) => self.input_exprs.remove(&from_pin_id),
+        };
         true
     }
 

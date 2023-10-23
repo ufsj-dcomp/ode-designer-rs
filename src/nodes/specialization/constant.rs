@@ -3,7 +3,7 @@ use linkme::distributed_slice;
 
 use crate::{
     imgui::app::input_num,
-    nodes::{Data, Node},
+    nodes::{LinkPayload, Node},
     pins::{OutputPin, Pin},
     register_node,
 };
@@ -30,8 +30,8 @@ impl NodeSpecialization for Constant {
         &self.node.name
     }
 
-    fn send_data(&self) -> Data {
-        Data::Number(self.value)
+    fn send_data(&self) -> LinkPayload {
+        LinkPayload::Number(self.value)
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {

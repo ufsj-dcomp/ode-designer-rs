@@ -4,7 +4,7 @@ use linkme::distributed_slice;
 
 use crate::{
     imgui::app::input_num,
-    nodes::{Data, Node},
+    nodes::{LinkPayload, Node},
     pins::{OutputPin, Pin},
     register_node,
 };
@@ -31,8 +31,8 @@ impl NodeSpecialization for Population {
         &self.node.name
     }
 
-    fn send_data(&self) -> Data {
-        Data::Text(self.node.name.clone())
+    fn send_data(&self) -> LinkPayload {
+        LinkPayload::Text(self.node.name.clone())
     }
 
     fn draw(&mut self, ui: &Ui) -> bool {

@@ -1,19 +1,20 @@
 use derive_more::From;
 use imnodes::{InputPinId, OutputPinId};
 
-use crate::{app::Link, nodes::Data};
+use crate::{app::Link, nodes::LinkPayload};
 
 #[derive(Debug, Clone)]
 pub struct SendData {
-    pub data: Data,
+    pub data: LinkPayload,
     pub from_output: OutputPinId,
     pub to_input: InputPinId,
 }
 
-#[derive(Debug, Clone, From)]
+#[derive(Debug, Clone)]
 pub enum Message {
     SendData(SendData),
     AddLink(Link),
+    RemoveLink(Link),
 }
 
 #[derive(Debug, Clone)]
