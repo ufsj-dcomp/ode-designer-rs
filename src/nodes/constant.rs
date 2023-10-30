@@ -4,31 +4,30 @@ use linkme::distributed_slice;
 use crate::{
     core::app::input_num,
     core::App,
-    nodes::{LinkPayload, Node},
+    nodes::LinkPayload,
     pins::{OutputPin, Pin},
     register_node,
 };
 
-use super::{
-    NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
-};
+use super::{NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
 register_node!(Constant);
 
 #[derive(Debug)]
 pub struct Constant {
-    node: Node,
+    id: NodeId,
+    pub name: String,
     value: f64,
     output: OutputPin,
 }
 
-impl NodeSpecialization for Constant {
+impl Node for Constant {
     fn id(&self) -> NodeId {
-        self.node.id()
+        self.id
     }
 
     fn name(&self) -> &str {
-        &self.node.name
+        &self.name
     }
 
     fn send_data(&self) -> LinkPayload {
@@ -36,7 +35,7 @@ impl NodeSpecialization for Constant {
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        ui.text(&self.node.name);
+        ui.text(&self.name);
         ui.same_line();
         input_num(ui, "##constant input", &mut self.value)
     }
@@ -49,7 +48,7 @@ impl NodeSpecialization for Constant {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_equation(&self, app: &App) -> odeir::Argument {
+    fn to_equation_argument(&self, _app: &App) -> odeir::Argument {
         odeir::Argument::Value {
             name: self.name().to_owned(),
             value: self.value,
@@ -57,11 +56,11 @@ impl NodeSpecialization for Constant {
     }
 }
 
-impl NodeSpecializationInitializer for Constant {
-    fn new(node: Node) -> Self {
-        let node_id = node.id();
+impl NodeInitializer for Constant {
+    fn new(node_id: NodeId, name: String) -> Self {
         Self {
-            node,
+            id: node_id,
+            name,
             value: 0.0,
             output: Pin::new(node_id),
         }

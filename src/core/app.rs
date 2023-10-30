@@ -6,12 +6,12 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use crate::core::GeneratesId;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::specialization::{LinkEvent, NodeSpecialization};
+use crate::nodes::{LinkEvent, Node};
 use crate::pins::Pin;
 
 use imgui::{StyleColor, StyleVar, Ui};
 
-use crate::{nodes::specialization::NODE_SPECIALIZATIONS, pins::Sign};
+use crate::{nodes::NODE_SPECIALIZATIONS, pins::Sign};
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -32,7 +32,7 @@ impl Link {
 
 #[derive(Default)]
 pub struct App {
-    pub(crate) nodes: HashMap<NodeId, Box<dyn NodeSpecialization>>,
+    pub(crate) nodes: HashMap<NodeId, Box<dyn Node>>,
     pub(crate) input_pins: HashMap<InputPinId, NodeId>,
     pub(crate) output_pins: HashMap<OutputPinId, NodeId>,
     pub(crate) links: Vec<Link>,
@@ -198,7 +198,7 @@ impl App {
         Self::default()
     }
 
-    pub fn add_node(&mut self, node: Box<dyn NodeSpecialization>) {
+    pub fn add_node(&mut self, node: Box<dyn Node>) {
         let node_id = node.id();
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
@@ -209,7 +209,7 @@ impl App {
         self.nodes.insert(node_id, node);
     }
 
-    pub fn get_node(&self, id: NodeId) -> Option<&dyn NodeSpecialization> {
+    pub fn get_node(&self, id: NodeId) -> Option<&dyn Node> {
         self.nodes.get(&id).map(Box::as_ref)
     }
 
@@ -219,7 +219,7 @@ impl App {
             .find(|link| link.input_pin_id == *input_id)
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) -> Option<Box<dyn NodeSpecialization>> {
+    pub fn remove_node(&mut self, id: &NodeId) -> Option<Box<dyn Node>> {
         let node = self.nodes.remove(id)?;
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.remove(input.id());
@@ -330,7 +330,7 @@ impl App {
         let mut equations = odeir::Map::new();
 
         for node in self.nodes.values() {
-            let arg = node.to_equation(self);
+            let arg = node.to_equation_argument(self);
             arguments.push(arg);
         }
 

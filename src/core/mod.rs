@@ -11,8 +11,8 @@ use imnodes::AttributeFlag;
 use std::time::Instant;
 use winit::dpi::Pixel;
 
-use crate::nodes::specialization::NodeSpecializationInitializer;
-use crate::nodes::specialization::{Combinator, Constant};
+use crate::nodes::NodeInitializer;
+use crate::nodes::{Combinator, Constant};
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
 

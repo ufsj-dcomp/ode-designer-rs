@@ -5,7 +5,7 @@ use core::{initialize_id_generator, style, System};
 
 use core::App;
 use imnodes::AttributeFlag;
-use nodes::specialization::{Combinator, Constant, NodeSpecializationInitializer};
+use nodes::{Combinator, Constant, NodeInitializer};
 
 mod message;
 

@@ -6,21 +6,19 @@ use strum::StaticVariantsArray;
 
 use crate::{
     core::App,
-    nodes::{LinkPayload, Node},
+    nodes::LinkPayload,
     pins::{InputPin, OutputPin, Pin, Sign},
     register_node,
 };
 
-use super::{
-    LinkEvent, NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer,
-    NODE_SPECIALIZATIONS,
-};
+use super::{LinkEvent, NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
 register_node!(Combinator);
 
 #[derive(Debug)]
 pub struct Combinator {
-    node: Node,
+    id: NodeId,
+    pub name: String,
     operation: Operation,
     input_exprs: HashMap<InputPinId, LinkPayload>,
     inputs: Vec<InputPin>,
@@ -44,13 +42,13 @@ impl Combinator {
     }
 }
 
-impl NodeSpecialization for Combinator {
+impl Node for Combinator {
     fn id(&self) -> NodeId {
-        self.node.id()
+        self.id
     }
 
     fn name(&self) -> &str {
-        &self.node.name
+        &self.name
     }
 
     fn send_data(&self) -> LinkPayload {
@@ -120,7 +118,7 @@ impl NodeSpecialization for Combinator {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_equation(&self, app: &App) -> odeir::Argument {
+    fn to_equation_argument(&self, app: &App) -> odeir::Argument {
         let mut composition = Vec::with_capacity(self.inputs.len());
 
         for input_pin in &self.inputs {
@@ -151,12 +149,11 @@ impl NodeSpecialization for Combinator {
     }
 }
 
-impl NodeSpecializationInitializer for Combinator {
-    fn new(node: Node) -> Self {
-        let node_id = node.id();
-
+impl NodeInitializer for Combinator {
+    fn new(node_id: NodeId, name: String) -> Self {
         Self {
-            node,
+            id: node_id,
+            name,
             operation: Operation::default(),
             input_exprs: HashMap::new(),
             inputs: vec![

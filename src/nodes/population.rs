@@ -5,35 +5,34 @@ use linkme::distributed_slice;
 use crate::{
     core::app::input_num,
     core::App,
-    nodes::{LinkPayload, Node},
+    nodes::LinkPayload,
     pins::{OutputPin, Pin},
     register_node,
 };
 
-use super::{
-    NameAndConstructor, NodeSpecialization, NodeSpecializationInitializer, NODE_SPECIALIZATIONS,
-};
+use super::{NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
 register_node!(Population);
 
 #[derive(Debug)]
 pub struct Population {
-    node: Node,
+    id: NodeId,
+    pub name: String,
     initial_value: f64,
     output: OutputPin,
 }
 
-impl NodeSpecialization for Population {
+impl Node for Population {
     fn id(&self) -> NodeId {
-        self.node.id()
+        self.id
     }
 
     fn name(&self) -> &str {
-        &self.node.name
+        &self.name
     }
 
     fn send_data(&self) -> LinkPayload {
-        LinkPayload::Text(self.node.name.clone())
+        LinkPayload::Text(self.name.clone())
     }
 
     fn draw(&mut self, ui: &Ui) -> bool {
@@ -50,7 +49,7 @@ impl NodeSpecialization for Population {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_equation(&self, app: &App) -> odeir::Argument {
+    fn to_equation_argument(&self, _app: &App) -> odeir::Argument {
         odeir::Argument::Value {
             name: self.name().to_owned(),
             value: self.initial_value,
@@ -58,11 +57,11 @@ impl NodeSpecialization for Population {
     }
 }
 
-impl NodeSpecializationInitializer for Population {
-    fn new(node: Node) -> Self {
-        let node_id = node.id();
+impl NodeInitializer for Population {
+    fn new(node_id: NodeId, name: String) -> Self {
         Self {
-            node,
+            id: node_id,
+            name,
             initial_value: 0.00,
             output: Pin::new(node_id),
         }
