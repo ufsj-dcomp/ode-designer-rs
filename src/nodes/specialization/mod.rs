@@ -140,6 +140,8 @@ pub trait NodeSpecialization: std::fmt::Debug {
     fn should_link(&self, input_pin_id: &InputPinId) -> bool {
         self.get_input(input_pin_id).is_some()
     }
+
+    fn to_equation(&self, app: &App) -> odeir::Argument;
 }
 
 pub trait NodeSpecializationInitializer {

@@ -34,6 +34,5 @@ fn main() {
         }
     } */
 
-    #[cfg(feature = "imgui")]
     crate::imgui::main(app).unwrap();
 }

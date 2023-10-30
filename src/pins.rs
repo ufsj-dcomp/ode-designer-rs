@@ -125,12 +125,11 @@ impl Pin for InputPin {
                 } else {
                     false
                 }
-            },
+            }
             None => false,
         }
     }
 }
-
 
 impl Pin for OutputPin {
     type SelfIdType = OutputPinId;

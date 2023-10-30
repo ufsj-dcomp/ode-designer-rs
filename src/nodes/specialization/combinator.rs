@@ -5,6 +5,7 @@ use linkme::distributed_slice;
 use strum::StaticVariantsArray;
 
 use crate::{
+    app::App,
     nodes::{LinkPayload, Node},
     pins::{InputPin, OutputPin, Pin, Sign},
     register_node,
@@ -117,6 +118,36 @@ impl NodeSpecialization for Combinator {
 
     fn outputs_mut(&mut self) -> Option<&mut [OutputPin]> {
         Some(std::array::from_mut(&mut self.output))
+    }
+
+    fn to_equation(&self, app: &App) -> odeir::Argument {
+        let mut composition = Vec::with_capacity(self.inputs.len());
+
+        for input_pin in &self.inputs {
+            let Some(linked_pin_id) = input_pin.linked_to else {
+                continue;
+            };
+
+            let node_id = app
+                .output_pins
+                .get(&linked_pin_id)
+                .expect("The node must exist, otherwise this should have been unlinked");
+
+            let node = app
+                .get_node(*node_id)
+                .expect("The node must exist, otherwise this should have been unlinked");
+
+            composition.push(odeir::models::Component::Argument {
+                name: node.name().to_owned(),
+                contribution: input_pin.sign.into(),
+            });
+        }
+
+        odeir::Argument::Composite {
+            name: self.name().to_owned(),
+            operation: Into::<char>::into(self.operation).into(),
+            composition,
+        }
     }
 }
 

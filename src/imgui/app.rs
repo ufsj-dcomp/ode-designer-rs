@@ -80,14 +80,6 @@ impl AppState {
 }
 
 impl App {
-    pub fn save_sate(&self, _folder: impl AsRef<Path>) -> std::io::Result<()> {
-        // let folder = folder.as_ref();
-        // let model = self.as_model();
-        /* let model = odeir::model_into_json(&model);
-        let ui: &imnodes::EditorScope = todo!();
-        std::fs::write(folder.join("model.json"), model) */
-        Ok(())
-    }
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -145,6 +137,14 @@ impl App {
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
+                ui.menu_bar(|| {
+                    ui.menu("File", || {
+                        if ui.menu_item("Save") {
+                            self.save_sate();
+                        }
+                    })
+                });
+
                 let scope =
                     imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
                 if let Some(link) = scope.links_created() {

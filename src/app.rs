@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
@@ -171,6 +172,39 @@ impl App {
         }
         self.messages = new_messages;
     }
+
+    pub fn save_sate(&self) {
+        let mut arguments = Vec::new();
+        let mut equations = odeir::Map::new();
+
+        for node in self.nodes.values() {
+            let arg = node.to_equation(self);
+            arguments.push(arg);
+        }
+
+        let json = odeir::Json {
+            metadata: odeir::Metadata {
+                name: "TODO".to_string(),
+                model_metadata: odeir::ModelMetadata::ODE(odeir::models::ode::Metadata {
+                    start_time: 0.0,
+                    delta_time: 0.0,
+                    end_time: 0.0,
+                }),
+                positions: odeir::Map::new(),
+            },
+            arguments,
+            equations,
+        };
+
+        println!("{}", serde_json::to_string_pretty(&json).unwrap());
+        // let folder = folder.as_ref();
+        // let model = self.as_model();
+        /* let model = odeir::model_into_json(&model);
+        let ui: &imnodes::EditorScope = todo!();
+        std::fs::write(folder.join("model.json"), model) */
+    }
+
+    // pub fn load_state(&self, )
 }
 
 /* impl App {

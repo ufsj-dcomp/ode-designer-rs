@@ -2,6 +2,7 @@ use imnodes::NodeId;
 use linkme::distributed_slice;
 
 use crate::{
+    app::App,
     imgui::app::input_num,
     nodes::{LinkPayload, Node},
     pins::{OutputPin, Pin},
@@ -46,6 +47,13 @@ impl NodeSpecialization for Constant {
 
     fn outputs_mut(&mut self) -> Option<&mut [OutputPin]> {
         Some(std::array::from_mut(&mut self.output))
+    }
+
+    fn to_equation(&self, app: &App) -> odeir::Argument {
+        odeir::Argument::Value {
+            name: self.name().to_owned(),
+            value: self.value,
+        }
     }
 }
 
