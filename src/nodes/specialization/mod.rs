@@ -11,8 +11,8 @@ use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 use linkme::distributed_slice;
 
 use crate::{
-    app::App,
-    imgui::app::sign_pin_button,
+    core::app::sign_pin_button,
+    core::App,
     message::{Message, SendData},
     pins::{InputPin, OutputPin, Pin},
 };

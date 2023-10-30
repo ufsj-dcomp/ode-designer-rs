@@ -5,7 +5,7 @@ use linkme::distributed_slice;
 use strum::StaticVariantsArray;
 
 use crate::{
-    app::App,
+    core::App,
     nodes::{LinkPayload, Node},
     pins::{InputPin, OutputPin, Pin, Sign},
     register_node,

@@ -3,7 +3,7 @@ pub mod specialization;
 use derive_more::From;
 use imnodes::{InputPinId, NodeId, OutputPinId};
 
-use crate::id_gen::GeneratesId;
+use crate::core::GeneratesId;
 
 #[derive(Debug)]
 pub struct Node {

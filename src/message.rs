@@ -1,7 +1,7 @@
 use derive_more::From;
 use imnodes::{InputPinId, OutputPinId};
 
-use crate::{app::Link, nodes::LinkPayload};
+use crate::{core::app::Link, nodes::LinkPayload};
 
 #[derive(Debug, Clone)]
 pub struct SendData {

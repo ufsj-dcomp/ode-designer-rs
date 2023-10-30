@@ -1,6 +1,6 @@
 use imnodes::{InputPinId, NodeId, OutputPinId};
 
-use crate::{id_gen::GeneratesId, nodes::LinkPayload};
+use crate::{core::GeneratesId, nodes::LinkPayload};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sign {

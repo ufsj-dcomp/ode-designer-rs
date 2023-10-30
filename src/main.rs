@@ -1,38 +1,45 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 
-use app::App;
+use core::{initialize_id_generator, style, System};
+
+use core::App;
+use imnodes::AttributeFlag;
+use nodes::specialization::{Combinator, Constant, NodeSpecializationInitializer};
 
 mod message;
 
-mod imgui;
+mod core;
 
-pub mod app;
-mod id_gen;
 pub mod nodes;
 pub mod pins;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
 
-    let app = App::new();
-    /* if let Ok(file) = std::fs::read("model.json") {
-        let model = odeir::ffi::model_from_json(&file);
-        for (id, n) in model.nodes {
-            match n {
-                odeir::Node::Population { id, name, related_constant_name, links } => {
-                    app.add_node(Node::new_population(n.name(), Population::new()));
-                },
-                odeir::Node::Combinator => {
-                    app.add_node(Node::new_combinator(n.name(), Combinator::default()));
-                },
+    let mut system = System::make_window("ODE Editor", (1024.0, 768.0));
+    // SAFETY: The pointer is valid for the lifetime of the function.
+    style::set_eel_style(system.imgui.style_mut());
+    let nodesctx = imnodes::Context::new();
+    let mut nodeseditor = nodesctx.create_editor();
 
-            }
-        }
-        for c in model.constants {
-            app.add_node(Node::new_constant(&c.name, Constant::new(c.value)));
-        }
-    } */
+    // SAFETY: The initialization of this value at the startup code is always
+    // safe to do. However, using this value will only ever be safe while the
+    // application isn't multithreaded or at least not the GUI part, which
+    // honestly doesn't need to be.
+    unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
 
-    crate::imgui::main(app).unwrap();
+    let _link_detach = nodeseditor.push(AttributeFlag::EnableLinkDetachWithDragClick);
+    let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
+
+    let mut app = App::new();
+
+    app.add_node(Constant::new_boxed("K".into()));
+    app.add_node(Combinator::new_boxed("comb".into()));
+    app.add_node(Combinator::new_boxed("comb2".into()));
+
+    system.main_loop(move |_, ui| {
+        app.draw(ui, &mut nodeseditor);
+    });
+    Ok(())
 }

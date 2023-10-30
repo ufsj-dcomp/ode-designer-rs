@@ -3,8 +3,8 @@ use imnodes::NodeId;
 use linkme::distributed_slice;
 
 use crate::{
-    app::App,
-    imgui::app::input_num,
+    core::app::input_num,
+    core::App,
     nodes::{LinkPayload, Node},
     pins::{OutputPin, Pin},
     register_node,
