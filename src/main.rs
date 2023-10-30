@@ -5,7 +5,6 @@ use app::App;
 
 mod message;
 
-#[cfg(feature = "imgui")]
 mod imgui;
 
 pub mod app;
