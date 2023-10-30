@@ -6,6 +6,7 @@ use crate::id_gen::GeneratesId;
 
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::specialization::{LinkEvent, NodeSpecialization};
+use crate::pins::Pin;
 
 #[derive(Debug, Clone)]
 pub struct Link {
