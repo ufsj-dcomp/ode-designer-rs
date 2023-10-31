@@ -1,8 +1,11 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 use std::collections::{HashMap, HashSet};
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
+use rfd::FileDialog;
 
 use crate::core::GeneratesId;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
@@ -325,7 +328,7 @@ impl App {
         self.messages = new_messages;
     }
 
-    pub fn save_sate(&self) {
+    pub fn save_sate(&self) -> Option<()> {
         let mut arguments = Vec::new();
         let mut equations = odeir::Map::new();
 
@@ -348,11 +351,12 @@ impl App {
             equations,
         };
 
-        println!("{}", serde_json::to_string_pretty(&json).unwrap());
-        // let folder = folder.as_ref();
-        // let model = self.as_model();
-        /* let model = odeir::model_into_json(&model);
-        let ui: &imnodes::EditorScope = todo!();
-        std::fs::write(folder.join("model.json"), model) */
+        let json_contents = serde_json::to_string_pretty(&json).ok()?;
+
+        let file_path = FileDialog::new()
+            .add_filter("json", &["json"])
+            .save_file()?;
+
+        std::fs::write(file_path, json_contents).ok()
     }
 }
