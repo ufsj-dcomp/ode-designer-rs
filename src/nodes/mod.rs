@@ -1,10 +1,8 @@
-pub mod combinator;
-pub mod constant;
-pub mod population;
+pub mod expression;
+pub mod term;
 
-pub use combinator::Combinator;
-pub use constant::Constant;
-pub use population::Population;
+pub use expression::Expression;
+pub use term::Term;
 
 use imgui::Ui;
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
@@ -13,6 +11,7 @@ use linkme::distributed_slice;
 use crate::{
     core::App,
     core::{app::sign_pin_button, GeneratesId},
+    exprtree::ExpressionNode,
     message::{Message, SendData},
     pins::{InputPin, OutputPin, Pin},
 };
@@ -28,7 +27,7 @@ pub enum LinkPayload {
 pub enum LinkEvent {
     Push {
         from_pin_id: InputPinId,
-        payload: LinkPayload,
+        payload: ExpressionNode<InputPinId>,
     },
     Pop(InputPinId),
 }
@@ -38,11 +37,11 @@ pub trait Node: std::fmt::Debug {
 
     fn name(&self) -> &str;
 
-    fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
+    fn on_link_event(&mut self, _link_event: LinkEvent) -> bool {
         false
     }
 
-    fn send_data(&self) -> LinkPayload;
+    fn send_data(&self) -> ExpressionNode<InputPinId>;
 
     fn draw(&mut self, ui: &Ui) -> bool;
 
@@ -77,11 +76,12 @@ pub trait Node: std::fmt::Debug {
     }
 
     fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
-        if self.on_link_event(link_event) {
-            Some(self.broadcast_data())
-        } else {
-            None
-        }
+        self.on_link_event(link_event)
+            .then(|| self.broadcast_data())
+    }
+
+    fn state_changed(&mut self) -> bool {
+        true
     }
 
     fn process_node(&mut self, ui: &Ui, ui_node: &mut NodeScope) -> Option<Vec<Message>> {
@@ -108,11 +108,8 @@ pub trait Node: std::fmt::Debug {
 
         let inner_content_changed = self.draw(ui);
 
-        if inner_content_changed || input_changed {
-            Some(self.broadcast_data())
-        } else {
-            None
-        }
+        ((inner_content_changed || input_changed) && self.state_changed())
+            .then(|| self.broadcast_data())
     }
 
     fn get_input(&self, input_pin_id: &InputPinId) -> Option<&InputPin> {

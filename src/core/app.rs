@@ -1,6 +1,6 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+
+
+
 
 use std::collections::{HashMap, HashSet};
 
@@ -8,13 +8,14 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 use rfd::FileDialog;
 
 use crate::core::GeneratesId;
+use crate::exprtree::Sign;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{LinkEvent, Node};
 use crate::pins::Pin;
 
 use imgui::{StyleColor, StyleVar, Ui};
 
-use crate::{nodes::NODE_SPECIALIZATIONS, pins::Sign};
+use crate::nodes::NODE_SPECIALIZATIONS;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -330,7 +331,7 @@ impl App {
 
     pub fn save_sate(&self) -> Option<()> {
         let mut arguments = Vec::new();
-        let mut equations = odeir::Map::new();
+        let equations = odeir::Map::new();
 
         for node in self.nodes.values() {
             let arg = node.to_equation_argument(self);

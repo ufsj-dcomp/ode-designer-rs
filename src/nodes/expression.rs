@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write};
+use std::{fmt::Write};
 
 use imnodes::{InputPinId, NodeId};
 use linkme::distributed_slice;
@@ -6,43 +6,54 @@ use strum::StaticVariantsArray;
 
 use crate::{
     core::App,
-    nodes::LinkPayload,
-    pins::{InputPin, OutputPin, Pin, Sign},
+    exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
+    pins::{InputPin, OutputPin, Pin},
     register_node,
 };
 
 use super::{LinkEvent, NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
-register_node!(Combinator);
+register_node!(Expression);
 
 #[derive(Debug)]
-pub struct Combinator {
+pub enum ResolutionStatus<T> {
+    Resolved(T),
+    Unresolved,
+}
+
+impl<T> ResolutionStatus<T> {
+    pub fn reset(&mut self) {
+        *self = ResolutionStatus::Unresolved;
+    }
+}
+
+#[derive(Debug)]
+pub struct Expression {
     id: NodeId,
-    pub name: String,
-    operation: Operation,
-    input_exprs: HashMap<InputPinId, LinkPayload>,
+    name: String,
+    expr: ExpressionTree<InputPinId>,
+    resolved_expr: ResolutionStatus<Option<String>>,
     inputs: Vec<InputPin>,
     output: OutputPin,
 }
 
-impl Combinator {
-    pub fn expression_string(&self) -> String {
-        let search_pin = |pin_id| self.inputs.iter().find(|pin| pin.id() == pin_id);
-        self.input_exprs
-            .iter()
-            .map(|(key, value)| {
-                let input_pin = search_pin(key).unwrap();
-                match input_pin.map_data(value.clone()) {
-                    LinkPayload::Number(num) => num.to_string(),
-                    LinkPayload::Text(name) => name.to_string(),
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(&self.operation.to_string())
+impl Expression {
+    fn get_expr(&mut self) -> Option<&str> {
+        if let ResolutionStatus::Unresolved = self.resolved_expr {
+            let expr = self.expr.resolve_into_equation();
+
+            self.resolved_expr = ResolutionStatus::Resolved((!expr.is_empty()).then_some(expr));
+        }
+
+        if let ResolutionStatus::Resolved(ref expr) = self.resolved_expr {
+            expr.as_deref()
+        } else {
+            unreachable!("If it was not resolved, the previous `if` made sure to resolve it")
+        }
     }
 }
 
-impl Node for Combinator {
+impl Node for Expression {
     fn id(&self) -> NodeId {
         self.id
     }
@@ -51,12 +62,8 @@ impl Node for Combinator {
         &self.name
     }
 
-    fn send_data(&self) -> LinkPayload {
-        let mut expr = self.expression_string();
-        if !expr.is_empty() {
-            expr = format!("({})", expr)
-        };
-        expr.into()
+    fn send_data(&self) -> ExpressionNode<InputPinId> {
+        ExpressionNode::SubExpr(self.expr.clone())
     }
 
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
@@ -64,14 +71,34 @@ impl Node for Combinator {
             LinkEvent::Push {
                 from_pin_id,
                 payload,
-            } => self.input_exprs.insert(from_pin_id, payload),
-            LinkEvent::Pop(from_pin_id) => self.input_exprs.remove(&from_pin_id),
+            } => {
+                let pin = self
+                    .inputs
+                    .iter()
+                    .find(|pin| pin.id() == &from_pin_id)
+                    .expect("The pin must exist if we received data through it");
+                self.expr.members.insert(from_pin_id, pin.map_data(payload))
+            }
+            LinkEvent::Pop(from_pin_id) => self.expr.members.remove(&from_pin_id),
         };
+
+        self.resolved_expr.reset();
+        true
+    }
+
+    fn state_changed(&mut self) -> bool {
+        for input in &self.inputs {
+            if let Some(input_tree) = self.expr.members.get_mut(input.id()) {
+                input_tree.set_unary(input.sign);
+            };
+        }
+
+        self.resolved_expr.reset();
         true
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        let mut selected = self.operation as usize;
+        let mut selected = self.expr.join_op as usize;
         let mut changed = false;
 
         // Needs to be assigned to a variable other than `_`. Otherwise, the
@@ -80,24 +107,21 @@ impl Node for Combinator {
         let _smth = ui.push_item_width(50.);
 
         if ui.combo(
-            "##combinator operation select",
+            "##Expression operation select",
             &mut selected,
             Operation::ALL_VARIANTS,
             |op| format!("{op}").into(),
         ) {
-            self.operation = Operation::from_repr(selected as u8)
+            self.expr.join_op = Operation::from_repr(selected as u8)
                 .expect("ImGui returned an out-of-range value in combobox");
 
             changed = true
         }
 
-        let expr = self.expression_string();
-
-        if expr.is_empty() {
-            ui.text("Nothing yet!");
-        } else {
-            ui.text(expr);
-        }
+        match self.get_expr() {
+            Some(expr) => ui.text(expr),
+            None => ui.text("Nothing yet!"),
+        };
 
         changed
     }
@@ -143,79 +167,24 @@ impl Node for Combinator {
 
         odeir::Argument::Composite {
             name: self.name().to_owned(),
-            operation: Into::<char>::into(self.operation).into(),
+            operation: Into::<char>::into(self.expr.join_op).into(),
             composition,
         }
     }
 }
 
-impl NodeInitializer for Combinator {
+impl NodeInitializer for Expression {
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
             id: node_id,
             name,
-            operation: Operation::default(),
-            input_exprs: HashMap::new(),
+            expr: Default::default(),
+            resolved_expr: ResolutionStatus::Resolved(None),
             inputs: vec![
                 Pin::new_signed(node_id, Sign::Positive),
                 Pin::new_signed(node_id, Sign::Positive),
             ],
             output: Pin::new(node_id),
         }
-    }
-}
-
-#[derive(
-    Debug,
-    Default,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    strum::EnumIter,
-    strum::EnumVariantNames,
-    strum::FromRepr,
-    strum::StaticVariantsArray,
-)]
-#[repr(u8)]
-pub enum Operation {
-    #[default]
-    Add,
-    Sub,
-    Div,
-    Mul,
-}
-
-pub struct NotAnOperationChar;
-
-impl TryFrom<char> for Operation {
-    type Error = NotAnOperationChar;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value {
-            '+' => Ok(Self::Add),
-            '-' => Ok(Self::Sub),
-            '/' => Ok(Self::Div),
-            '*' => Ok(Self::Mul),
-            _ => Err(NotAnOperationChar),
-        }
-    }
-}
-
-impl From<Operation> for char {
-    fn from(value: Operation) -> Self {
-        match value {
-            Operation::Add => '+',
-            Operation::Sub => '-',
-            Operation::Div => '/',
-            Operation::Mul => '*',
-        }
-    }
-}
-
-impl std::fmt::Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let c: char = (*self).into();
-        f.write_char(c)
     }
 }

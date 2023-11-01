@@ -3,16 +3,12 @@ use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
 use glium::{glutin, Display, Surface};
-use imgui::internal::RawCast;
 use imgui::{Context, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use imnodes::AttributeFlag;
 use std::time::Instant;
 use winit::dpi::Pixel;
 
-use crate::nodes::NodeInitializer;
-use crate::nodes::{Combinator, Constant};
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
 

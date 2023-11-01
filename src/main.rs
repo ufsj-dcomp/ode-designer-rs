@@ -5,12 +5,13 @@ use core::{initialize_id_generator, style, System};
 
 use core::App;
 use imnodes::AttributeFlag;
-use nodes::{Combinator, Constant, NodeInitializer};
+use nodes::{Expression, NodeInitializer, Term};
 
 mod message;
 
 mod core;
 
+pub mod exprtree;
 pub mod nodes;
 pub mod pins;
 
@@ -30,13 +31,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
 
     let _link_detach = nodeseditor.push(AttributeFlag::EnableLinkDetachWithDragClick);
-    let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
+    // let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
 
     let mut app = App::new();
 
-    app.add_node(Constant::new_boxed("K".into()));
-    app.add_node(Combinator::new_boxed("comb".into()));
-    app.add_node(Combinator::new_boxed("comb2".into()));
+    app.add_node(Term::new_boxed("A".into()));
+    app.add_node(Term::new_boxed("K".into()));
+    app.add_node(Expression::new_boxed("comb".into()));
+    app.add_node(Expression::new_boxed("comb2".into()));
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor);

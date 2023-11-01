@@ -1,37 +1,9 @@
 use imnodes::{InputPinId, NodeId, OutputPinId};
 
-use crate::{core::GeneratesId, nodes::LinkPayload};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Sign {
-    Positive,
-    Negative,
-}
-
-impl Sign {
-    pub fn toggle(&mut self) {
-        *self = match self {
-            Sign::Positive => Sign::Negative,
-            Sign::Negative => Sign::Positive,
-        }
-    }
-
-    fn to_multiplier(self) -> f64 {
-        match self {
-            Sign::Positive => 1.0,
-            Sign::Negative => -1.0,
-        }
-    }
-}
-
-impl From<Sign> for char {
-    fn from(value: Sign) -> Self {
-        match value {
-            Sign::Positive => '+',
-            Sign::Negative => '-',
-        }
-    }
-}
+use crate::{
+    core::GeneratesId,
+    exprtree::{ExpressionNode, Sign},
+};
 
 #[derive(Debug, Clone)]
 pub struct InputPin {
@@ -50,12 +22,9 @@ pub struct OutputPin {
 }
 
 impl InputPin {
-    pub fn map_data(&self, data: LinkPayload) -> LinkPayload {
-        match (data, self.sign) {
-            (LinkPayload::Number(n), sign) => LinkPayload::Number(n * sign.to_multiplier()),
-            (LinkPayload::Text(t), Sign::Negative) => LinkPayload::Text(format!("(-{t})")),
-            (data, _) => data,
-        }
+    pub fn map_data(&self, mut data: ExpressionNode<InputPinId>) -> ExpressionNode<InputPinId> {
+        data.set_unary(self.sign);
+        data
     }
 }
 
@@ -96,7 +65,7 @@ impl Pin for InputPin {
         &self.id
     }
 
-    fn new_signed(node_id: NodeId, sign: Sign) -> Self {
+    fn new_signed(node_id: NodeId, _sign: Sign) -> Self {
         Self {
             id: Self::SelfIdType::generate(),
             node_id,
@@ -139,7 +108,7 @@ impl Pin for OutputPin {
         &self.id
     }
 
-    fn new_signed(node_id: NodeId, sign: Sign) -> Self {
+    fn new_signed(node_id: NodeId, _sign: Sign) -> Self {
         Self {
             id: Self::SelfIdType::generate(),
             node_id,

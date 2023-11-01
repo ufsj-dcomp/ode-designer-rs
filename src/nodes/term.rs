@@ -1,38 +1,38 @@
 use imgui::Ui;
-use imnodes::NodeId;
+use imnodes::{InputPinId, NodeId};
 use linkme::distributed_slice;
 
 use crate::{
     core::app::input_num,
     core::App,
-    nodes::LinkPayload,
+    exprtree::{ExpressionNode, Leaf, Sign},
     pins::{OutputPin, Pin},
     register_node,
 };
 
 use super::{NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
-register_node!(Population);
+register_node!(Term);
 
 #[derive(Debug)]
-pub struct Population {
+pub struct Term {
     id: NodeId,
-    pub name: String,
+    leaf: Leaf,
     initial_value: f64,
     output: OutputPin,
 }
 
-impl Node for Population {
+impl Node for Term {
     fn id(&self) -> NodeId {
         self.id
     }
 
     fn name(&self) -> &str {
-        &self.name
+        &self.leaf.symbol
     }
 
-    fn send_data(&self) -> LinkPayload {
-        LinkPayload::Text(self.name.clone())
+    fn send_data(&self) -> ExpressionNode<InputPinId> {
+        ExpressionNode::Leaf(self.leaf.clone())
     }
 
     fn draw(&mut self, ui: &Ui) -> bool {
@@ -57,11 +57,14 @@ impl Node for Population {
     }
 }
 
-impl NodeInitializer for Population {
+impl NodeInitializer for Term {
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
             id: node_id,
-            name,
+            leaf: Leaf {
+                symbol: name,
+                unary_op: Sign::Positive,
+            },
             initial_value: 0.00,
             output: Pin::new(node_id),
         }

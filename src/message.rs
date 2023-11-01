@@ -1,11 +1,11 @@
 use derive_more::From;
 use imnodes::{InputPinId, OutputPinId};
 
-use crate::{core::app::Link, nodes::LinkPayload};
+use crate::{core::app::Link, exprtree::ExpressionNode};
 
 #[derive(Debug, Clone)]
 pub struct SendData {
-    pub data: LinkPayload,
+    pub data: ExpressionNode<InputPinId>,
     pub from_output: OutputPinId,
     pub to_input: InputPinId,
 }
