@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt::Write, hash::Hash};
 
+use strum::EnumString;
+
 #[derive(Debug, Clone)]
 pub struct ExpressionTree<OriginType: Hash> {
     pub unary_op: Sign,
@@ -29,10 +31,12 @@ pub struct Leaf {
     pub unary_op: Sign,
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum Sign {
     #[default]
+    #[strum(serialize = "+")]
     Positive,
+    #[strum(serialize = "-")]
     Negative,
 }
 
@@ -89,6 +93,10 @@ impl<OriginType: Hash> ExpressionTree<OriginType> {
 
         result
     }
+
+    pub fn set_join_op(&mut self, join_op: Operation) {
+        self.join_op = join_op;
+    }
 }
 
 impl<OriginType: Hash> ExpressionNode<OriginType> {
@@ -128,15 +136,20 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
     Eq,
     strum::EnumIter,
     strum::EnumVariantNames,
+    strum::EnumString,
     strum::FromRepr,
     strum::StaticVariantsArray,
 )]
 #[repr(u8)]
 pub enum Operation {
     #[default]
+    #[strum(serialize = "+")]
     Add,
+    #[strum(serialize = "-")]
     Sub,
+    #[strum(serialize = "/", serialize = "÷")]
     Div,
+    #[strum(serialize = "*", serialize = "×")]
     Mul,
 }
 

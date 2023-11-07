@@ -1,6 +1,5 @@
 use imgui::Ui;
 use imnodes::{InputPinId, NodeId};
-use linkme::distributed_slice;
 
 use crate::{
     core::app::input_num,
@@ -10,7 +9,7 @@ use crate::{
     register_node,
 };
 
-use super::{NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
+use super::{Node, NodeInitializer, NODE_SPECIALIZATIONS};
 
 register_node!(Term);
 
@@ -49,11 +48,11 @@ impl Node for Term {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_equation_argument(&self, _app: &App) -> odeir::Argument {
-        odeir::Argument::Value {
+    fn to_argument(&self, _app: &App) -> Option<odeir::Argument> {
+        Some(odeir::Argument::Value {
             name: self.name().to_owned(),
             value: self.initial_value,
-        }
+        })
     }
 }
 
@@ -68,5 +67,26 @@ impl NodeInitializer for Term {
             initial_value: 0.00,
             output: Pin::new(node_id),
         }
+    }
+
+    fn try_from_argument(
+        node_id: NodeId,
+        arg: &odeir::Argument,
+    ) -> Option<(Self, Option<PendingOperations>)> {
+        let odeir::Argument::Value { name, value } = arg else {
+            return None;
+        };
+
+        let node = Self {
+            id: node_id,
+            leaf: Leaf {
+                symbol: name.clone(),
+                unary_op: Sign::Positive,
+            },
+            initial_value: *value,
+            output: Pin::new(node_id),
+        };
+
+        Some((node, None))
     }
 }

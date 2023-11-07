@@ -1,5 +1,6 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
+#![feature(lazy_cell)]
 
 use core::{initialize_id_generator, style, System};
 
@@ -11,6 +12,7 @@ mod message;
 
 mod core;
 
+pub mod errors;
 pub mod exprtree;
 pub mod nodes;
 pub mod pins;
@@ -35,10 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = App::new();
 
-    app.add_node(Term::new_boxed("A".into()));
-    app.add_node(Term::new_boxed("K".into()));
-    app.add_node(Expression::new_boxed("comb".into()));
-    app.add_node(Expression::new_boxed("comb2".into()));
+    // app.add_node(Term::new_boxed("A".into()));
+    // app.add_node(Term::new_boxed("K".into()));
+    // app.add_node(Expression::new_boxed("comb".into()));
+    // app.add_node(Expression::new_boxed("comb2".into()));
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor);

@@ -1,16 +1,19 @@
-
-
-
-
 use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::BufReader;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
+use itertools::Itertools;
+use odeir::Equation;
 use rfd::FileDialog;
 
 use crate::core::GeneratesId;
+use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::{LinkEvent, Node};
+use crate::nodes::{
+    LinkEvent, Node, NodeFactory, NodeInitializer, PendingOperation, PendingOperations,
+};
 use crate::pins::Pin;
 
 use imgui::{StyleColor, StyleVar, Ui};
@@ -60,19 +63,6 @@ pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
         .build()
 }
 
-pub fn sign_pin_button(ui: &Ui, id: i32, sign: Sign) -> bool {
-    let (txt, col) = match sign {
-        Sign::Positive => ("+", rgb(40, 200, 40)),
-        Sign::Negative => ("-", rgb(200, 50, 50)),
-    };
-    let hover_col = col.map(|x| x * 1.25);
-    let pressed_col = col.map(|x| x.powf(2.2));
-    let _c = ui.push_style_color(StyleColor::Button, col);
-    let _fc = ui.push_style_color(StyleColor::ButtonHovered, hover_col);
-    let _hc = ui.push_style_color(StyleColor::ButtonActive, pressed_col);
-    ui.button(format!("  {}  ##{}", txt, id))
-}
-
 enum StateAction {
     Keep,
     Clear,
@@ -100,12 +90,12 @@ impl AppState {
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
-                        let node_ctor = NODE_SPECIALIZATIONS
+                        let node_factory = &NODE_SPECIALIZATIONS
                             .get(*index)
                             .expect("User tried to construct an out-of-index node specialization")
                             .1;
 
-                        let node = node_ctor(name.clone());
+                        let node = node_factory.new_with_name(name.clone());
 
                         app.add_node(node);
                         StateAction::Clear
@@ -181,7 +171,11 @@ impl App {
                 ui.menu_bar(|| {
                     ui.menu("File", || {
                         if ui.menu_item("Save") {
-                            self.save_sate();
+                            self.save_state();
+                        }
+
+                        if ui.menu_item("Load") {
+                            self.load_state();
                         }
                     })
                 });
@@ -250,7 +244,7 @@ impl App {
                 received_msgs.insert(tagged.tag);
                 node.notify(LinkEvent::Push {
                     from_pin_id: to_input,
-                    payload: data.clone(),
+                    payload: data,
                 })
             }
             Message::AddLink(link) => {
@@ -329,14 +323,18 @@ impl App {
         self.messages = new_messages;
     }
 
-    pub fn save_sate(&self) -> Option<()> {
-        let mut arguments = Vec::new();
-        let equations = odeir::Map::new();
+    pub fn save_state(&self) -> Option<()> {
+        let arguments: Vec<odeir::Argument> = self
+            .nodes
+            .values()
+            .filter_map(|node| node.to_argument(self))
+            .collect();
 
-        for node in self.nodes.values() {
-            let arg = node.to_equation_argument(self);
-            arguments.push(arg);
-        }
+        let equations: Vec<Equation> = self
+            .nodes
+            .values()
+            .filter_map(|node| node.to_equation(self))
+            .collect();
 
         let json = odeir::Json {
             metadata: odeir::Metadata {
@@ -359,5 +357,94 @@ impl App {
             .save_file()?;
 
         std::fs::write(file_path, json_contents).ok()
+    }
+
+    pub fn load_state(&mut self) -> anyhow::Result<()> {
+        let file_path = FileDialog::new()
+            .add_filter("json", &["json"])
+            .pick_file()
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
+            })?;
+
+        let file = File::open(file_path)?;
+
+        let reader = BufReader::new(file);
+
+        let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
+            Err(NotCorrectModel::NotODE)?
+        };
+
+        let node_factories = NODE_SPECIALIZATIONS.iter().map(|(_name, factory)| factory);
+
+        let arguments_and_ops = model
+            .arguments
+            .values()
+            .cartesian_product(node_factories.clone())
+            .filter_map(|(arg, factory)| factory.try_from_argument(arg));
+
+        let equations_and_ops = model
+            .equations
+            .iter()
+            .cartesian_product(node_factories)
+            .filter_map(|(eq, factory)| factory.try_from_equation(eq));
+
+        let pending_ops: Vec<PendingOperations> = arguments_and_ops
+            .chain(equations_and_ops)
+            .filter_map(|(node, ops)| {
+                self.add_node(node);
+                ops
+            })
+            .collect();
+
+        let mut node_name_map = HashMap::new();
+
+        self.nodes.iter().for_each(|(_node_id, node)| {
+            node_name_map.insert(node.name(), node);
+        });
+
+        for PendingOperations {
+            node_id,
+            operations,
+        } in pending_ops
+        {
+            for operation in operations {
+                match operation {
+                    PendingOperation::LinkWith {
+                        node_name,
+                        via_pin_id,
+                    } => {
+                        let node_error = |reason| {
+                            let source_node =
+                                self.get_node(node_id).expect("This node surely exists");
+                            InvalidNodeReference {
+                                source_node: source_node.name().to_string(),
+                                tried_linking_to: node_name.clone(),
+                                reason,
+                            }
+                        };
+
+                        let output_pin_id = {
+                            let node = node_name_map
+                                .get(&node_name as &str)
+                                .ok_or_else(|| node_error(InvalidNodeReason::NodeDoesNotExist))?;
+
+                            let output_node = node
+                                .outputs()
+                                .ok_or_else(|| node_error(InvalidNodeReason::NoOutputPin))?
+                                .first()
+                                .ok_or_else(|| node_error(InvalidNodeReason::NoOutputPin))?;
+
+                            *output_node.id()
+                        };
+
+                        self.messages
+                            .push(Message::AddLink(Link::new(via_pin_id, output_pin_id)))
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }

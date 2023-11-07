@@ -1,17 +1,22 @@
+mod assigner;
 pub mod expression;
 pub mod term;
+
+use std::{
+    ops::{Deref, DerefMut},
+    sync::LazyLock,
+};
 
 pub use expression::Expression;
 pub use term::Term;
 
 use imgui::Ui;
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
-use linkme::distributed_slice;
 
 use crate::{
     core::App,
-    core::{app::sign_pin_button, GeneratesId},
-    exprtree::ExpressionNode,
+    core::GeneratesId,
+    exprtree::{ExpressionNode, ExpressionTree},
     message::{Message, SendData},
     pins::{InputPin, OutputPin, Pin},
 };
@@ -90,13 +95,12 @@ pub trait Node: std::fmt::Debug {
         let mut input_changed = false;
 
         for input in self.inputs_mut().unwrap_or_default() {
-            let shape = input.get_shape();
-            let id = *input.id();
-            ui_node.add_input(id, shape, || {
-                if sign_pin_button(ui, id.into(), input.sign) {
-                    input.sign.toggle();
-                    input_changed = true;
+            ui_node.add_input(*input.id(), input.get_shape(), || {
+                if let Some(label) = input.get_label() {
+                    ui.text(label);
                 }
+
+                input_changed |= input.draw(ui);
             })
         }
 
@@ -144,7 +148,13 @@ pub trait Node: std::fmt::Debug {
         self.get_input(input_pin_id).is_some()
     }
 
-    fn to_equation_argument(&self, app: &App) -> odeir::Argument;
+    fn to_argument(&self, app: &App) -> Option<odeir::Argument> {
+        None
+    }
+
+    fn to_equation(&self, app: &App) -> Option<odeir::Equation> {
+        None
+    }
 }
 
 pub trait NodeInitializer {
@@ -157,20 +167,191 @@ pub trait NodeInitializer {
         let node_id = NodeId::generate();
         Box::new(Self::new(node_id, name))
     }
+
+    fn try_from_argument(
+        node_id: NodeId,
+        arg: &odeir::Argument,
+    ) -> Option<(Self, Option<PendingOperations>)>
+    where
+        Self: Node + Sized,
+    {
+        None
+    }
+
+    fn try_from_argument_boxed(
+        arg: &odeir::Argument,
+    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>
+    where
+        Self: Node + Sized + 'static,
+    {
+        let node_id = NodeId::generate();
+        match Self::try_from_argument(node_id, arg) {
+            Some((node, pending_ops)) => Some((Box::new(node), pending_ops)),
+            None => None,
+        }
+    }
+
+    fn try_from_equation(
+        node_id: NodeId,
+        eq: &odeir::Equation,
+    ) -> Option<(Self, Option<PendingOperations>)>
+    where
+        Self: Node + Sized,
+    {
+        None
+    }
+
+    fn try_from_equation_boxed(
+        eq: &odeir::Equation,
+    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>
+    where
+        Self: Node + Sized + 'static,
+    {
+        let node_id = NodeId::generate();
+        match Self::try_from_equation(node_id, eq) {
+            Some((node, pending_ops)) => Some((Box::new(node), pending_ops)),
+            None => None,
+        }
+    }
 }
 
-pub type NameAndConstructor = (&'static str, fn(String) -> Box<dyn Node>);
+pub trait NodeFactory {
+    fn new_with_name(&self, name: String) -> Box<dyn Node>;
 
-#[distributed_slice]
-pub static NODE_SPECIALIZATIONS: [NameAndConstructor] = [..];
+    fn try_from_argument(
+        &self,
+        arg: &odeir::Argument,
+    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>;
+
+    fn try_from_equation(
+        &self,
+        eq: &odeir::Equation,
+    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>;
+}
+
+pub type NameAndFactory = (
+    &'static str,
+    LazyLock<&'static (dyn NodeFactory + Send + Sync)>,
+);
+
+#[linkme::distributed_slice]
+pub static NODE_SPECIALIZATIONS: [NameAndFactory] = [..];
 
 #[macro_export]
 macro_rules! register_node {
     ( $node:ident ) => {
         use paste::paste;
         paste! {
-            #[distributed_slice(NODE_SPECIALIZATIONS)]
-            static [<$node:upper _SPECIALIZATION>]: NameAndConstructor = (stringify!($node), $node::new_boxed);
+            use $crate::nodes::{NameAndFactory, NodeFactory, PendingOperations};
+
+            struct [<$node Factory>];
+
+            impl NodeFactory for [<$node Factory>] {
+                fn new_with_name(&self, name: String) -> Box<dyn Node> {
+                    $node::new_boxed(name)
+                }
+
+                fn try_from_argument(&self, arg: &odeir::Argument) -> Option<(Box<dyn Node>, Option<PendingOperations>)> {
+                    $node::try_from_argument_boxed(arg)
+                }
+
+                fn try_from_equation(&self, eq: &odeir::Equation) -> Option<(Box<dyn Node>, Option<PendingOperations>)> {
+                    $node::try_from_equation_boxed(eq)
+                }
+            }
+
+            #[linkme::distributed_slice(NODE_SPECIALIZATIONS)]
+            static [<$node:upper _SPECIALIZATION>]: NameAndFactory = (stringify!($node), std::sync::LazyLock::new(|| &[<$node Factory>]));
         }
     };
+}
+
+#[derive(Debug, Default)]
+pub struct ExprWrapper<T> {
+    pub resolution: ResolutionStatus<Option<String>>,
+    pub expr: T,
+}
+
+#[derive(Debug, Default)]
+pub enum ResolutionStatus<T> {
+    Resolved(T),
+    #[default]
+    Unresolved,
+}
+
+impl<T> ResolutionStatus<T> {
+    pub fn reset(&mut self) {
+        *self = ResolutionStatus::Unresolved;
+    }
+}
+
+pub trait Resolvable {
+    fn resolve(&self) -> String;
+}
+
+impl<T: Resolvable> Resolvable for Option<T> {
+    fn resolve(&self) -> String {
+        match self {
+            Some(expr) => expr.resolve(),
+            None => "Nothing yet!".to_string(),
+        }
+    }
+}
+
+impl<T: std::hash::Hash> Resolvable for ExpressionNode<T> {
+    fn resolve(&self) -> String {
+        self.resolve_into_equation_part()
+    }
+}
+
+impl<T: std::hash::Hash> Resolvable for ExpressionTree<T> {
+    fn resolve(&self) -> String {
+        self.resolve_into_equation()
+    }
+}
+
+impl<T: Resolvable> ExprWrapper<T> {
+    pub fn get_expr_repr(&mut self) -> Option<&str> {
+        if let ResolutionStatus::Unresolved = self.resolution {
+            let expr = self.expr.resolve();
+            self.resolution = ResolutionStatus::Resolved((!expr.is_empty()).then_some(expr));
+        }
+
+        if let ResolutionStatus::Resolved(ref expr) = self.resolution {
+            expr.as_deref()
+        } else {
+            unreachable!("If it was not resolved, the previous `if` made sure to resolve it")
+        }
+    }
+
+    pub fn set_expr(&mut self, expr: T) {
+        self.resolution.reset();
+        self.expr = expr;
+    }
+}
+
+impl<T: Resolvable> Deref for ExprWrapper<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.expr
+    }
+}
+
+impl<T: Resolvable> DerefMut for ExprWrapper<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.expr
+    }
+}
+
+pub struct PendingOperations {
+    pub node_id: NodeId,
+    pub operations: Vec<PendingOperation>,
+}
+
+pub enum PendingOperation {
+    LinkWith {
+        node_name: String,
+        via_pin_id: InputPinId,
+    },
 }

@@ -1,4 +1,4 @@
-use std::{fmt::Write};
+use std::{fmt::Write, str::FromStr};
 
 use imnodes::{InputPinId, NodeId};
 use linkme::distributed_slice;
@@ -11,46 +11,19 @@ use crate::{
     register_node,
 };
 
-use super::{LinkEvent, NameAndConstructor, Node, NodeInitializer, NODE_SPECIALIZATIONS};
+use super::{
+    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS,
+};
 
 register_node!(Expression);
-
-#[derive(Debug)]
-pub enum ResolutionStatus<T> {
-    Resolved(T),
-    Unresolved,
-}
-
-impl<T> ResolutionStatus<T> {
-    pub fn reset(&mut self) {
-        *self = ResolutionStatus::Unresolved;
-    }
-}
 
 #[derive(Debug)]
 pub struct Expression {
     id: NodeId,
     name: String,
-    expr: ExpressionTree<InputPinId>,
-    resolved_expr: ResolutionStatus<Option<String>>,
+    expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
     inputs: Vec<InputPin>,
     output: OutputPin,
-}
-
-impl Expression {
-    fn get_expr(&mut self) -> Option<&str> {
-        if let ResolutionStatus::Unresolved = self.resolved_expr {
-            let expr = self.expr.resolve_into_equation();
-
-            self.resolved_expr = ResolutionStatus::Resolved((!expr.is_empty()).then_some(expr));
-        }
-
-        if let ResolutionStatus::Resolved(ref expr) = self.resolved_expr {
-            expr.as_deref()
-        } else {
-            unreachable!("If it was not resolved, the previous `if` made sure to resolve it")
-        }
-    }
 }
 
 impl Node for Expression {
@@ -63,7 +36,7 @@ impl Node for Expression {
     }
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {
-        ExpressionNode::SubExpr(self.expr.clone())
+        ExpressionNode::SubExpr(self.expr_wrapper.clone())
     }
 
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
@@ -77,28 +50,30 @@ impl Node for Expression {
                     .iter()
                     .find(|pin| pin.id() == &from_pin_id)
                     .expect("The pin must exist if we received data through it");
-                self.expr.members.insert(from_pin_id, pin.map_data(payload))
+                self.expr_wrapper
+                    .members
+                    .insert(from_pin_id, pin.map_data(payload))
             }
-            LinkEvent::Pop(from_pin_id) => self.expr.members.remove(&from_pin_id),
+            LinkEvent::Pop(from_pin_id) => self.expr_wrapper.members.remove(&from_pin_id),
         };
 
-        self.resolved_expr.reset();
+        self.expr_wrapper.resolution.reset();
         true
     }
 
     fn state_changed(&mut self) -> bool {
         for input in &self.inputs {
-            if let Some(input_tree) = self.expr.members.get_mut(input.id()) {
+            if let Some(input_tree) = self.expr_wrapper.members.get_mut(input.id()) {
                 input_tree.set_unary(input.sign);
             };
         }
 
-        self.resolved_expr.reset();
+        self.expr_wrapper.resolution.reset();
         true
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        let mut selected = self.expr.join_op as usize;
+        let mut selected = self.expr_wrapper.join_op as usize;
         let mut changed = false;
 
         // Needs to be assigned to a variable other than `_`. Otherwise, the
@@ -112,13 +87,13 @@ impl Node for Expression {
             Operation::ALL_VARIANTS,
             |op| format!("{op}").into(),
         ) {
-            self.expr.join_op = Operation::from_repr(selected as u8)
+            self.expr_wrapper.join_op = Operation::from_repr(selected as u8)
                 .expect("ImGui returned an out-of-range value in combobox");
 
             changed = true
         }
 
-        match self.get_expr() {
+        match self.expr_wrapper.get_expr_repr() {
             Some(expr) => ui.text(expr),
             None => ui.text("Nothing yet!"),
         };
@@ -142,7 +117,7 @@ impl Node for Expression {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_equation_argument(&self, app: &App) -> odeir::Argument {
+    fn to_argument(&self, app: &App) -> Option<odeir::Argument> {
         let mut composition = Vec::with_capacity(self.inputs.len());
 
         for input_pin in &self.inputs {
@@ -165,11 +140,11 @@ impl Node for Expression {
             });
         }
 
-        odeir::Argument::Composite {
+        Some(odeir::Argument::Composite {
             name: self.name().to_owned(),
-            operation: Into::<char>::into(self.expr.join_op).into(),
+            operation: Into::<char>::into(self.expr_wrapper.join_op).into(),
             composition,
-        }
+        })
     }
 }
 
@@ -178,13 +153,63 @@ impl NodeInitializer for Expression {
         Self {
             id: node_id,
             name,
-            expr: Default::default(),
-            resolved_expr: ResolutionStatus::Resolved(None),
+            expr_wrapper: Default::default(),
             inputs: vec![
                 Pin::new_signed(node_id, Sign::Positive),
                 Pin::new_signed(node_id, Sign::Positive),
             ],
             output: Pin::new(node_id),
         }
+    }
+
+    fn try_from_argument(
+        node_id: NodeId,
+        arg: &odeir::Argument,
+    ) -> Option<(Self, Option<PendingOperations>)> {
+        let odeir::Argument::Composite {
+            name,
+            operation,
+            composition,
+        } = arg
+        else {
+            return None;
+        };
+
+        let mut expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>> = Default::default();
+        expr_wrapper
+            .set_join_op(Operation::from_str(operation).expect("Should be a valid operation"));
+
+        let node = Self {
+            id: node_id,
+            name: name.clone(),
+            expr_wrapper,
+            inputs: vec![
+                Pin::new_signed(node_id, Sign::Positive),
+                Pin::new_signed(node_id, Sign::Positive),
+            ],
+            output: Pin::new(node_id),
+        };
+
+        let pending_ops = PendingOperations {
+            node_id,
+            operations: composition
+                .iter()
+                .cloned()
+                .filter_map(|comp| {
+                    if let odeir::Component::Argument { name, .. } = comp {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                })
+                .zip(node.inputs.iter())
+                .map(|(node_name, input_pin)| PendingOperation::LinkWith {
+                    node_name,
+                    via_pin_id: *input_pin.id(),
+                })
+                .collect(),
+        };
+
+        Some((node, Some(pending_ops)))
     }
 }

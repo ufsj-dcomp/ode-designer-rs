@@ -1,7 +1,8 @@
-use imnodes::{InputPinId, NodeId, OutputPinId};
+use imgui::{StyleColor, Ui};
+use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
-    core::GeneratesId,
+    core::{app::rgb, GeneratesId},
     exprtree::{ExpressionNode, Sign},
 };
 
@@ -11,6 +12,8 @@ pub struct InputPin {
     node_id: NodeId,
     pub sign: Sign,
     pub linked_to: Option<OutputPinId>,
+    label: Option<String>,
+    draw_sign: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +22,7 @@ pub struct OutputPin {
     node_id: NodeId,
     pub sign: Sign,
     pub linked_to: Vec<InputPinId>,
+    label: Option<String>,
 }
 
 impl InputPin {
@@ -40,6 +44,10 @@ pub trait Pin: Sized {
         Self::new_signed(node_id, Sign::Positive)
     }
 
+    fn draw(&mut self, _ui: &Ui) -> bool {
+        false
+    }
+
     fn is_linked_to(&self, pin_id: &Self::LinkedToIdType) -> bool;
 
     fn has_links(&self) -> bool;
@@ -54,6 +62,30 @@ pub trait Pin: Sized {
         } else {
             imnodes::PinShape::Circle
         }
+    }
+
+    fn get_label(&self) -> Option<&str>;
+
+    fn set_label(&mut self, label: impl ToString) -> &mut Self;
+}
+
+pub fn sign_pin_button(ui: &Ui, id: i32, sign: Sign) -> bool {
+    let (txt, col) = match sign {
+        Sign::Positive => ("+", rgb(40, 200, 40)),
+        Sign::Negative => ("-", rgb(200, 50, 50)),
+    };
+    let hover_col = col.map(|x| x * 1.25);
+    let pressed_col = col.map(|x| x.powf(2.2));
+    let _c = ui.push_style_color(StyleColor::Button, col);
+    let _fc = ui.push_style_color(StyleColor::ButtonHovered, hover_col);
+    let _hc = ui.push_style_color(StyleColor::ButtonActive, pressed_col);
+    ui.button(format!("  {}  ##{}", txt, id))
+}
+
+impl InputPin {
+    pub fn remove_sign(&mut self) -> &mut Self {
+        self.draw_sign = false;
+        self
     }
 }
 
@@ -71,7 +103,24 @@ impl Pin for InputPin {
             node_id,
             sign: Sign::Positive,
             linked_to: None,
+            draw_sign: true,
+            label: None,
         }
+    }
+
+    fn draw(&mut self, ui: &Ui) -> bool {
+        if !self.draw_sign {
+            return false;
+        }
+
+        let mut changed = false;
+        let id = *self.id();
+
+        if sign_pin_button(ui, id.into(), self.sign) {
+            self.sign.toggle();
+            changed = true;
+        }
+        changed
     }
 
     fn is_linked_to(&self, pin_id: &Self::LinkedToIdType) -> bool {
@@ -98,6 +147,15 @@ impl Pin for InputPin {
             None => false,
         }
     }
+
+    fn get_label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    fn set_label(&mut self, label: impl ToString) -> &mut Self {
+        self.label = Some(label.to_string());
+        self
+    }
 }
 
 impl Pin for OutputPin {
@@ -114,6 +172,7 @@ impl Pin for OutputPin {
             node_id,
             sign: Sign::Positive,
             linked_to: Vec::new(),
+            label: None,
         }
     }
 
@@ -136,5 +195,14 @@ impl Pin for OutputPin {
             }
         };
         o.is_some()
+    }
+
+    fn get_label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    fn set_label(&mut self, label: impl ToString) -> &mut Self {
+        self.label = Some(label.to_string());
+        self
     }
 }
