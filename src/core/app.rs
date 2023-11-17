@@ -5,6 +5,7 @@ use std::io::BufReader;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 use itertools::Itertools;
 use odeir::Equation;
+use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 
 use crate::core::GeneratesId;
@@ -15,6 +16,7 @@ use crate::nodes::{
     LinkEvent, Node, NodeFactory, NodeInitializer, PendingOperation, PendingOperations,
 };
 use crate::pins::Pin;
+use crate::utils::ModelFragment;
 
 use imgui::{StyleColor, StyleVar, Ui};
 
@@ -25,27 +27,30 @@ pub struct Link {
     pub id: LinkId,
     pub input_pin_id: InputPinId,
     pub output_pin_id: OutputPinId,
+    pub contribution: Sign,
 }
 
 impl Link {
-    pub fn new(input_pin_id: InputPinId, output_pin_id: OutputPinId) -> Self {
+    pub fn new(input_pin_id: InputPinId, output_pin_id: OutputPinId, contribution: Sign) -> Self {
         Self {
             id: LinkId::generate(),
             input_pin_id,
             output_pin_id,
+            contribution,
         }
     }
 }
 
 #[derive(Default)]
 pub struct App {
-    pub(crate) nodes: HashMap<NodeId, Box<dyn Node>>,
-    pub(crate) input_pins: HashMap<InputPinId, NodeId>,
-    pub(crate) output_pins: HashMap<OutputPinId, NodeId>,
-    pub(crate) links: Vec<Link>,
-    pub state: Option<AppState>,
-    pub messages: MessageQueue,
-    pub received_messages: HashMap<NodeId, HashSet<usize>>,
+    nodes: HashMap<NodeId, Box<dyn Node>>,
+    input_pins: HashMap<InputPinId, NodeId>,
+    pub output_pins: HashMap<OutputPinId, NodeId>,
+    node_names: Vec<String>,
+    links: Vec<Link>,
+    state: Option<AppState>,
+    messages: MessageQueue,
+    received_messages: HashMap<NodeId, HashSet<usize>>,
 }
 
 pub enum AppState {
@@ -204,6 +209,7 @@ impl App {
         for output in node.outputs().unwrap_or_default() {
             self.output_pins.insert(*output.id(), node_id);
         }
+        self.node_names.push(node.name().to_owned());
         self.nodes.insert(node_id, node);
     }
 
@@ -225,6 +231,7 @@ impl App {
         for output in node.outputs().unwrap_or_default() {
             self.output_pins.remove(output.id());
         }
+        self.node_names.retain(|name| name != node.name());
         Some(node)
     }
 
@@ -255,6 +262,7 @@ impl App {
                     let Link {
                         ref input_pin_id,
                         ref output_pin_id,
+                        contribution,
                         ..
                     } = &link;
                     let node_ids = [
@@ -268,10 +276,10 @@ impl App {
                     }
                     input_node
                         .get_input_mut(input_pin_id)?
-                        .link_to(output_pin_id);
+                        .link_to((*output_pin_id, *contribution));
                     output_node
                         .get_output_mut(output_pin_id)?
-                        .link_to(input_pin_id);
+                        .link_to(*input_pin_id);
                     self.links.push(link);
                     output_node.broadcast_data()
                 }
@@ -300,7 +308,7 @@ impl App {
 
     pub fn add_link(&mut self, start_pin: OutputPinId, end_pin: InputPinId) {
         self.messages
-            .push(Message::AddLink(Link::new(end_pin, start_pin)));
+            .push(Message::AddLink(Link::new(end_pin, start_pin, Sign::default())));
     }
 
     pub fn remove_link(&mut self, link_id: LinkId) {
@@ -323,20 +331,22 @@ impl App {
         self.messages = new_messages;
     }
 
-    pub fn save_state(&self) -> Option<()> {
-        let arguments: Vec<odeir::Argument> = self
+    fn create_json(&self) -> odeir::Json {
+        let mut arguments = Vec::new();
+        let mut equations = Vec::new();
+
+        self
             .nodes
             .values()
-            .filter_map(|node| node.to_argument(self))
-            .collect();
+            .filter_map(|node| node.to_model_fragment(self))
+            .for_each(|frag| {
+                match frag {
+                    ModelFragment::Argument(arg) => arguments.push(arg),
+                    ModelFragment::Equation(eq) => equations.push(eq),
+                }
+            });
 
-        let equations: Vec<Equation> = self
-            .nodes
-            .values()
-            .filter_map(|node| node.to_equation(self))
-            .collect();
-
-        let json = odeir::Json {
+        odeir::Json {
             metadata: odeir::Metadata {
                 name: "TODO".to_string(),
                 model_metadata: odeir::ModelMetadata::ODE(odeir::models::ode::Metadata {
@@ -348,54 +358,49 @@ impl App {
             },
             arguments,
             equations,
-        };
+        }
+    }
 
-        let json_contents = serde_json::to_string_pretty(&json).ok()?;
-
+    pub fn save_state(&self) -> Option<()> {
         let file_path = FileDialog::new()
             .add_filter("json", &["json"])
             .save_file()?;
 
-        std::fs::write(file_path, json_contents).ok()
+        let file = File::create(file_path).ok()?;
+
+        let json = self.create_json();
+
+        serde_json::to_writer_pretty(file, &json).ok()
+
     }
 
-    pub fn load_state(&mut self) -> anyhow::Result<()> {
-        let file_path = FileDialog::new()
-            .add_filter("json", &["json"])
-            .pick_file()
-            .ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
-            })?;
-
-        let file = File::open(file_path)?;
-
-        let reader = BufReader::new(file);
-
-        let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
-            Err(NotCorrectModel::NotODE)?
-        };
+    fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
+        let odeir::CoreModel { equations, arguments } = model.core;
 
         let node_factories = NODE_SPECIALIZATIONS.iter().map(|(_name, factory)| factory);
 
-        let arguments_and_ops = model
-            .arguments
-            .values()
-            .cartesian_product(node_factories.clone())
-            .filter_map(|(arg, factory)| factory.try_from_argument(arg));
+        let frags = arguments
+            .into_values()
+            .map(Into::<ModelFragment>::into)
+            .chain(
+                equations
+                    .into_iter()
+                    .map(Into::<ModelFragment>::into)
+            );
 
-        let equations_and_ops = model
-            .equations
-            .iter()
-            .cartesian_product(node_factories)
-            .filter_map(|(eq, factory)| factory.try_from_equation(eq));
+        let mut pending_ops = Vec::new();
+        
+        for frag in frags {
+            for factory in node_factories.clone() {
+                if let Some((node, ops)) = factory.try_from_model_fragment(&frag) {
+                    self.add_node(node);
 
-        let pending_ops: Vec<PendingOperations> = arguments_and_ops
-            .chain(equations_and_ops)
-            .filter_map(|(node, ops)| {
-                self.add_node(node);
-                ops
-            })
-            .collect();
+                    if let Some(ops) = ops {
+                        pending_ops.push(ops);
+                    }
+                }
+            }
+        }
 
         let mut node_name_map = HashMap::new();
 
@@ -413,6 +418,7 @@ impl App {
                     PendingOperation::LinkWith {
                         node_name,
                         via_pin_id,
+                        sign,
                     } => {
                         let node_error = |reason| {
                             let source_node =
@@ -439,12 +445,324 @@ impl App {
                         };
 
                         self.messages
-                            .push(Message::AddLink(Link::new(via_pin_id, output_pin_id)))
+                            .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    pub fn load_state(&mut self) -> anyhow::Result<()> {
+        let file_path = FileDialog::new()
+            .add_filter("json", &["json"])
+            .pick_file()
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
+            })?;
+
+        let file = File::open(file_path)?;
+
+        let reader = BufReader::new(file);
+
+        let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
+            Err(NotCorrectModel::NotODE)?
+        };
+
+        self.try_read_model(model)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{any::Any, collections::{HashMap, HashSet}, ops::Deref};
+
+    use imnodes::{InputPinId, NodeId, OutputPinId};
+    use odeir::models::ode::OdeModel;
+
+    use super::App;
+    use crate::{nodes::{Term, Expression, Assigner, NodeInitializer, LinkEvent, Node}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::ModelFragment};
+
+    struct ExpressionNodeBuilder<'pin> {
+        name: String,
+        links_to_create: Vec<(&'pin mut OutputPin, ExpressionNode<InputPinId>, Sign)>,
+    }
+
+    impl<'pin> ExpressionNodeBuilder<'pin> {
+        fn new(name: impl ToString) -> Self {
+            Self {
+                name: name.to_string(),
+                links_to_create: Vec::new(),
+            }
+        }
+
+        fn linked_to(mut self, node: &'pin mut dyn Node, contribution: Sign) -> Self {
+            let send_data = node.send_data();
+            let output_pin = node.outputs_mut().unwrap().first_mut().unwrap();
+            self.links_to_create.push((output_pin, send_data, contribution));
+            self
+        }
+
+        fn build(self, op: Operation) -> Box<dyn Node> {
+            let node_id = NodeId::generate();
+            let mut expr = Expression::new(node_id, self.name);
+
+            expr.expr_wrapper.set_join_op(op);
+
+            let link_events: Vec<_> = expr
+                .inputs_mut()
+                .unwrap()
+                .iter_mut()
+                .zip(self.links_to_create)
+                .map(|(input_pin, (output_pin, payload, sign))| {
+                    let link_event = LinkEvent::Push {
+                        from_pin_id: input_pin.id,
+                        payload,
+                    };
+
+                    input_pin.sign = sign;
+
+                    (input_pin.id, output_pin, sign, link_event)
+                })
+                .collect();
+
+            for (input_pin_id, output_pin, sign, link_event) in link_events {
+                expr.get_input_mut(&input_pin_id)
+                    .unwrap()
+                    .link_to((output_pin.id, sign));
+
+                output_pin.link_to(input_pin_id);
+
+                expr.on_link_event(link_event);
+            }
+
+            Box::new(expr)
+        }
+    }
+
+    struct AssignerNodeBuilder {
+        name: String,
+    }
+
+    impl AssignerNodeBuilder {
+        fn new(name: impl ToString) -> Self {
+            Self { name: name.to_string() }
+        }
+
+        fn build(self, argument: &mut dyn Node) -> Box<dyn Node> {
+            let node_id = NodeId::generate();
+            let mut assigner = Assigner::new(node_id, self.name);
+
+            let output_pin = argument
+                .outputs_mut()
+                .unwrap()
+                .first_mut()
+                .unwrap();
+
+            output_pin.link_to(assigner.input.id);
+
+            assigner
+                .input
+                .link_to(output_pin.id);
+
+            assigner.on_link_event(
+                LinkEvent::Push {
+                    from_pin_id: assigner.input.id,
+                    payload: argument.send_data(),
+                }
+            );
+
+            Box::new(assigner)
+        }
+    }
+
+    struct AppBuilder;
+
+    impl AppBuilder {
+        fn with_nodes<const N: usize>(nodes: [Box<dyn Node>; N]) -> App {
+            let mut app = App::default();
+            nodes.into_iter().for_each(|node| app.add_node(node));
+
+            app
+        }
+    }
+
+    const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
+
+    fn app_with_nodes_abk() -> App {
+        let mut a = Term::new_boxed("A".to_owned());
+        let mut b = Term::new_boxed("B".to_owned());
+        let mut k = Term::new_boxed("K".to_owned());
+
+        let mut a_times_k = ExpressionNodeBuilder::new("a*k")
+            .linked_to(a.as_mut(), Sign::Positive)
+            .linked_to(k.as_mut(), Sign::Positive)
+            .build(Operation::Mul);
+
+        let mut a_times_k_plus_b = ExpressionNodeBuilder::new("a*k+b")
+            .linked_to(a_times_k.as_mut(), Sign::Positive)
+            .linked_to(b.as_mut(), Sign::Negative)
+            .build(Operation::Add);
+
+        let da_dt = AssignerNodeBuilder::new("dA/dt")
+            .build(a_times_k.as_mut());
+
+        let db_dt = AssignerNodeBuilder::new("dB/dt")
+            .build(a_times_k_plus_b.as_mut());
+
+        AppBuilder::with_nodes([
+            a,
+            b,
+            k,
+            a_times_k,
+            a_times_k_plus_b,
+            da_dt,
+            db_dt,
+        ])
+    }
+
+    fn init_id_gen() {
+        let nodesctx = imnodes::Context::new();
+        let nodeseditor = nodesctx.create_editor();
+        unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
+    }
+
+    fn assert_find_node<'app>(app: &'app App, name: &str) -> &'app dyn Node {
+        app.nodes
+            .values()
+            .find(|node| node.name() == name)
+            .unwrap_or_else(|| panic!("Couldn't find node '{name}'"))
+            .deref()
+    }
+
+    fn assert_term(app: &App, node_name: &str, expected_value: f64) {
+        use ModelFragment::*;
+        use odeir::Argument::*;
+
+        let node = assert_find_node(app, node_name);
+
+        if let Some(Argument(Value { name, value })) = node.to_model_fragment(app) {
+            assert_eq!(name, node_name);
+            assert_eq!(value, expected_value);
+        } else {
+            panic!("'{node_name}' isn't a Term");
+        };
+    }
+
+    fn assert_expression<const N: usize>(app: &App, node_name: &str, expected_operation: &str, linked_to: [(&str, char); N]) {
+        use ModelFragment::*;
+        use odeir::Argument::*;
+
+        let node = assert_find_node(app, node_name);
+
+        let expected_linked_to: HashSet<(&str, char)> = linked_to
+            .into_iter()
+            .collect();
+
+        if let Some(Argument(Composite { name, operation, composition })) = node.to_model_fragment(app) {
+            assert_eq!(name, node_name);
+            assert_eq!(operation, expected_operation);
+            
+            let actual_linked_to: HashSet<(&str, char)> = composition
+                .iter()
+                .map(|comp| -> (&str, char) {
+                    (comp.name.as_ref(), comp.contribution)
+                })
+                .collect();
+
+            assert_eq!(actual_linked_to, expected_linked_to);
+        } else {
+            panic!("'{node_name}' isn't an Expression");
+        };
+    }
+
+    fn assert_assigner(app: &App, node_name: &str, expected_operates_on: &str, expected_argument: &str, expected_contribution: char) {
+        use ModelFragment::*;
+        use odeir::Equation;
+
+        let node = assert_find_node(app, node_name);
+
+        if let Some(Equation(Equation { name, operates_on, argument, contribution })) = node.to_model_fragment(app) {
+            assert_eq!(name, node_name);
+            assert_eq!(operates_on, expected_operates_on);
+            assert_eq!(argument, expected_argument);
+            assert_eq!(contribution, expected_contribution);
+        } else {
+            panic!("'{node_name}' isn't an Assigner");
+        };
+    }
+
+    #[test]
+    fn test_app_create_model() {
+
+        // Given - An app with pre-populated nodes, presumably from the GUI
+
+        init_id_gen();
+
+        let app = app_with_nodes_abk();
+
+        // When - The user requests a JSON to be created, for saving purposes
+
+        let json = app.create_json();
+
+        // Then - The JSON is expected to contain every node, correctly labeled
+        // as a arguments or equations and containing their respective links
+
+        let expected: odeir::Json = serde_json::from_str(ABK_JSON).unwrap();
+
+        let matching_config = assert_json_diff::Config::new(assert_json_diff::CompareMode::Strict)
+            .consider_array_sorting(false);
+
+        assert_json_diff::assert_json_matches!(json, expected, &matching_config);
+    }
+
+    #[test]
+    fn test_app_read_model() {
+
+        // Given - An empty app
+
+        init_id_gen();
+
+        let mut app = App::new();
+
+        // When - The user requests to load a JSON file
+
+        let Ok(odeir::Model::ODE(ode_model)) = serde_json::from_str(ABK_JSON) else {
+            panic!("Unable to extract ODE Model from ABK JSON");
+        };
+
+        let result = app.try_read_model(ode_model);
+        app.update(); // Runs possible pending operations!
+
+        // Then - The user expects all nodes to be created, with their
+        // respective links
+
+        assert!(result.is_ok());
+
+        assert_term(&app, "A", 0.0);
+        assert_term(&app, "B", 0.0);
+        assert_term(&app, "K", 0.0);
+
+        assert_expression(
+            &app, "a*k", "*",
+            [
+                ("A", '+'),
+                ("K", '+'),
+            ]
+        );
+
+        assert_expression(
+            &app, "a*k+b", "+",
+            [
+                ("a*k", '+'),
+                ("B", '-'),
+            ]
+        );
+
+        assert_assigner(&app, "dA/dt", "TODO!", "a*k", '+');
+
+        assert_assigner(&app, "dB/dt", "TODO!", "a*k+b", '+');
+
     }
 }

@@ -1,5 +1,5 @@
 use imgui::{StyleColor, Ui};
-use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
+use imnodes::{NodeScope, InputPinId, NodeId, OutputPinId};
 
 use crate::{
     core::{app::rgb, GeneratesId},
@@ -52,7 +52,7 @@ pub trait Pin: Sized {
 
     fn has_links(&self) -> bool;
 
-    fn link_to(&mut self, pin_id: &Self::LinkedToIdType);
+    fn link_to(&mut self, linkeable: impl Linkable<Self::LinkedToIdType>);
 
     fn unlink(&mut self, pin_id: &Self::LinkedToIdType) -> bool;
 
@@ -67,6 +67,30 @@ pub trait Pin: Sized {
     fn get_label(&self) -> Option<&str>;
 
     fn set_label(&mut self, label: impl ToString) -> &mut Self;
+}
+
+pub trait Linkable<IdType> {
+    fn pin_id(&self) -> IdType;
+
+    fn sign(&self) -> Sign {
+        Sign::default()
+    }
+}
+
+impl<IdType: Copy> Linkable<IdType> for IdType {
+    fn pin_id(&self) -> IdType {
+        *self        
+    }
+}
+
+impl<IdType: Copy> Linkable<IdType> for (IdType, Sign) {
+    fn pin_id(&self) -> IdType {
+        self.0
+    }
+
+    fn sign(&self) -> Sign {
+        self.1
+    }
 }
 
 pub fn sign_pin_button(ui: &Ui, id: i32, sign: Sign) -> bool {
@@ -130,8 +154,9 @@ impl Pin for InputPin {
         self.linked_to.is_some()
     }
 
-    fn link_to(&mut self, pin_id: &Self::LinkedToIdType) {
-        self.linked_to = Some(*pin_id);
+    fn link_to(&mut self, linkeable: impl Linkable<Self::LinkedToIdType>) {
+        self.linked_to = Some(linkeable.pin_id());
+        self.sign = linkeable.sign();
     }
 
     fn unlink(&mut self, pin_id: &Self::LinkedToIdType) -> bool {
@@ -183,8 +208,8 @@ impl Pin for OutputPin {
         !self.linked_to.is_empty()
     }
 
-    fn link_to(&mut self, pin_id: &Self::LinkedToIdType) {
-        self.linked_to.push(*pin_id);
+    fn link_to(&mut self, linkeable: impl Linkable<Self::LinkedToIdType>) {
+        self.linked_to.push(linkeable.pin_id());
     }
 
     fn unlink(&mut self, pin_id: &Self::LinkedToIdType) -> bool {

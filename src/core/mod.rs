@@ -12,7 +12,6 @@ use winit::dpi::Pixel;
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
 
-// mod clipboard;
 pub mod app;
 mod id_gen;
 pub mod style;

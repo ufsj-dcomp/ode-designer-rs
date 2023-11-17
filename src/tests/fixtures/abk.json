@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.0,
+    "end_time": 0.0,
+    "positions": {}
+  },
+  "arguments": [
+    {
+      "name": "K",
+      "value": 0.0
+    },
+    {
+      "name": "a*k",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "A",
+          "contribution": "+"
+        },
+        {
+          "name": "K",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "A",
+      "value": 0.0
+    },
+    {
+      "name": "B",
+      "value": 0.0
+    },
+    {
+      "name": "a*k+b",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "a*k",
+          "contribution": "+"
+        },
+        {
+          "name": "B",
+          "contribution": "-"
+        }
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "name": "dB/dt",
+      "operates_on": "TODO!",
+      "argument": "a*k+b",
+      "contribution": "+"
+    },
+    {
+      "name": "dA/dt",
+      "operates_on": "TODO!",
+      "argument": "a*k",
+      "contribution": "+"
+    }
+  ]
+}

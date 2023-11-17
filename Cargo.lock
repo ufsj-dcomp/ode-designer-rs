@@ -36,6 +36,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
+name = "assert-json-diff"
+version = "2.0.2"
+source = "git+https://github.com/briankung/assert-json-diff/?branch=feature/assert-json-contains#da9af96806e16860c15ff002cf813b021d3bdb8a"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "atk-sys"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1143,6 +1152,7 @@ name = "ode-designer-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert-json-diff",
  "color-eyre",
  "derive_more",
  "glium",

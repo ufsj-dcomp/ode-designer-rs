@@ -31,7 +31,7 @@ pub struct Leaf {
     pub unary_op: Sign,
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, EnumString)]
+#[derive(Default, Hash, Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 pub enum Sign {
     #[default]
     #[strum(serialize = "+")]
@@ -61,6 +61,21 @@ impl From<Sign> for char {
         match value {
             Sign::Positive => '+',
             Sign::Negative => '-',
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct NotASign;
+
+impl TryFrom<char> for Sign {
+    type Error = NotASign;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '+' => Ok(Self::Positive),
+            '-' => Ok(Self::Negative),
+            _ => Err(NotASign),
         }
     }
 }
