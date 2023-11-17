@@ -6,10 +6,10 @@ use crate::{
     core::App,
     exprtree::{ExpressionNode, Leaf, Sign},
     pins::{OutputPin, Pin},
-    register_node,
+    register_node, utils::ModelFragment,
 };
 
-use super::{Node, NodeInitializer, NODE_SPECIALIZATIONS};
+use super::{Node, NodeInitializer, NODE_SPECIALIZATIONS, PendingOperations};
 
 register_node!(Term);
 
@@ -48,11 +48,11 @@ impl Node for Term {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_argument(&self, _app: &App) -> Option<odeir::Argument> {
+    fn to_model_fragment(&self, _app: &App) -> Option<ModelFragment> {
         Some(odeir::Argument::Value {
             name: self.name().to_owned(),
             value: self.initial_value,
-        })
+        }.into())
     }
 }
 
@@ -69,11 +69,11 @@ impl NodeInitializer for Term {
         }
     }
 
-    fn try_from_argument(
+    fn try_from_model_fragment(
         node_id: NodeId,
-        arg: &odeir::Argument,
+        frag: &ModelFragment,
     ) -> Option<(Self, Option<PendingOperations>)> {
-        let odeir::Argument::Value { name, value } = arg else {
+        let ModelFragment::Argument(odeir::Argument::Value { name, value }) = frag else {
             return None;
         };
 

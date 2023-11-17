@@ -5,11 +5,11 @@ use imnodes::{InputPinId, NodeId};
 use crate::{
     exprtree::{ExpressionNode, Sign},
     pins::{InputPin, Pin},
-    register_node,
+    register_node, utils::ModelFragment,
 };
 
 use super::{
-    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS,
+    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS, PendingOperations,
 };
 
 register_node!(Assigner);
@@ -18,7 +18,7 @@ register_node!(Assigner);
 pub struct Assigner {
     id: NodeId,
     name: String,
-    input: InputPin,
+    pub input: InputPin,
     expr_node: ExprWrapper<Option<ExpressionNode<InputPinId>>>,
 }
 
@@ -72,7 +72,7 @@ impl Node for Assigner {
         Some(std::array::from_mut(&mut self.input))
     }
 
-    fn to_equation(&self, app: &crate::core::App) -> Option<odeir::Equation> {
+    fn to_model_fragment(&self, app: &crate::core::App) -> Option<ModelFragment> {
         let Some(linked_pin_id) = self.input.linked_to else {
             return None;
         };
@@ -94,7 +94,7 @@ impl Node for Assigner {
             operates_on: "TODO!".to_string(),
             argument,
             contribution,
-        })
+        }.into())
     }
 }
 
@@ -108,10 +108,14 @@ impl NodeInitializer for Assigner {
         }
     }
 
-    fn try_from_equation(
+    fn try_from_model_fragment(
         node_id: NodeId,
-        eq: &odeir::Equation,
+        frag: &ModelFragment,
     ) -> Option<(Self, Option<PendingOperations>)> {
+        let ModelFragment::Equation(eq) = frag else {
+            return None;
+        };
+
         let mut tmp = [0; 4];
         let contribution = eq.contribution.encode_utf8(&mut tmp);
 
@@ -130,6 +134,7 @@ impl NodeInitializer for Assigner {
             operations: vec![PendingOperation::LinkWith {
                 node_name: eq.argument.clone(),
                 via_pin_id: *node.input.id(),
+                sign: node.input.sign,
             }],
         };
 

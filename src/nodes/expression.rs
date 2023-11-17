@@ -8,11 +8,11 @@ use crate::{
     core::App,
     exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
     pins::{InputPin, OutputPin, Pin},
-    register_node,
+    register_node, utils::ModelFragment,
 };
 
 use super::{
-    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS,
+    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS, PendingOperations,
 };
 
 register_node!(Expression);
@@ -21,7 +21,7 @@ register_node!(Expression);
 pub struct Expression {
     id: NodeId,
     name: String,
-    expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
+    pub expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
     inputs: Vec<InputPin>,
     output: OutputPin,
 }
@@ -50,6 +50,7 @@ impl Node for Expression {
                     .iter()
                     .find(|pin| pin.id() == &from_pin_id)
                     .expect("The pin must exist if we received data through it");
+
                 self.expr_wrapper
                     .members
                     .insert(from_pin_id, pin.map_data(payload))
@@ -117,7 +118,7 @@ impl Node for Expression {
         Some(std::array::from_mut(&mut self.output))
     }
 
-    fn to_argument(&self, app: &App) -> Option<odeir::Argument> {
+    fn to_model_fragment(&self, app: &App) -> Option<ModelFragment> {
         let mut composition = Vec::with_capacity(self.inputs.len());
 
         for input_pin in &self.inputs {
@@ -134,7 +135,7 @@ impl Node for Expression {
                 .get_node(*node_id)
                 .expect("The node must exist, otherwise this should have been unlinked");
 
-            composition.push(odeir::models::Component::Argument {
+            composition.push(odeir::models::Component {
                 name: node.name().to_owned(),
                 contribution: input_pin.sign.into(),
             });
@@ -144,7 +145,7 @@ impl Node for Expression {
             name: self.name().to_owned(),
             operation: Into::<char>::into(self.expr_wrapper.join_op).into(),
             composition,
-        })
+        }.into())
     }
 }
 
@@ -162,15 +163,15 @@ impl NodeInitializer for Expression {
         }
     }
 
-    fn try_from_argument(
+    fn try_from_model_fragment(
         node_id: NodeId,
-        arg: &odeir::Argument,
+        frag: &ModelFragment,
     ) -> Option<(Self, Option<PendingOperations>)> {
-        let odeir::Argument::Composite {
+        let ModelFragment::Argument(odeir::Argument::Composite {
             name,
             operation,
             composition,
-        } = arg
+        }) = frag
         else {
             return None;
         };
@@ -195,19 +196,13 @@ impl NodeInitializer for Expression {
             operations: composition
                 .iter()
                 .cloned()
-                .filter_map(|comp| {
-                    if let odeir::Component::Argument { name, .. } = comp {
-                        Some(name)
-                    } else {
-                        None
-                    }
-                })
                 .zip(node.inputs.iter())
-                .map(|(node_name, input_pin)| PendingOperation::LinkWith {
-                    node_name,
+                .map(|(comp, input_pin)| Some(PendingOperation::LinkWith {
+                    node_name: comp.name,
                     via_pin_id: *input_pin.id(),
-                })
-                .collect(),
+                    sign: comp.contribution.try_into().ok()?,
+                }))
+                .collect::<Option<Vec<PendingOperation>>>()?,
         };
 
         Some((node, Some(pending_ops)))

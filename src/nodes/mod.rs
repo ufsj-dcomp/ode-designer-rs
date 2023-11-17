@@ -9,6 +9,7 @@ use std::{
 
 pub use expression::Expression;
 pub use term::Term;
+pub use assigner::Assigner;
 
 use imgui::Ui;
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
@@ -16,9 +17,9 @@ use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 use crate::{
     core::App,
     core::GeneratesId,
-    exprtree::{ExpressionNode, ExpressionTree},
+    exprtree::{ExpressionNode, ExpressionTree, Sign},
     message::{Message, SendData},
-    pins::{InputPin, OutputPin, Pin},
+    pins::{InputPin, OutputPin, Pin}, utils::ModelFragment,
 };
 
 use derive_more::From;
@@ -148,13 +149,7 @@ pub trait Node: std::fmt::Debug {
         self.get_input(input_pin_id).is_some()
     }
 
-    fn to_argument(&self, app: &App) -> Option<odeir::Argument> {
-        None
-    }
-
-    fn to_equation(&self, app: &App) -> Option<odeir::Equation> {
-        None
-    }
+    fn to_model_fragment(&self, app: &App) -> Option<ModelFragment>;
 }
 
 pub trait NodeInitializer {
@@ -168,64 +163,35 @@ pub trait NodeInitializer {
         Box::new(Self::new(node_id, name))
     }
 
-    fn try_from_argument(
+    fn try_from_model_fragment(
         node_id: NodeId,
-        arg: &odeir::Argument,
+        frag: &ModelFragment,
     ) -> Option<(Self, Option<PendingOperations>)>
     where
-        Self: Node + Sized,
-    {
-        None
-    }
+        Self: Node + Sized;
 
-    fn try_from_argument_boxed(
-        arg: &odeir::Argument,
+    fn try_from_model_fragment_boxed(
+        frag: &ModelFragment,
     ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>
     where
         Self: Node + Sized + 'static,
     {
         let node_id = NodeId::generate();
-        match Self::try_from_argument(node_id, arg) {
-            Some((node, pending_ops)) => Some((Box::new(node), pending_ops)),
-            None => None,
-        }
-    }
+        
 
-    fn try_from_equation(
-        node_id: NodeId,
-        eq: &odeir::Equation,
-    ) -> Option<(Self, Option<PendingOperations>)>
-    where
-        Self: Node + Sized,
-    {
-        None
-    }
-
-    fn try_from_equation_boxed(
-        eq: &odeir::Equation,
-    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>
-    where
-        Self: Node + Sized + 'static,
-    {
-        let node_id = NodeId::generate();
-        match Self::try_from_equation(node_id, eq) {
-            Some((node, pending_ops)) => Some((Box::new(node), pending_ops)),
-            None => None,
-        }
+        Self::try_from_model_fragment(node_id, frag)
+            .map(|(node, possible_pending_ops)| -> (Box<dyn Node>, _) {
+                (Box::new(node), possible_pending_ops)
+            })
     }
 }
 
 pub trait NodeFactory {
     fn new_with_name(&self, name: String) -> Box<dyn Node>;
 
-    fn try_from_argument(
+    fn try_from_model_fragment(
         &self,
-        arg: &odeir::Argument,
-    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>;
-
-    fn try_from_equation(
-        &self,
-        eq: &odeir::Equation,
+        frag: &ModelFragment,
     ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>;
 }
 
@@ -242,26 +208,20 @@ macro_rules! register_node {
     ( $node:ident ) => {
         use paste::paste;
         paste! {
-            use $crate::nodes::{NameAndFactory, NodeFactory, PendingOperations};
-
             struct [<$node Factory>];
 
-            impl NodeFactory for [<$node Factory>] {
-                fn new_with_name(&self, name: String) -> Box<dyn Node> {
+            impl $crate::nodes::NodeFactory for [<$node Factory>] {
+                fn new_with_name(&self, name: String) -> Box<dyn $crate::nodes::Node> {
                     $node::new_boxed(name)
                 }
 
-                fn try_from_argument(&self, arg: &odeir::Argument) -> Option<(Box<dyn Node>, Option<PendingOperations>)> {
-                    $node::try_from_argument_boxed(arg)
-                }
-
-                fn try_from_equation(&self, eq: &odeir::Equation) -> Option<(Box<dyn Node>, Option<PendingOperations>)> {
-                    $node::try_from_equation_boxed(eq)
+                fn try_from_model_fragment(&self, frag: &$crate::utils::ModelFragment) -> Option<(Box<dyn $crate::nodes::Node>, Option<$crate::nodes::PendingOperations>)> {
+                    $node::try_from_model_fragment_boxed(frag)
                 }
             }
 
             #[linkme::distributed_slice(NODE_SPECIALIZATIONS)]
-            static [<$node:upper _SPECIALIZATION>]: NameAndFactory = (stringify!($node), std::sync::LazyLock::new(|| &[<$node Factory>]));
+            static [<$node:upper _SPECIALIZATION>]: $crate::nodes::NameAndFactory = (stringify!($node), std::sync::LazyLock::new(|| &[<$node Factory>]));
         }
     };
 }
@@ -353,5 +313,6 @@ pub enum PendingOperation {
     LinkWith {
         node_name: String,
         via_pin_id: InputPinId,
+        sign: Sign,
     },
 }

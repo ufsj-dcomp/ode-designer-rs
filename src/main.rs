@@ -16,6 +16,7 @@ pub mod errors;
 pub mod exprtree;
 pub mod nodes;
 pub mod pins;
+pub mod utils;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
