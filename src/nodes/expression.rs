@@ -1,21 +1,18 @@
 use std::{fmt::Write, str::FromStr};
 
 use imnodes::{InputPinId, NodeId};
-use linkme::distributed_slice;
 use strum::StaticVariantsArray;
 
 use crate::{
     core::App,
     exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
     pins::{InputPin, OutputPin, Pin},
-    register_node, utils::ModelFragment,
+    utils::ModelFragment,
 };
 
 use super::{
-    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS, PendingOperations,
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations,
 };
-
-register_node!(Expression);
 
 #[derive(Debug)]
 pub struct Expression {
@@ -26,7 +23,7 @@ pub struct Expression {
     output: OutputPin,
 }
 
-impl Node for Expression {
+impl NodeImpl for Expression {
     fn id(&self) -> NodeId {
         self.id
     }
@@ -147,9 +144,7 @@ impl Node for Expression {
             composition,
         }.into())
     }
-}
 
-impl NodeInitializer for Expression {
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
             id: node_id,

@@ -3,24 +3,22 @@ use std::fs::File;
 use std::io::BufReader;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
-use itertools::Itertools;
 use odeir::Equation;
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
+use strum::VariantNames;
 
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeFactory, NodeInitializer, PendingOperation, PendingOperations,
+    LinkEvent, Node, PendingOperation, PendingOperations, NodeVariant,
 };
 use crate::pins::Pin;
 use crate::utils::ModelFragment;
 
 use imgui::{StyleColor, StyleVar, Ui};
-
-use crate::nodes::NODE_SPECIALIZATIONS;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -43,10 +41,9 @@ impl Link {
 
 #[derive(Default)]
 pub struct App {
-    nodes: HashMap<NodeId, Box<dyn Node>>,
+    nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
-    node_names: Vec<String>,
     links: Vec<Link>,
     state: Option<AppState>,
     messages: MessageQueue,
@@ -55,6 +52,9 @@ pub struct App {
 
 pub enum AppState {
     AddingNode { name: String, index: usize },
+    AttributingAssignerOperatesOn {
+        attribute_to: NodeId,
+    },
 }
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
@@ -89,20 +89,17 @@ impl AppState {
                     ui.combo(
                         "##Node Type",
                         index,
-                        NODE_SPECIALIZATIONS.static_slice(),
-                        |names_and_specs| names_and_specs.0.into(),
+                        Node::VARIANTS,
+                        |variant_name| (*variant_name).into(),
                     );
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
-                        let node_factory = &NODE_SPECIALIZATIONS
-                            .get(*index)
-                            .expect("User tried to construct an out-of-index node specialization")
-                            .1;
+                        let node_variant = NodeVariant::from_repr(*index)
+                            .expect("User tried to construct an out-of-index node specialization");
 
-                        let node = node_factory.new_with_name(name.clone());
+                        app.add_node(Node::build_from_ui(name.clone(), node_variant));
 
-                        app.add_node(node);
                         StateAction::Clear
                     } else {
                         StateAction::Keep
@@ -111,6 +108,42 @@ impl AppState {
                     StateAction::Clear
                 }
             }
+            AppState::AttributingAssignerOperatesOn {
+                attribute_to,
+            } => {
+                ui.open_popup("Hey Modal");
+
+                if let Some(_popup) = ui.modal_popup_config("Hey Modal")
+                    .movable(false)
+                    .resizable(false)
+                    .scrollable(false)
+                    .collapsible(false)
+                    .title_bar(true)
+                    .begin_popup()
+                {
+                    ui.text("Hey, from modal!");
+
+                    for (node_id, node) in app.nodes.iter() {
+                        if ui.selectable_config(node.name())
+                            .disabled(node_id == attribute_to)
+                            .build()
+                        {
+                            app.messages.push(
+                                Message::AttributeAssignerOperatesOn {
+                                    assigner_id: *attribute_to,
+                                    value: *node_id,
+                                }
+                            );
+
+                            return StateAction::Clear;
+                        }
+                    }
+    
+                    StateAction::Keep
+                } else {
+                    unreachable!("If the state is AttributingAssignerOperatesOn, then the modal is open");
+                }
+            },
         }
     }
 }
@@ -123,10 +156,15 @@ impl App {
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
             editor.add_node(*id, |mut ui_node| {
-                if let Some(msgs) = node.process_node(ui, &mut ui_node) {
+                let (msgs, app_state_change) = node.process_node(ui, &mut ui_node);
+                if let Some(msgs) = msgs {
                     for msg in msgs {
                         self.messages.push(msg)
                     }
+                }
+
+                if app_state_change.is_some() {
+                    self.state = app_state_change;
                 }
             });
         }
@@ -201,7 +239,7 @@ impl App {
         Self::default()
     }
 
-    pub fn add_node(&mut self, node: Box<dyn Node>) {
+    pub fn add_node(&mut self, node: Node) {
         let node_id = node.id();
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
@@ -209,12 +247,11 @@ impl App {
         for output in node.outputs().unwrap_or_default() {
             self.output_pins.insert(*output.id(), node_id);
         }
-        self.node_names.push(node.name().to_owned());
         self.nodes.insert(node_id, node);
     }
 
-    pub fn get_node(&self, id: NodeId) -> Option<&dyn Node> {
-        self.nodes.get(&id).map(Box::as_ref)
+    pub fn get_node(&self, id: NodeId) -> Option<&Node> {
+        self.nodes.get(&id)
     }
 
     pub fn get_link(&self, input_id: &InputPinId) -> Option<&Link> {
@@ -223,7 +260,7 @@ impl App {
             .find(|link| link.input_pin_id == *input_id)
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) -> Option<Box<dyn Node>> {
+    pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
         let node = self.nodes.remove(id)?;
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.remove(input.id());
@@ -231,7 +268,6 @@ impl App {
         for output in node.outputs().unwrap_or_default() {
             self.output_pins.remove(output.id());
         }
-        self.node_names.retain(|name| name != node.name());
         Some(node)
     }
 
@@ -303,6 +339,7 @@ impl App {
                     .unlink(input_pin_id);
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
+            Message::AttributeAssignerOperatesOn { assigner_id, value } => unimplemented!(),
         }
     }
 
@@ -377,30 +414,24 @@ impl App {
     fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
         let odeir::CoreModel { equations, arguments } = model.core;
 
-        let node_factories = NODE_SPECIALIZATIONS.iter().map(|(_name, factory)| factory);
-
-        let frags = arguments
+        let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
             .map(Into::<ModelFragment>::into)
             .chain(
                 equations
                     .into_iter()
                     .map(Into::<ModelFragment>::into)
-            );
+            )
+            .map(Node::build_from_fragment)
+            .collect::<Result<_, _>>()?;
 
-        let mut pending_ops = Vec::new();
-        
-        for frag in frags {
-            for factory in node_factories.clone() {
-                if let Some((node, ops)) = factory.try_from_model_fragment(&frag) {
-                    self.add_node(node);
-
-                    if let Some(ops) = ops {
-                        pending_ops.push(ops);
-                    }
-                }
-            }
-        }
+        let pending_ops: Vec<PendingOperations> = nodes_and_ops
+            .into_iter()
+            .filter_map(|(node, ops)| {
+                self.add_node(node);
+                ops
+            })
+            .collect();
 
         let mut node_name_map = HashMap::new();
 
@@ -447,6 +478,7 @@ impl App {
                         self.messages
                             .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
                     }
+                    PendingOperation::SetAssignerOperatesOn { via_node_id, node_name } => unimplemented!(),
                 }
             }
         }
@@ -482,7 +514,7 @@ mod tests {
     use odeir::models::ode::OdeModel;
 
     use super::App;
-    use crate::{nodes::{Term, Expression, Assigner, NodeInitializer, LinkEvent, Node}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::ModelFragment};
+    use crate::{nodes::{NodeImpl, Term, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::ModelFragment};
 
     struct ExpressionNodeBuilder<'pin> {
         name: String,
@@ -497,14 +529,14 @@ mod tests {
             }
         }
 
-        fn linked_to(mut self, node: &'pin mut dyn Node, contribution: Sign) -> Self {
+        fn linked_to(mut self, node: &'pin mut Node, contribution: Sign) -> Self {
             let send_data = node.send_data();
             let output_pin = node.outputs_mut().unwrap().first_mut().unwrap();
             self.links_to_create.push((output_pin, send_data, contribution));
             self
         }
 
-        fn build(self, op: Operation) -> Box<dyn Node> {
+        fn build(self, op: Operation) -> Node {
             let node_id = NodeId::generate();
             let mut expr = Expression::new(node_id, self.name);
 
@@ -537,7 +569,7 @@ mod tests {
                 expr.on_link_event(link_event);
             }
 
-            Box::new(expr)
+            expr.into()
         }
     }
 
@@ -550,7 +582,7 @@ mod tests {
             Self { name: name.to_string() }
         }
 
-        fn build(self, argument: &mut dyn Node) -> Box<dyn Node> {
+        fn build(self, argument: &mut Node) -> Node {
             let node_id = NodeId::generate();
             let mut assigner = Assigner::new(node_id, self.name);
 
@@ -573,14 +605,14 @@ mod tests {
                 }
             );
 
-            Box::new(assigner)
+            assigner.into()
         }
     }
 
     struct AppBuilder;
 
     impl AppBuilder {
-        fn with_nodes<const N: usize>(nodes: [Box<dyn Node>; N]) -> App {
+        fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
             let mut app = App::default();
             nodes.into_iter().for_each(|node| app.add_node(node));
 
@@ -591,25 +623,25 @@ mod tests {
     const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
 
     fn app_with_nodes_abk() -> App {
-        let mut a = Term::new_boxed("A".to_owned());
-        let mut b = Term::new_boxed("B".to_owned());
-        let mut k = Term::new_boxed("K".to_owned());
+        let mut a = Node::build_from_ui("A".to_owned(), NodeVariant::Term);
+        let mut b = Node::build_from_ui("B".to_owned(), NodeVariant::Term);
+        let mut k = Node::build_from_ui("K".to_owned(), NodeVariant::Term);
 
         let mut a_times_k = ExpressionNodeBuilder::new("a*k")
-            .linked_to(a.as_mut(), Sign::Positive)
-            .linked_to(k.as_mut(), Sign::Positive)
+            .linked_to(&mut a, Sign::Positive)
+            .linked_to(&mut k, Sign::Positive)
             .build(Operation::Mul);
 
         let mut a_times_k_plus_b = ExpressionNodeBuilder::new("a*k+b")
-            .linked_to(a_times_k.as_mut(), Sign::Positive)
-            .linked_to(b.as_mut(), Sign::Negative)
+            .linked_to(&mut a_times_k, Sign::Positive)
+            .linked_to(&mut b, Sign::Negative)
             .build(Operation::Add);
 
         let da_dt = AssignerNodeBuilder::new("dA/dt")
-            .build(a_times_k.as_mut());
+            .build(&mut a_times_k);
 
         let db_dt = AssignerNodeBuilder::new("dB/dt")
-            .build(a_times_k_plus_b.as_mut());
+            .build(&mut a_times_k_plus_b);
 
         AppBuilder::with_nodes([
             a,
@@ -628,12 +660,11 @@ mod tests {
         unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
     }
 
-    fn assert_find_node<'app>(app: &'app App, name: &str) -> &'app dyn Node {
+    fn assert_find_node<'app>(app: &'app App, name: &str) -> &'app Node {
         app.nodes
             .values()
             .find(|node| node.name() == name)
             .unwrap_or_else(|| panic!("Couldn't find node '{name}'"))
-            .deref()
     }
 
     fn assert_term(app: &App, node_name: &str, expected_value: f64) {

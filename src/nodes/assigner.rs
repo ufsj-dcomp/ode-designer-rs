@@ -5,14 +5,12 @@ use imnodes::{InputPinId, NodeId};
 use crate::{
     exprtree::{ExpressionNode, Sign},
     pins::{InputPin, Pin},
-    register_node, utils::ModelFragment,
+    utils::ModelFragment, core::app::AppState,
 };
 
 use super::{
-    ExprWrapper, LinkEvent, Node, NodeInitializer, PendingOperation, NODE_SPECIALIZATIONS, PendingOperations,
+    ExprWrapper, LinkEvent, PendingOperation, PendingOperations, NodeImpl,
 };
-
-register_node!(Assigner);
 
 #[derive(Debug)]
 pub struct Assigner {
@@ -20,9 +18,10 @@ pub struct Assigner {
     name: String,
     pub input: InputPin,
     expr_node: ExprWrapper<Option<ExpressionNode<InputPinId>>>,
+    operates_on: Option<(NodeId, String)>,
 }
 
-impl Node for Assigner {
+impl NodeImpl for Assigner {
     fn id(&self) -> imnodes::NodeId {
         self.id
     }
@@ -61,7 +60,25 @@ impl Node for Assigner {
             Some(expr) => ui.text(expr),
             None => ui.text("Nothing yet!"),
         }
-        false
+
+        ui.text("Variable: ");
+        ui.same_line();
+        
+        match &self.operates_on {
+            Some((_, node_name)) => {
+                ui.text(node_name);
+                ui.button("Change")
+            },
+            None => ui.button("Choose"),
+        }
+    }
+
+    fn trigger_app_state_change(&self) -> Option<AppState> {
+        Some(
+            AppState::AttributingAssignerOperatesOn {
+                attribute_to: self.id,
+            }
+        )
     }
 
     fn inputs(&self) -> Option<&[InputPin]> {
@@ -96,15 +113,13 @@ impl Node for Assigner {
             contribution,
         }.into())
     }
-}
-
-impl NodeInitializer for Assigner {
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
             id: node_id,
             name,
             input: InputPin::new_signed(node_id, Sign::Positive),
             expr_node: Default::default(),
+            operates_on: None,
         }
     }
 
@@ -127,6 +142,7 @@ impl NodeInitializer for Assigner {
                 Sign::from_str(contribution).expect("Should be a valid sign"),
             ),
             expr_node: Default::default(),
+            operates_on: None,
         };
 
         let pending_ops = PendingOperations {

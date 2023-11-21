@@ -6,7 +6,6 @@ use core::{initialize_id_generator, style, System};
 
 use core::App;
 use imnodes::AttributeFlag;
-use nodes::{Expression, NodeInitializer, Term};
 
 mod message;
 
@@ -22,10 +21,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
 
     let mut system = System::make_window("ODE Editor", (1024.0, 768.0));
-    // SAFETY: The pointer is valid for the lifetime of the function.
+
     style::set_eel_style(system.imgui.style_mut());
+
     let nodesctx = imnodes::Context::new();
     let mut nodeseditor = nodesctx.create_editor();
+
+    style::set_imnodes_style(nodeseditor.get_style());
 
     // SAFETY: The initialization of this value at the startup code is always
     // safe to do. However, using this value will only ever be safe while the
@@ -37,11 +39,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
 
     let mut app = App::new();
-
-    // app.add_node(Term::new_boxed("A".into()));
-    // app.add_node(Term::new_boxed("K".into()));
-    // app.add_node(Expression::new_boxed("comb".into()));
-    // app.add_node(Expression::new_boxed("comb2".into()));
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor);

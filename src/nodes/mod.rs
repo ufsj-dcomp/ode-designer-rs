@@ -1,13 +1,15 @@
 mod assigner;
 pub mod expression;
 pub mod term;
+pub mod errors;
 
 use std::{
     ops::{Deref, DerefMut},
-    sync::LazyLock,
+    sync::LazyLock, convert::Infallible,
 };
 
 pub use expression::Expression;
+use strum::{EnumDeref, EnumDiscriminants, FromRepr, EnumVariantNames};
 pub use term::Term;
 pub use assigner::Assigner;
 
@@ -16,13 +18,15 @@ use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
     core::App,
-    core::GeneratesId,
+    core::{GeneratesId, app::AppState},
     exprtree::{ExpressionNode, ExpressionTree, Sign},
     message::{Message, SendData},
     pins::{InputPin, OutputPin, Pin}, utils::ModelFragment,
 };
 
 use derive_more::From;
+
+use self::errors::NotANode;
 
 #[derive(Debug, Clone, From)]
 pub enum LinkPayload {
@@ -38,7 +42,50 @@ pub enum LinkEvent {
     Pop(InputPinId),
 }
 
-pub trait Node: std::fmt::Debug {
+#[derive(Debug, EnumDeref, EnumDiscriminants, EnumVariantNames, From)]
+#[strum_deref_target(dyn NodeImpl)]
+#[strum_discriminants(name(NodeVariant))]
+#[strum_discriminants(derive(FromRepr))]
+pub enum Node {
+    Term(Term),
+    Expression(Expression),
+    Assigner(Assigner),
+}
+
+impl Node {
+    pub fn build_from_ui(name: String, variant: NodeVariant) -> Self {
+        let node_id = NodeId::generate();
+
+        match variant {
+            NodeVariant::Term => Term::new(node_id, name).into(),
+            NodeVariant::Expression => Expression::new(node_id, name).into(),
+            NodeVariant::Assigner => Assigner::new(node_id, name).into(),
+        }
+    }
+
+    pub fn build_from_fragment(frag: ModelFragment) -> Result<(Self, Option<PendingOperations>), NotANode> {
+        let node_id = NodeId::generate();
+
+        Term::try_from_model_fragment(node_id, &frag)
+            .map(|(node_impl, ops)| (node_impl.into(), ops))
+            .or_else(||
+                Expression::try_from_model_fragment(node_id, &frag)
+                    .map(|(node_impl, ops)| (node_impl.into(), ops))
+                    .or_else(||
+                        Assigner::try_from_model_fragment(node_id, &frag)
+                            .map(|(node_impl, ops)| (node_impl.into(), ops))
+                    )
+            ).ok_or(NotANode(frag))
+    }
+}
+
+pub trait NodeImpl {
+    fn new(node_id: NodeId, name: String) -> Self
+        where Self: Sized;
+
+    fn try_from_model_fragment(node_id: NodeId, frag: &ModelFragment) -> Option<(Self, Option<PendingOperations>)>
+        where Self: Sized;
+
     fn id(&self) -> NodeId;
 
     fn name(&self) -> &str;
@@ -48,6 +95,10 @@ pub trait Node: std::fmt::Debug {
     }
 
     fn send_data(&self) -> ExpressionNode<InputPinId>;
+
+    fn trigger_app_state_change(&self) -> Option<AppState> {
+        None
+    }
 
     fn draw(&mut self, ui: &Ui) -> bool;
 
@@ -90,7 +141,7 @@ pub trait Node: std::fmt::Debug {
         true
     }
 
-    fn process_node(&mut self, ui: &Ui, ui_node: &mut NodeScope) -> Option<Vec<Message>> {
+    fn process_node(&mut self, ui: &Ui, ui_node: &mut NodeScope) -> (Option<Vec<Message>>, Option<AppState>) {
         ui_node.add_titlebar(|| ui.text(self.name()));
 
         let mut input_changed = false;
@@ -113,8 +164,12 @@ pub trait Node: std::fmt::Debug {
 
         let inner_content_changed = self.draw(ui);
 
-        ((inner_content_changed || input_changed) && self.state_changed())
-            .then(|| self.broadcast_data())
+        let messages = ((inner_content_changed || input_changed) && self.state_changed())
+            .then(|| self.broadcast_data());
+
+        let app_state_change = inner_content_changed.then(|| self.trigger_app_state_change()).flatten();
+
+        (messages, app_state_change)
     }
 
     fn get_input(&self, input_pin_id: &InputPinId) -> Option<&InputPin> {
@@ -150,80 +205,6 @@ pub trait Node: std::fmt::Debug {
     }
 
     fn to_model_fragment(&self, app: &App) -> Option<ModelFragment>;
-}
-
-pub trait NodeInitializer {
-    fn new(node_id: NodeId, name: String) -> Self;
-
-    fn new_boxed(name: String) -> Box<dyn Node>
-    where
-        Self: Node + Sized + 'static,
-    {
-        let node_id = NodeId::generate();
-        Box::new(Self::new(node_id, name))
-    }
-
-    fn try_from_model_fragment(
-        node_id: NodeId,
-        frag: &ModelFragment,
-    ) -> Option<(Self, Option<PendingOperations>)>
-    where
-        Self: Node + Sized;
-
-    fn try_from_model_fragment_boxed(
-        frag: &ModelFragment,
-    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>
-    where
-        Self: Node + Sized + 'static,
-    {
-        let node_id = NodeId::generate();
-        
-
-        Self::try_from_model_fragment(node_id, frag)
-            .map(|(node, possible_pending_ops)| -> (Box<dyn Node>, _) {
-                (Box::new(node), possible_pending_ops)
-            })
-    }
-}
-
-pub trait NodeFactory {
-    fn new_with_name(&self, name: String) -> Box<dyn Node>;
-
-    fn try_from_model_fragment(
-        &self,
-        frag: &ModelFragment,
-    ) -> Option<(Box<dyn Node>, Option<PendingOperations>)>;
-}
-
-pub type NameAndFactory = (
-    &'static str,
-    LazyLock<&'static (dyn NodeFactory + Send + Sync)>,
-);
-
-#[linkme::distributed_slice]
-pub static NODE_SPECIALIZATIONS: [NameAndFactory] = [..];
-
-#[macro_export]
-macro_rules! register_node {
-    ( $node:ident ) => {
-        use paste::paste;
-        paste! {
-            struct [<$node Factory>];
-
-            impl $crate::nodes::NodeFactory for [<$node Factory>] {
-                fn new_with_name(&self, name: String) -> Box<dyn $crate::nodes::Node> {
-                    $node::new_boxed(name)
-                }
-
-                fn try_from_model_fragment(&self, frag: &$crate::utils::ModelFragment) -> Option<(Box<dyn $crate::nodes::Node>, Option<$crate::nodes::PendingOperations>)> {
-                    $node::try_from_model_fragment_boxed(frag)
-                }
-            }
-
-            #[linkme::distributed_slice(NODE_SPECIALIZATIONS)]
-            static [<$node:upper _SPECIALIZATION>]: $crate::nodes::NameAndFactory = (stringify!($node), std::sync::LazyLock::new(|| &[<$node Factory>]));
-        }
-    };
 }
 
 #[derive(Debug, Default)]
@@ -315,4 +296,8 @@ pub enum PendingOperation {
         via_pin_id: InputPinId,
         sign: Sign,
     },
+    SetAssignerOperatesOn {
+        via_node_id: NodeId,
+        node_name: String,
+    }
 }

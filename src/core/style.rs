@@ -1,4 +1,5 @@
 use imgui::Style;
+use imnodes::ImNodesStyle;
 
 pub fn set_raikiri_style(style: &mut Style) {
     // My tweaks
@@ -79,6 +80,7 @@ pub fn set_extasy_style(style: &mut Style) {
     style.scrollbar_rounding = 9.0;
     style.grab_min_size = 5.0;
     style.grab_rounding = 3.0;
+    style.alpha = 1.0;
 
     style[imgui::StyleColor::Text] = [0.80, 0.80, 0.83, 1.00];
     style[imgui::StyleColor::TextDisabled] = [0.24, 0.23, 0.29, 1.00];
@@ -132,4 +134,29 @@ pub fn set_eel_style(style: &mut Style) {
     style[imgui::StyleColor::Button] = [0.20, 0.25, 0.29, 1.00];
     style[imgui::StyleColor::ButtonHovered] = [0.28, 0.56, 1.00, 1.00];
     style[imgui::StyleColor::ButtonActive] = [0.06, 0.53, 0.98, 1.00];
+
+    // For whatever reason, this thing's transparency overwrites the whole
+    // application background, rather than add/multiply
+    style[imgui::StyleColor::ModalWindowDimBg] = [0.14, 0.14, 0.14, 0.80];
+}
+
+pub fn set_imnodes_style(style: &mut ImNodesStyle) {
+    /*
+    Originals:
+        GridBackground = 0xC8322828
+        MiniMapBackground = 0x96191919
+        MiniMapBackgroundHovered = 0xC8191919
+        MiniMapNodeBackground = 0x64C8C8C8
+        MiniMapNodeBackgroundHovered = 0xFFC8C8C8
+        MiniMapNodeBackgroundSelected = 0xFFC8C8C8
+    */
+
+    // Removes some of the excessive transparency
+
+    style.Colors[imnodes::ColorStyle::GridBackground as usize] = 0xDE_32_28_28;
+    style.Colors[imnodes::ColorStyle::MiniMapBackground as usize] = 0xDE_19_19_19;
+    style.Colors[imnodes::ColorStyle::MiniMapBackgroundHovered as usize] = 0xDE_19_19_19;
+    style.Colors[imnodes::ColorStyle::MiniMapNodeBackground as usize] = 0xDE_C8_C8_C8;
+    style.Colors[imnodes::ColorStyle::MiniMapNodeBackgroundHovered as usize] = 0xDE_C8_C8_C8;
+    style.Colors[imnodes::ColorStyle::MiniMapNodeBackgroundSelected as usize] = 0xDE_C8_C8_C8;
 }

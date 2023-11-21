@@ -409,12 +409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "either"
-version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
-
-[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -824,15 +818,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -879,26 +864,6 @@ checksum = "b67380fd3b2fbe7527a606e18729d21c6f3951633d0500574c4dc22d2d638b9f"
 dependencies = [
  "cfg-if",
  "winapi",
-]
-
-[[package]]
-name = "linkme"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f948366ad5bb46b5514ba7a7a80643726eef08b06632592699676748c8bc33b"
-dependencies = [
- "linkme-impl",
-]
-
-[[package]]
-name = "linkme-impl"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc28438cad73dcc90ff3466fc329a9252b1b8ba668eb0d5668ba97088cf4eef0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.29",
 ]
 
 [[package]]
@@ -1160,8 +1125,6 @@ dependencies = [
  "imgui-glium-renderer",
  "imgui-winit-support",
  "imnodes",
- "itertools",
- "linkme",
  "log",
  "odeir",
  "paste",
@@ -1544,7 +1507,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "strum"
 version = "0.25.0"
-source = "git+https://github.com/Syndelis/strum/?branch=feat/static-variants-array#726d6444935450dce151de573b73f98eac29ef4c"
+source = "git+https://github.com/Syndelis/strum/?branch=next#d1ec5755726be393da42135ba7ed53721fe5f2d3"
 dependencies = [
  "strum_macros",
 ]
@@ -1552,7 +1515,7 @@ dependencies = [
 [[package]]
 name = "strum_macros"
 version = "0.25.2"
-source = "git+https://github.com/Syndelis/strum/?branch=feat/static-variants-array#726d6444935450dce151de573b73f98eac29ef4c"
+source = "git+https://github.com/Syndelis/strum/?branch=next#d1ec5755726be393da42135ba7ed53721fe5f2d3"
 dependencies = [
  "heck",
  "proc-macro2",

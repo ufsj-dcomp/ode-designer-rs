@@ -1,5 +1,5 @@
 use derive_more::From;
-use imnodes::{InputPinId, OutputPinId};
+use imnodes::{InputPinId, OutputPinId, NodeId};
 
 use crate::{core::app::Link, exprtree::ExpressionNode};
 
@@ -15,6 +15,10 @@ pub enum Message {
     SendData(SendData),
     AddLink(Link),
     RemoveLink(Link),
+    AttributeAssignerOperatesOn {
+        assigner_id: NodeId,
+        value: NodeId,
+    },
 }
 
 #[derive(Debug, Clone)]

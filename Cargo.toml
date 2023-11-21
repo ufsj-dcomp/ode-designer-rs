@@ -10,13 +10,12 @@ imgui = ["dep:imgui-glium-renderer", "dep:imgui-winit-support", "dep:winit", "de
 color-eyre = "0.6.2"
 derive_more = "0.99.17"
 log = "0.4.17"
-strum = { git = "https://github.com/Syndelis/strum/", branch = "feat/static-variants-array", features = ["strum_macros", "derive"] }
+strum = { git = "https://github.com/Syndelis/strum/", branch = "next", features = ["strum_macros", "derive"] }
 glium = "0.32.1"
 imnodes = { path = "./crates/imnodes" }
 odeir = { path = "./crates/odeir" }
 thiserror = "1.0.40"
 sorted-vec = "0.8.2"
-linkme = "0.3.15"
 paste = "1.0.14"
 winit = { version = "0.27.5", features = ["wayland", "x11"] }
 imgui = { version = "0.11.0", features = ["docking"] }
@@ -25,7 +24,6 @@ imgui-winit-support = "0.11.0"
 serde_json = "1.0.108"
 rfd = "0.12.1"
 anyhow = "1.0.75"
-itertools = "0.11.0"
 
 [dev-dependencies]
 assert-json-diff = { git = "https://github.com/briankung/assert-json-diff/", branch = "feature/assert-json-contains" }

@@ -6,12 +6,10 @@ use crate::{
     core::App,
     exprtree::{ExpressionNode, Leaf, Sign},
     pins::{OutputPin, Pin},
-    register_node, utils::ModelFragment,
+    utils::ModelFragment,
 };
 
-use super::{Node, NodeInitializer, NODE_SPECIALIZATIONS, PendingOperations};
-
-register_node!(Term);
+use super::{NodeImpl, PendingOperations};
 
 #[derive(Debug)]
 pub struct Term {
@@ -21,7 +19,7 @@ pub struct Term {
     output: OutputPin,
 }
 
-impl Node for Term {
+impl NodeImpl for Term {
     fn id(&self) -> NodeId {
         self.id
     }
@@ -54,9 +52,7 @@ impl Node for Term {
             value: self.initial_value,
         }.into())
     }
-}
 
-impl NodeInitializer for Term {
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
             id: node_id,

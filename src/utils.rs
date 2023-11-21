@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum ModelFragment {
     Argument(odeir::Argument),
     Equation(odeir::Equation),
