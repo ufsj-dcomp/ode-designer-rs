@@ -19,6 +19,10 @@ pub enum Message {
         assigner_id: NodeId,
         value: NodeId,
     },
+    SetNodePos {
+        node_id: NodeId,
+        screen_space_pos: [f32; 2]
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +33,7 @@ pub struct TaggedMessage {
 
 #[derive(Debug, Clone, From, Default)]
 pub struct MessageQueue {
-    messages: Vec<TaggedMessage>,
+    pub messages: Vec<TaggedMessage>,
     current_tag: usize,
 }
 

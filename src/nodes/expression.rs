@@ -16,11 +16,11 @@ use super::{
 
 #[derive(Debug)]
 pub struct Expression {
-    id: NodeId,
-    name: String,
+    pub id: NodeId,
+    pub name: String,
     pub expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
-    inputs: Vec<InputPin>,
-    output: OutputPin,
+    pub inputs: Vec<InputPin>,
+    pub output: OutputPin,
 }
 
 impl NodeImpl for Expression {

@@ -14,11 +14,11 @@ use super::{
 
 #[derive(Debug)]
 pub struct Assigner {
-    id: NodeId,
-    name: String,
+    pub id: NodeId,
+    pub name: String,
     pub input: InputPin,
-    expr_node: ExprWrapper<Option<ExpressionNode<InputPinId>>>,
-    operates_on: Option<(NodeId, String)>,
+    pub expr_node: ExprWrapper<Option<ExpressionNode<InputPinId>>>,
+    pub operates_on: Option<(NodeId, String)>,
 }
 
 impl NodeImpl for Assigner {

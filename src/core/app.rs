@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 
-use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
+use imnodes::{InputPinId, LinkId, NodeId, OutputPinId, ImVec2};
 use odeir::Equation;
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
@@ -16,7 +16,7 @@ use crate::nodes::{
     LinkEvent, Node, PendingOperation, PendingOperations, NodeVariant,
 };
 use crate::pins::Pin;
-use crate::utils::ModelFragment;
+use crate::utils::{ModelFragment, VecConversion};
 
 use imgui::{StyleColor, StyleVar, Ui};
 
@@ -46,12 +46,16 @@ pub struct App {
     pub output_pins: HashMap<OutputPinId, NodeId>,
     links: Vec<Link>,
     state: Option<AppState>,
-    messages: MessageQueue,
+    queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
 }
 
 pub enum AppState {
-    AddingNode { name: String, index: usize },
+    AddingNode {
+        name: String,
+        index: usize,
+        add_at_screen_space_pos: [f32; 2],
+    },
     AttributingAssignerOperatesOn {
         attribute_to: NodeId,
     },
@@ -76,7 +80,7 @@ enum StateAction {
 impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
         match self {
-            AppState::AddingNode { name, index } => {
+            AppState::AddingNode { name, index, add_at_screen_space_pos } => {
                 let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
                 let _token = ui.push_style_var(StyleVar::WindowPadding([10.0; 2]));
                 if let Some(_popup) = ui.begin_popup("Create Node") {
@@ -98,7 +102,13 @@ impl AppState {
                         let node_variant = NodeVariant::from_repr(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
-                        app.add_node(Node::build_from_ui(name.clone(), node_variant));
+                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_variant));
+                        app.queue.push(
+                            Message::SetNodePos {
+                                node_id,
+                                screen_space_pos: *add_at_screen_space_pos
+                            }
+                        );
 
                         StateAction::Clear
                     } else {
@@ -128,7 +138,7 @@ impl AppState {
                             .disabled(node_id == attribute_to)
                             .build()
                         {
-                            app.messages.push(
+                            app.queue.push(
                                 Message::AttributeAssignerOperatesOn {
                                     assigner_id: *attribute_to,
                                     value: *node_id,
@@ -159,7 +169,7 @@ impl App {
                 let (msgs, app_state_change) = node.process_node(ui, &mut ui_node);
                 if let Some(msgs) = msgs {
                     for msg in msgs {
-                        self.messages.push(msg)
+                        self.queue.push(msg)
                     }
                 }
 
@@ -176,10 +186,12 @@ impl App {
             && ui.is_mouse_clicked(imgui::MouseButton::Right)
             && self.state.is_none()
         {
+            let mouse_screen_space_pos = ui.io().mouse_pos;
             ui.open_popup("Create Node");
             self.state = Some(AppState::AddingNode {
                 name: String::new(),
                 index: 0,
+                add_at_screen_space_pos: mouse_screen_space_pos,
             })
         }
         // Extra State handling
@@ -239,15 +251,20 @@ impl App {
         Self::default()
     }
 
-    pub fn add_node(&mut self, node: Node) {
+    pub fn add_node(&mut self, node: Node) -> NodeId {
         let node_id = node.id();
+
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
         }
+
         for output in node.outputs().unwrap_or_default() {
             self.output_pins.insert(*output.id(), node_id);
         }
+
+        let node_id_copy = node_id;
         self.nodes.insert(node_id, node);
+        node_id_copy
     }
 
     pub fn get_node(&self, id: NodeId) -> Option<&Node> {
@@ -340,11 +357,15 @@ impl App {
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
             Message::AttributeAssignerOperatesOn { assigner_id, value } => unimplemented!(),
+            Message::SetNodePos { node_id, screen_space_pos: [x, y] } => {
+                node_id.set_position(x, y, imnodes::CoordinateSystem::ScreenSpace);
+                None
+            },
         }
     }
 
     pub fn add_link(&mut self, start_pin: OutputPinId, end_pin: InputPinId) {
-        self.messages
+        self.queue
             .push(Message::AddLink(Link::new(end_pin, start_pin, Sign::default())));
     }
 
@@ -353,29 +374,44 @@ impl App {
             return;
         };
         let link = self.links.swap_remove(index);
-        self.messages.push(Message::RemoveLink(link));
+        self.queue.push(Message::RemoveLink(link));
     }
 
     pub fn update(&mut self) {
-        let mut new_messages = MessageQueue::with_tag(self.messages.current_tag());
-        for tagged in std::mem::take(&mut self.messages) {
+        let mut new_messages = MessageQueue::with_tag(self.queue.current_tag());
+        for tagged in std::mem::take(&mut self.queue) {
             let tag = tagged.tag;
             let newmsgs = self.handle_message(tagged);
             for newmsg in newmsgs.unwrap_or_default() {
                 new_messages.push_tagged(newmsg, tag);
             }
         }
-        self.messages = new_messages;
+        self.queue = new_messages;
     }
 
     fn create_json(&self) -> odeir::Json {
         let mut arguments = Vec::new();
         let mut equations = Vec::new();
+        let mut positions = odeir::Map::new();
 
         self
             .nodes
             .values()
-            .filter_map(|node| node.to_model_fragment(self))
+            .filter_map(|node| {
+                positions.insert(
+                    node.name().to_owned(),
+
+                    #[cfg(not(test))]
+                    node.id()
+                        .get_position(imnodes::CoordinateSystem::ScreenSpace)
+                        .convert(),
+
+                    #[cfg(test)]
+                    odeir::Position { x: 0.0, y: 0.0 },
+                );
+
+                node.to_model_fragment(self)
+            })
             .for_each(|frag| {
                 match frag {
                     ModelFragment::Argument(arg) => arguments.push(arg),
@@ -391,7 +427,7 @@ impl App {
                     delta_time: 0.0,
                     end_time: 0.0,
                 }),
-                positions: odeir::Map::new(),
+                positions,
             },
             arguments,
             equations,
@@ -412,7 +448,7 @@ impl App {
     }
 
     fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
-        let odeir::CoreModel { equations, arguments } = model.core;
+        let odeir::CoreModel { equations, arguments, positions } = model.core;
 
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
@@ -475,13 +511,24 @@ impl App {
                             *output_node.id()
                         };
 
-                        self.messages
+                        self.queue
                             .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
                     }
                     PendingOperation::SetAssignerOperatesOn { via_node_id, node_name } => unimplemented!(),
                 }
             }
         }
+
+        positions
+            .into_iter()
+            .for_each(|(node_name, node_pos)| {
+                if let Some(node) = node_name_map.get(&node_name as &str) {
+                    let node_id = node.id();
+                    let screen_space_pos = node_pos.convert();
+
+                    self.queue.push(Message::SetNodePos { node_id, screen_space_pos })
+                }
+            });
 
         Ok(())
     }
@@ -514,7 +561,7 @@ mod tests {
     use odeir::models::ode::OdeModel;
 
     use super::App;
-    use crate::{nodes::{NodeImpl, Term, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::ModelFragment};
+    use crate::{nodes::{NodeImpl, Term, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::{ModelFragment, VecConversion}, message::Message};
 
     struct ExpressionNodeBuilder<'pin> {
         name: String,
@@ -614,7 +661,7 @@ mod tests {
     impl AppBuilder {
         fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
             let mut app = App::default();
-            nodes.into_iter().for_each(|node| app.add_node(node));
+            nodes.into_iter().for_each(|node| { app.add_node(node); });
 
             app
         }
@@ -624,8 +671,19 @@ mod tests {
 
     fn app_with_nodes_abk() -> App {
         let mut a = Node::build_from_ui("A".to_owned(), NodeVariant::Term);
+        if let Node::Term(ref mut a) = &mut a {
+            a.initial_value = 10.0;
+        }
+
         let mut b = Node::build_from_ui("B".to_owned(), NodeVariant::Term);
+        if let Node::Term(ref mut b) = &mut b {
+            b.initial_value = 20.0;
+        }
+
         let mut k = Node::build_from_ui("K".to_owned(), NodeVariant::Term);
+        if let Node::Term(ref mut k) = &mut k {
+            k.initial_value = 30.0;
+        }
 
         let mut a_times_k = ExpressionNodeBuilder::new("a*k")
             .linked_to(&mut a, Sign::Positive)
@@ -667,61 +725,40 @@ mod tests {
             .unwrap_or_else(|| panic!("Couldn't find node '{name}'"))
     }
 
-    fn assert_term(app: &App, node_name: &str, expected_value: f64) {
-        use ModelFragment::*;
-        use odeir::Argument::*;
-
-        let node = assert_find_node(app, node_name);
-
-        if let Some(Argument(Value { name, value })) = node.to_model_fragment(app) {
-            assert_eq!(name, node_name);
-            assert_eq!(value, expected_value);
-        } else {
-            panic!("'{node_name}' isn't a Term");
-        };
+    macro_rules! assert_get {
+        ($app:expr, $node_name:expr, $node_type:tt) => {{
+            let node = assert_find_node($app, $node_name);
+            if let Node::$node_type(node) = node {
+                node
+            } else {
+                panic!("Node {} is not a '{}'!", $node_name, stringify!($node_type));
+            }
+        }};
     }
 
-    fn assert_expression<const N: usize>(app: &App, node_name: &str, expected_operation: &str, linked_to: [(&str, char); N]) {
-        use ModelFragment::*;
-        use odeir::Argument::*;
+    fn assert_expression<'app, const N: usize>(app: &'app App, name: &str, expected_connections: [(NodeId, Sign); N]) -> &'app Expression {
+        let expr = assert_get!(app, name, Expression);
+        let expected_connections: HashSet<_> = expected_connections.into();
 
-        let node = assert_find_node(app, node_name);
+        let actual_connections: HashSet<_> = expr
+            .inputs()
+            .unwrap()
+            .iter()
+            .filter_map(|pin| {
+                let Some(output_pin_id) = pin.linked_to else {
+                    return None;
+                };
 
-        let expected_linked_to: HashSet<(&str, char)> = linked_to
-            .into_iter()
+                let linked_to_node_id = app.output_pins.get(&output_pin_id).unwrap();
+                let linked_to_node = app.nodes.get(linked_to_node_id).unwrap();
+
+                Some((linked_to_node.id(), pin.sign))
+            })
             .collect();
 
-        if let Some(Argument(Composite { name, operation, composition })) = node.to_model_fragment(app) {
-            assert_eq!(name, node_name);
-            assert_eq!(operation, expected_operation);
-            
-            let actual_linked_to: HashSet<(&str, char)> = composition
-                .iter()
-                .map(|comp| -> (&str, char) {
-                    (comp.name.as_ref(), comp.contribution)
-                })
-                .collect();
+        assert_eq!(actual_connections, expected_connections);
 
-            assert_eq!(actual_linked_to, expected_linked_to);
-        } else {
-            panic!("'{node_name}' isn't an Expression");
-        };
-    }
-
-    fn assert_assigner(app: &App, node_name: &str, expected_operates_on: &str, expected_argument: &str, expected_contribution: char) {
-        use ModelFragment::*;
-        use odeir::Equation;
-
-        let node = assert_find_node(app, node_name);
-
-        if let Some(Equation(Equation { name, operates_on, argument, contribution })) = node.to_model_fragment(app) {
-            assert_eq!(name, node_name);
-            assert_eq!(operates_on, expected_operates_on);
-            assert_eq!(argument, expected_argument);
-            assert_eq!(contribution, expected_contribution);
-        } else {
-            panic!("'{node_name}' isn't an Assigner");
-        };
+        expr
     }
 
     #[test]
@@ -740,7 +777,15 @@ mod tests {
         // Then - The JSON is expected to contain every node, correctly labeled
         // as a arguments or equations and containing their respective links
 
-        let expected: odeir::Json = serde_json::from_str(ABK_JSON).unwrap();
+        let mut expected: odeir::Json = serde_json::from_str(ABK_JSON).unwrap();
+
+        // Remove positions, as they can't be added in tests since they depend
+        // on the GUI
+        expected
+            .metadata
+            .positions
+            .iter_mut()
+            .for_each(|(_, pos)| *pos = odeir::Position { x: 0.0, y: 0.0 });
 
         let matching_config = assert_json_diff::Config::new(assert_json_diff::CompareMode::Strict)
             .consider_array_sorting(false);
@@ -764,6 +809,34 @@ mod tests {
         };
 
         let result = app.try_read_model(ode_model);
+
+        let expected_positions: HashMap<_, _> = [
+            ("A", [-355.0, 469.0]),
+            ("B", [-310.0, 175.0]),
+            ("K", [0.0, 0.0]),
+            ("a*k", [371.7532, 292.3206]),
+            ("a*k+b", [1337.0, -240.0]),
+            ("dA/dt", [357.0, 611.0]),
+            ("dB/dt", [1.5, 2.5])
+        ].into();
+
+        let mut actual_positions = HashMap::new();
+
+        // Removes node position setting messages, as they are possible via
+        // raw pointer manip in Imnodes' library code, which of course depends
+        // on the GUI existing
+        app.queue.messages.retain(|msg| {
+            if let Message::SetNodePos { node_id, screen_space_pos } = msg.message {
+                let node = app.nodes.get(&node_id).unwrap();
+                actual_positions.insert(node.name(), screen_space_pos);
+                false
+            } else {
+                true
+            }
+        });
+
+        assert_eq!(actual_positions, expected_positions);
+
         app.update(); // Runs possible pending operations!
 
         // Then - The user expects all nodes to be created, with their
@@ -771,29 +844,42 @@ mod tests {
 
         assert!(result.is_ok());
 
-        assert_term(&app, "A", 0.0);
-        assert_term(&app, "B", 0.0);
-        assert_term(&app, "K", 0.0);
+        let a = assert_get!(&app, "A", Term);
+        assert_eq!(a.initial_value, 10.0);
 
-        assert_expression(
-            &app, "a*k", "*",
+        let b = assert_get!(&app, "B", Term);
+        assert_eq!(b.initial_value, 20.0);
+
+        let k = assert_get!(&app, "K", Term);
+        assert_eq!(k.initial_value, 30.0);
+
+        let a_times_k = assert_expression(
+            &app, "a*k",
             [
-                ("A", '+'),
-                ("K", '+'),
+                (a.id(), Sign::Positive),
+                (k.id(), Sign::Positive),
             ]
         );
 
-        assert_expression(
-            &app, "a*k+b", "+",
+        let a_times_k_plus_b = assert_expression(
+            &app, "a*k+b",
             [
-                ("a*k", '+'),
-                ("B", '-'),
+                (a_times_k.id(), Sign::Positive),
+                (b.id(), Sign::Negative),
             ]
         );
 
-        assert_assigner(&app, "dA/dt", "TODO!", "a*k", '+');
+        let da_dt = assert_get!(&app, "dA/dt", Assigner);
+        assert!(matches!(
+            da_dt.input.linked_to,
+            Some(output_pin_id) if output_pin_id == a_times_k.output.id
+        ));
 
-        assert_assigner(&app, "dB/dt", "TODO!", "a*k+b", '+');
+        let db_dt = assert_get!(&app, "dB/dt", Assigner);
+        assert!(matches!(
+            db_dt.input.linked_to,
+            Some(output_pin_id) if output_pin_id == a_times_k_plus_b.output.id
+        ));
 
     }
 }

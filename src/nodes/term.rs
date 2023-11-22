@@ -13,10 +13,10 @@ use super::{NodeImpl, PendingOperations};
 
 #[derive(Debug)]
 pub struct Term {
-    id: NodeId,
-    leaf: Leaf,
-    initial_value: f64,
-    output: OutputPin,
+    pub id: NodeId,
+    pub leaf: Leaf,
+    pub initial_value: f64,
+    pub output: OutputPin,
 }
 
 impl NodeImpl for Term {
