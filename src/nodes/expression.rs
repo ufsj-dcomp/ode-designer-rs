@@ -1,4 +1,4 @@
-use std::{fmt::Write, str::FromStr};
+use std::str::FromStr;
 
 use imnodes::{InputPinId, NodeId};
 use strum::StaticVariantsArray;

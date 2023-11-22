@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 
-use imnodes::{InputPinId, LinkId, NodeId, OutputPinId, ImVec2};
-use odeir::Equation;
+use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
+
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -18,7 +18,7 @@ use crate::nodes::{
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{StyleColor, StyleVar, Ui};
+use imgui::{StyleVar, Ui};
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -356,7 +356,7 @@ impl App {
                     .unlink(input_pin_id);
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
-            Message::AttributeAssignerOperatesOn { assigner_id, value } => unimplemented!(),
+            Message::AttributeAssignerOperatesOn { assigner_id: _, value: _ } => unimplemented!(),
             Message::SetNodePos { node_id, screen_space_pos: [x, y] } => {
                 node_id.set_position(x, y, imnodes::CoordinateSystem::ScreenSpace);
                 None
@@ -514,7 +514,7 @@ impl App {
                         self.queue
                             .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
                     }
-                    PendingOperation::SetAssignerOperatesOn { via_node_id, node_name } => unimplemented!(),
+                    PendingOperation::SetAssignerOperatesOn { via_node_id: _, node_name: _ } => unimplemented!(),
                 }
             }
         }
@@ -555,13 +555,13 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use std::{any::Any, collections::{HashMap, HashSet}, ops::Deref};
+    use std::collections::{HashMap, HashSet};
 
-    use imnodes::{InputPinId, NodeId, OutputPinId};
-    use odeir::models::ode::OdeModel;
+    use imnodes::{InputPinId, NodeId};
+    
 
     use super::App;
-    use crate::{nodes::{NodeImpl, Term, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, utils::{ModelFragment, VecConversion}, message::Message};
+    use crate::{nodes::{NodeImpl, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, message::Message};
 
     struct ExpressionNodeBuilder<'pin> {
         name: String,

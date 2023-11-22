@@ -3,10 +3,7 @@ pub mod expression;
 pub mod term;
 pub mod errors;
 
-use std::{
-    ops::{Deref, DerefMut},
-    sync::LazyLock, convert::Infallible,
-};
+use std::ops::{Deref, DerefMut};
 
 pub use expression::Expression;
 use strum::{EnumDeref, EnumDiscriminants, FromRepr, EnumVariantNames};

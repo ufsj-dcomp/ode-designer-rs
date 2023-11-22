@@ -1,5 +1,5 @@
 use imgui::{StyleColor, Ui};
-use imnodes::{NodeScope, InputPinId, NodeId, OutputPinId};
+use imnodes::{InputPinId, NodeId, OutputPinId};
 
 use crate::{
     core::{app::rgb, GeneratesId},
