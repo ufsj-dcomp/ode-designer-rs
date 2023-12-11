@@ -721,8 +721,7 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 [[package]]
 name = "imgui"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "122d677d0efcd64ca15f12907beaf46b26bbd2cdc855ee5b227f29cf50f75bb5"
+source = "git+https://github.com/syndelis/imgui-rs?branch=fix/alpha-blending#05f54c9a8a9752b78204ea1a0983c0b36e01c830"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -734,8 +733,7 @@ dependencies = [
 [[package]]
 name = "imgui-glium-renderer"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e80492c04e268158ec77720b375d30d44ebe6274e8a3d983356d601c089fb0d"
+source = "git+https://github.com/syndelis/imgui-rs?branch=fix/alpha-blending#05f54c9a8a9752b78204ea1a0983c0b36e01c830"
 dependencies = [
  "glium",
  "imgui",
@@ -744,8 +742,7 @@ dependencies = [
 [[package]]
 name = "imgui-sys"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d785272a57cb8058a53a1e6f376f48e2ec4f40fbc6a9bb197dabf7b6b59c03bf"
+source = "git+https://github.com/syndelis/imgui-rs?branch=fix/alpha-blending#05f54c9a8a9752b78204ea1a0983c0b36e01c830"
 dependencies = [
  "cc",
  "cfg-if",
@@ -756,8 +753,7 @@ dependencies = [
 [[package]]
 name = "imgui-winit-support"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edae4bfce64634fa013aec131f5d5f1c80df8aa0bddc0e0a9845ad57036b6987"
+source = "git+https://github.com/syndelis/imgui-rs?branch=fix/alpha-blending#05f54c9a8a9752b78204ea1a0983c0b36e01c830"
 dependencies = [
  "imgui",
  "winit",

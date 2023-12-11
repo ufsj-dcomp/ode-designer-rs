@@ -18,9 +18,15 @@ thiserror = "1.0.40"
 sorted-vec = "0.8.2"
 paste = "1.0.14"
 winit = { version = "0.27.5", features = ["wayland", "x11"] }
-imgui = { version = "0.11.0", features = ["docking"] }
-imgui-glium-renderer = "0.11.0"
-imgui-winit-support = "0.11.0"
+imgui = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending", features = ["docking"] }
+imgui-glium-renderer = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
+imgui-winit-support = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
+
+# For development of imgui-rs features
+# imgui = { path = "./crates/imgui-rs/imgui", features = ["docking"] }
+# imgui-glium-renderer = { path = "./crates/imgui-rs/imgui-glium-renderer" }
+# imgui-winit-support = { path = "./crates/imgui-rs/imgui-winit-support" }
+
 serde_json = "1.0.108"
 rfd = "0.12.1"
 anyhow = "1.0.75"
