@@ -45,11 +45,12 @@ impl Link {
 
 #[derive(Default)]
 pub struct SimulationState {
-    plots: Vec<PlotInfo>,
-    plot_layout: PlotLayout,
+    //pub plots: Vec<PlotInfo>,
+    pub plot: PlotInfo,
+    pub plot_layout: PlotLayout,
     pub colors: Vec<ImVec4>,
-    flag_simulation: bool,
-    flag_plot_all: bool,
+    pub flag_simulation: bool,
+    pub flag_plot_all: bool,
 }
 
 #[derive(Default)]
@@ -61,7 +62,7 @@ pub struct App {
     state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
-    simulation_state: SimulationState,
+    pub (crate) simulation_state: SimulationState,
 }
 
 pub enum AppState {

@@ -1,6 +1,7 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 #![feature(lazy_cell)]
+#![feature(int_roundings)]
 
 use core::{initialize_id_generator, style, System};
 
