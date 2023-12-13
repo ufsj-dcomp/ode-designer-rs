@@ -4,6 +4,7 @@ use std::io::BufReader;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
+use implot::ImVec4;
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -19,6 +20,9 @@ use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
 use imgui::{StyleVar, Ui};
+
+use crate::core::plot::PlotInfo;
+use crate::core::plot::PlotLayout;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -40,6 +44,15 @@ impl Link {
 }
 
 #[derive(Default)]
+pub struct SimulationState {
+    plots: Vec<PlotInfo>,
+    plot_layout: PlotLayout,
+    pub colors: Vec<ImVec4>,
+    flag_simulation: bool,
+    flag_plot_all: bool,
+}
+
+#[derive(Default)]
 pub struct App {
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
@@ -48,6 +61,7 @@ pub struct App {
     state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
+    simulation_state: SimulationState,
 }
 
 pub enum AppState {
@@ -223,18 +237,7 @@ impl App {
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
-                ui.menu_bar(|| {
-                    ui.menu("File", || {
-                        if ui.menu_item("Save") {
-                            self.save_state();
-                        }
-
-                        if ui.menu_item("Load") {
-                            self.load_state();
-                        }
-                    })
-                });
-
+                self.draw_menu(ui);
                 let scope =
                     imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
                 if let Some(link) = scope.links_created() {

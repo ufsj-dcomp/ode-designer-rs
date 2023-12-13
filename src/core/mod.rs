@@ -15,6 +15,8 @@ pub use id_gen::{initialize_id_generator, GeneratesId};
 pub mod app;
 mod id_gen;
 pub mod style;
+pub mod menu;
+pub mod plot;
 
 pub struct System {
     pub event_loop: EventLoop<()>,
