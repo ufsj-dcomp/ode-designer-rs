@@ -6,3 +6,7 @@
 	path = crates/odeir
 	url = https://github.com/syndelis/odeir
 	branch = feat/simulation-next
+[submodule "crates/implot-rs"]
+	path = crates/implot-rs
+	url = https://github.com/syndelis/implot-rs
+	branch = ode-designer
