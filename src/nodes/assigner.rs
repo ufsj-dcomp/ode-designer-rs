@@ -108,7 +108,7 @@ impl NodeImpl for Assigner {
 
         Some(odeir::Equation {
             name: self.name().to_owned(),
-            operates_on: "TODO!".to_string(),
+            operates_on: self.operates_on.clone().map(|(_, name)| name),
             argument,
             contribution,
         }.into())
@@ -145,14 +145,24 @@ impl NodeImpl for Assigner {
             operates_on: None,
         };
 
-        let pending_ops = PendingOperations {
+        let mut pending_ops = PendingOperations {
             node_id,
-            operations: vec![PendingOperation::LinkWith {
-                node_name: eq.argument.clone(),
-                via_pin_id: *node.input.id(),
-                sign: node.input.sign,
-            }],
+            operations: vec![
+                PendingOperation::LinkWith {
+                    node_name: eq.argument.clone(),
+                    via_pin_id: *node.input.id(),
+                    sign: node.input.sign,
+                }
+            ],
         };
+
+        if let Some(target_node_name) = &eq.operates_on {
+            pending_ops.operations.push(
+                PendingOperation::SetAssignerOperatesOn {
+                    target_node_name: target_node_name.to_owned(),
+                }
+            )
+        }
 
         Some((node, Some(pending_ops)))
     }

@@ -294,7 +294,6 @@ pub enum PendingOperation {
         sign: Sign,
     },
     SetAssignerOperatesOn {
-        via_node_id: NodeId,
-        node_name: String,
+        target_node_name: String,
     }
 }

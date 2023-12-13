@@ -356,7 +356,21 @@ impl App {
                     .unlink(input_pin_id);
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
-            Message::AttributeAssignerOperatesOn { assigner_id: _, value: _ } => unimplemented!(),
+            Message::AttributeAssignerOperatesOn { assigner_id, value } => {
+                let target_name = self.nodes.get(&value)
+                    .expect("The node must have been chosen from a list of existing nodes")
+                    .name()
+                    .to_owned();
+
+                let Node::Assigner(assigner) = self.nodes.get_mut(&assigner_id)
+                    .expect("An assigner with this ID must exist, as it asked to open the modal")
+                else {
+                    panic!("This node must be an assigner. If not, how could the modal have been opened?");
+                };
+
+                assigner.operates_on = Some((value, target_name));
+                None
+            },
             Message::SetNodePos { node_id, screen_space_pos: [x, y] } => {
                 node_id.set_position(x, y, imnodes::CoordinateSystem::ScreenSpace);
                 None
@@ -491,7 +505,7 @@ impl App {
                             let source_node =
                                 self.get_node(node_id).expect("This node surely exists");
                             InvalidNodeReference {
-                                source_node: source_node.name().to_string(),
+                                source_node: source_node.name().to_owned(),
                                 tried_linking_to: node_name.clone(),
                                 reason,
                             }
@@ -514,7 +528,22 @@ impl App {
                         self.queue
                             .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
                     }
-                    PendingOperation::SetAssignerOperatesOn { via_node_id: _, node_name: _ } => unimplemented!(),
+                    PendingOperation::SetAssignerOperatesOn { target_node_name } => {
+                        let target_node = node_name_map
+                            .get(&target_node_name as &str)
+                            .ok_or_else(|| {
+                                let source_node = self.get_node(node_id).expect("This node surely exists");
+                                InvalidNodeReference {
+                                    source_node: source_node.name().to_owned(),
+                                    tried_linking_to: target_node_name.clone(),
+                                    reason: InvalidNodeReason::NodeDoesNotExist,
+                                }
+                            }
+                        )?;
+
+                        self.queue
+                            .push(Message::AttributeAssignerOperatesOn { assigner_id: node_id, value: target_node.id() })
+                    },
                 }
             }
         }
