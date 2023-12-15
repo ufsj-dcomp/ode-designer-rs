@@ -4,7 +4,7 @@ use std::io::BufReader;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
-use implot::ImVec4;
+use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -19,10 +19,12 @@ use crate::nodes::{
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{StyleVar, Ui};
+use imgui::{StyleVar, Ui, TabBar, TabItem};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
+
+use super::plot;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -45,13 +47,25 @@ impl Link {
 
 #[derive(Default)]
 pub struct SimulationState {
-    //pub plots: Vec<PlotInfo>,
     pub plot: PlotInfo,
     pub plot_layout: PlotLayout,
     pub colors: Vec<ImVec4>,
     pub flag_simulation: bool,
     pub flag_plot_all: bool,
 }
+
+impl SimulationState {
+    pub fn draw_tab(&self, ui: &Ui, plot_ui: &mut PlotUi){
+        /*for i in 0..plot_info.plot_data.len() {
+            let values: Vec<f64> = plot_data.data
+            .iter()  
+            .map(|x| x[i]) 
+            .collect(); 
+        }
+        */
+    }
+}
+
 
 #[derive(Default)]
 pub struct App {
@@ -216,8 +230,8 @@ impl App {
                 StateAction::Keep => self.state = Some(state),
             }
         }
-    }
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext) {
+    }    
+    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
         let flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
@@ -233,12 +247,12 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
         // let mut bg = ui.clone_style().colors[imgui::sys::ImGuiCol_WindowBg as usize];
-        ui.window("ode designer")
+        /*ui.window("ode designer")
             .size(ui.io().display_size, imgui::Condition::Always)
             .position([0.0, 0.0], imgui::Condition::Always)
-            .flags(flags)
-            .build(|| {
-                self.draw_menu(ui);
+            .flags(flags)*/
+            //.build(|| {
+                self.draw_menu(ui); 
                 let scope =
                     imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
                 if let Some(link) = scope.links_created() {
@@ -246,9 +260,23 @@ impl App {
                 } else if let Some(link_id) = scope.get_dropped_link() {
                     self.remove_link(link_id);
                 }
-            });
+            //});
 
         self.update();
+    }
+
+    pub fn draw_tabs(&mut self,  ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi){
+        let tab_bar: imgui::TabBar<&str> = imgui::TabBar::new("Tabs");
+        tab_bar.build(&ui, || {
+            let tab_model = TabItem::new("Model"); 
+            tab_model.build(ui, || {
+                self.draw(ui, context, plot_ui);
+            }); 
+            let tab_2 = TabItem::new("Tab 0"); 
+            tab_2.build(ui, || {
+                self.draw(ui, context, plot_ui);
+            });
+        });
     }
 
     pub fn new() -> Self {

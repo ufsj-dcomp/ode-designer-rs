@@ -1,21 +1,8 @@
 use imgui::Ui;
+use implot::PlotUi;
 use crate::{App, core::plot::{CSVData, PlotLayout}};
 use rfd::FileDialog;
 
-/*
-void initializePlot(int n, float n_graphs_tab){
-    //plot_layout is global
-    plot_layout.next_tab_id = 0;
-    plot_layout.active_tabs.clear();
-    plot_layout.number_of_tabs = ceil((float)n/n_graphs_tab);
-    if (plot_layout.number_of_tabs == 0)
-        plot_layout.number_of_tabs = 1; 
-    for (int i = 0; i < plot_layout.number_of_tabs; i++){
-        plot_layout.active_tabs.push_back(plot_layout.next_tab_id++);
-    }
-    plot_layout.style = ImPlot::GetStyle();
-    plot_layout.style.LineWeight = 2.;
-} */
 
 impl App {    
     
@@ -38,22 +25,14 @@ impl App {
                     self.simulation_state.flag_plot_all = false;
                     self.simulation_state.plot.xlabel = String::from("time (days)");
                     self.simulation_state.plot.ylabel = String::from("conc/ml");
-                    self.simulation_state.plot_layout = PlotLayout {
-                        rows: 2,
-                        cols: 2,                        
-                        number_of_tabs: self.simulation_state.plot.plot_data.population_count()
-                                    .div_ceil(4) as u32,
-                        active_tabs: vec![],
-                    };
+                    self.simulation_state.plot_layout = PlotLayout::new(2,2,
+                        self.simulation_state.plot.plot_data.population_count().div_ceil(4) as u32);
                     let layout = &mut self.simulation_state.plot_layout;
                     if layout.number_of_tabs == 0 {
                         layout.number_of_tabs = 1;
                     }
                     layout.active_tabs = (0..layout.number_of_tabs).into_iter().collect();  
-                    self.simulation_state.plot.plot_graph(&self.simulation_state.plot_layout);                                                      
-                    /*
-                    plot_layout.style = ImPlot::GetStyle();
-                    plot_layout.style.LineWeight = 2.;    */
+                    //self.simulation_state.plot.plot_graph(ui, layout);                    
                 } 
             }                        
              

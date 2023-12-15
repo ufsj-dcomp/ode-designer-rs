@@ -1,6 +1,9 @@
-use imgui::Ui;
-use implot::ImVec4;
+use imgui::{Ui, TabBar, TabItem};
+use implot::{ImVec4, PlotLine, PlotUi};
+use nalgebra::DMatrix;
 use std::path::Path;
+
+use super::App;
 
 #[derive(Default,Debug)]
 pub struct CSVData {
@@ -51,20 +54,28 @@ impl CSVData {
         let mut rdr = csv::Reader::from_reader(fp);
 
         let mut plot_data = CSVData::default();
-
+        
         if rdr.has_headers() {
             plot_data.labels = rdr.headers().unwrap().iter().map(|v| v.to_string()).collect();
         }
         println!("{:?}", plot_data.labels);
+        let n_cols = plot_data.labels.len();
+
+        let mut populations : Vec<Vec<f64>> = (0..n_cols).map(|_| Vec::new()).collect();
         
         for result in rdr.records() {
-            // The iterator yields Result<StringRecord, Error>, so we check the
-            // error here.
+            
             let record = result?;
-            let mut records_f64: Vec<f64> = record.iter().map(|v| v.parse::<f64>().unwrap()).collect();
-            plot_data.time.push(records_f64.remove(0));
-            plot_data.data.push(records_f64); 
+            record
+                .iter()
+                .map(|v| v.parse::<f64>().unwrap())
+                .zip(populations.iter_mut())
+                .for_each(|(value,population)| {
+                    population.push(value);
+                });
         }
+        plot_data.time = populations.remove(0);
+        plot_data.data = populations;
         
         Ok(plot_data)
     }
@@ -74,15 +85,43 @@ impl CSVData {
     }    
 }
 
+impl PlotLayout {
+    pub fn new(r: u32, c: u32, n_tabs: u32) -> Self {
+        Self {
+            rows: r,
+            cols: c,
+            number_of_tabs: n_tabs,
+            active_tabs: vec![],
+        }
+    }
+}
+
 impl PlotInfo{
     //Chamadas para o ImPlot 
-    pub fn plot_graph(&self, layout: &PlotLayout){
-        /*let plotting_context = implot::Context::create();
-        let plot_ui = plotting_context.get_plot_ui();
-            implot::Plot::new("my title")
-            .size([300.0, 200.0]) // other things such as .x_label("some_label") can be added too
-            .build(&plot_ui, || {
-            // Do things such as plotting lines
-    }); */
+    pub fn plot_graph(&self, ui: &Ui, layout: &PlotLayout){
+        
+        /*let tab_bar: imgui::TabBar<&str> = imgui::TabBar::new("Tabs");
+        tab_bar.build(&ui, || {
+            imgui::TabItem::new("Tab 0").build(&ui, || {
+                let x = vec![1.0,2.0,3.0,4.0,5.0];
+                let y = vec![1.0,2.0,3.0,4.0,5.0];
+                implot::Plot::new("Plot")
+                    .size([300.0, 200.0]) // other things such as .x_label("some_label") can be added too
+                    .build(&plot_ui, || {
+                    PlotLine::new("legend label").plot(&self.plot_data.time,&data);
+                });
+                
+            });
+        });*/
+
+        /*//let content_width = ui.window_content_region_min()/ui.window_content_region_max();              
+            int colors_size = colors.len();
+            for (int i = 0; i < layout.rows*plot_layout.cols; ++i) {
+                int index = id + i;
+                PlotLine::new(plot.labels[index])).plot(&self.time_data,);           
+                }
+            }
+        */
+        
     }
 }
