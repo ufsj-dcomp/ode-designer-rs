@@ -1,12 +1,11 @@
 use imgui::Ui;
-use implot::PlotUi;
-use crate::{App, core::plot::{CSVData, PlotLayout}};
+
+use crate::App;
 use rfd::FileDialog;
 
 use super::app::SimulationState;
 
-
-impl App {    
+impl App {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
         if ui.menu_item("Plot CSV file") {
             let file = FileDialog::new()
@@ -14,13 +13,13 @@ impl App {
                 .set_directory(".")
                 .pick_file();
 
-            if let Some(file_path) = file { 
+            if let Some(file_path) = file {
                 self.simulation_state = Some(SimulationState::from_csv(file_path));
-            } 
-        }  
+            }
+        }
     }
-    
-    pub fn draw_menu(&mut self, ui: &Ui){
+
+    pub fn draw_menu(&mut self, ui: &Ui) {
         ui.menu_bar(|| {
             ui.menu("File", || {
                 if ui.menu_item("New") {
@@ -35,7 +34,7 @@ impl App {
                     self.save_state();
                 }
 
-                self.draw_menu_load_csv(ui); 
+                self.draw_menu_load_csv(ui);
             });
 
             ui.menu("Edit", || {
@@ -49,5 +48,4 @@ impl App {
             })
         });
     }
-
 }

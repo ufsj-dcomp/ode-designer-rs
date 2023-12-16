@@ -79,7 +79,7 @@ pub trait Linkable<IdType> {
 
 impl<IdType: Copy> Linkable<IdType> for IdType {
     fn pin_id(&self) -> IdType {
-        *self        
+        *self
     }
 }
 

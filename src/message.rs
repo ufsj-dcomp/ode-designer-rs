@@ -1,5 +1,5 @@
 use derive_more::From;
-use imnodes::{InputPinId, OutputPinId, NodeId};
+use imnodes::{InputPinId, NodeId, OutputPinId};
 
 use crate::{core::app::Link, exprtree::ExpressionNode};
 
@@ -21,7 +21,7 @@ pub enum Message {
     },
     SetNodePos {
         node_id: NodeId,
-        screen_space_pos: [f32; 2]
+        screen_space_pos: [f32; 2],
     },
 }
 

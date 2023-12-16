@@ -1,24 +1,25 @@
 mod assigner;
+pub mod errors;
 pub mod expression;
 pub mod term;
-pub mod errors;
 
 use std::ops::{Deref, DerefMut};
 
-pub use expression::Expression;
-use strum::{EnumDeref, EnumDiscriminants, FromRepr, EnumVariantNames};
-pub use term::Term;
 pub use assigner::Assigner;
+pub use expression::Expression;
+use strum::{EnumDeref, EnumDiscriminants, EnumVariantNames, FromRepr};
+pub use term::Term;
 
 use imgui::Ui;
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
     core::App,
-    core::{GeneratesId, app::AppState},
+    core::{app::AppState, GeneratesId},
     exprtree::{ExpressionNode, ExpressionTree, Sign},
     message::{Message, SendData},
-    pins::{InputPin, OutputPin, Pin}, utils::ModelFragment,
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use derive_more::From;
@@ -60,28 +61,36 @@ impl Node {
         }
     }
 
-    pub fn build_from_fragment(frag: ModelFragment) -> Result<(Self, Option<PendingOperations>), NotANode> {
+    pub fn build_from_fragment(
+        frag: ModelFragment,
+    ) -> Result<(Self, Option<PendingOperations>), NotANode> {
         let node_id = NodeId::generate();
 
         Term::try_from_model_fragment(node_id, &frag)
             .map(|(node_impl, ops)| (node_impl.into(), ops))
-            .or_else(||
+            .or_else(|| {
                 Expression::try_from_model_fragment(node_id, &frag)
                     .map(|(node_impl, ops)| (node_impl.into(), ops))
-                    .or_else(||
+                    .or_else(|| {
                         Assigner::try_from_model_fragment(node_id, &frag)
                             .map(|(node_impl, ops)| (node_impl.into(), ops))
-                    )
-            ).ok_or(NotANode(frag))
+                    })
+            })
+            .ok_or(NotANode(frag))
     }
 }
 
 pub trait NodeImpl {
     fn new(node_id: NodeId, name: String) -> Self
-        where Self: Sized;
+    where
+        Self: Sized;
 
-    fn try_from_model_fragment(node_id: NodeId, frag: &ModelFragment) -> Option<(Self, Option<PendingOperations>)>
-        where Self: Sized;
+    fn try_from_model_fragment(
+        node_id: NodeId,
+        frag: &ModelFragment,
+    ) -> Option<(Self, Option<PendingOperations>)>
+    where
+        Self: Sized;
 
     fn id(&self) -> NodeId;
 
@@ -138,7 +147,11 @@ pub trait NodeImpl {
         true
     }
 
-    fn process_node(&mut self, ui: &Ui, ui_node: &mut NodeScope) -> (Option<Vec<Message>>, Option<AppState>) {
+    fn process_node(
+        &mut self,
+        ui: &Ui,
+        ui_node: &mut NodeScope,
+    ) -> (Option<Vec<Message>>, Option<AppState>) {
         ui_node.add_titlebar(|| ui.text(self.name()));
 
         let mut input_changed = false;
@@ -164,7 +177,9 @@ pub trait NodeImpl {
         let messages = ((inner_content_changed || input_changed) && self.state_changed())
             .then(|| self.broadcast_data());
 
-        let app_state_change = inner_content_changed.then(|| self.trigger_app_state_change()).flatten();
+        let app_state_change = inner_content_changed
+            .then(|| self.trigger_app_state_change())
+            .flatten();
 
         (messages, app_state_change)
     }
@@ -295,5 +310,5 @@ pub enum PendingOperation {
     },
     SetAssignerOperatesOn {
         target_node_name: String,
-    }
+    },
 }
