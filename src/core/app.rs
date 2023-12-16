@@ -105,8 +105,14 @@ impl SimulationState {
             implot::Plot::new("Plot")
                 .size([300.0, 200.0])
                 .build(plot_ui, || {
-                    implot::PlotLine::new("legend label")
-                        .plot(&self.plot.data.time, &self.plot.data.lines[0]);
+                    self.plot
+                        .data
+                        .lines
+                        .iter()
+                        .zip(&self.plot.data.labels)
+                        .for_each(|(line, label)| {
+                            implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                        })
                 });
         });
 
