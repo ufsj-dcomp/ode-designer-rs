@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
+use std::path::PathBuf;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
@@ -24,7 +25,7 @@ use imgui::{StyleVar, Ui, TabBar, TabItem};
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
-use super::plot;
+use super::plot::{self, CSVData};
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -45,6 +46,26 @@ impl Link {
     }
 }
 
+const COLORS: &[ImVec4] = &[
+    ImVec4::new(0.98,0.027,0.027,1.0),
+    ImVec4::new(0.09,0.027,0.98,1.0),
+    ImVec4::new(0.98,0.027,0.027,1.0), //vermelha
+    ImVec4::new(0.09,0.027,0.98,1.0), 
+    ImVec4::new(0.027,0.98,0.12,1.0), //verde claro
+    ImVec4::new(0.96,0.98,0.027,1.0), //amarelo
+    ImVec4::new(0.5,0.,1.0,1.0), //roxo
+    ImVec4::new(1.0,0.5,0.,1.0), //laranja
+    ImVec4::new(0.2,1.0,1.0,1.0), //ciano
+    ImVec4::new(1.0,0.2,0.6,1.0), //rosa
+    ImVec4::new(0.4,0.7,1.0,1.0), //azul claro
+    ImVec4::new(1.0,0.4,0.4,1.0), //vermelho claro                                                        
+    ImVec4::new(1.0,0.2,1.0,1.0), //magenta                            
+    ImVec4::new(1.0,0.7,0.4,1.0), //laranja claro
+    ImVec4::new(0.74,0.055,0.055,1.0),
+    ImVec4::new(0.6,0.298,0.,1.0),
+    ImVec4::new(0.1,0.4,0.1,1.0)  //verde escuro 
+];
+
 #[derive(Default)]
 pub struct SimulationState {
     pub plot: PlotInfo,
@@ -55,14 +76,50 @@ pub struct SimulationState {
 }
 
 impl SimulationState {
-    pub fn draw_tab(&self, ui: &Ui, plot_ui: &mut PlotUi){
-        /*for i in 0..plot_info.plot_data.len() {
-            let values: Vec<f64> = plot_data.data
-            .iter()  
-            .map(|x| x[i]) 
-            .collect(); 
+    pub fn from_csv(file_path: PathBuf) -> Self {
+        let csv_data = CSVData::load_data(file_path).unwrap(); 
+
+        let pane_count = csv_data.population_count().div_ceil(4);
+
+        Self {
+            plot: PlotInfo {
+                data: csv_data,
+                title: String::from("TODO!"),
+                xlabel: String::from("time (days)"),
+                ylabel: String::from("conc/ml"),
+            },
+            plot_layout: PlotLayout::new(2, 2, pane_count as u32),
+            colors: COLORS.to_owned(),
+            flag_simulation: false,
+            flag_plot_all: false,
+
         }
-        */
+    }
+
+    pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi){
+        // for i in 0..plot_info.plot_data.len() {
+        //     let values: Vec<f64> = plot_data.data
+        //     .iter()  
+        //     .map(|x| x[i]) 
+        //     .collect(); 
+        // }
+
+        imgui::TabItem::new("Tab 0")
+            .build(ui, || {
+            implot::Plot::new("Plot")
+                .size([300.0, 200.0])
+                .build(plot_ui, || {
+                implot::PlotLine::new("legend label").plot(&self.plot.data.time, &self.plot.data.lines[0]);
+            });
+        });
+
+        // let content_width = ui.window_content_region_min()/ui.window_content_region_max();              
+            // int colors_size = colors.len();
+            // for (int i = 0; i < layout.rows*plot_layout.cols; ++i) {
+            //     int index = id + i;
+            //     PlotLine::new(plot.labels[index])).plot(&self.time_data,);           
+            //     }
+            // }
     }
 }
 
@@ -76,7 +133,7 @@ pub struct App {
     state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
-    pub (crate) simulation_state: SimulationState,
+    pub (crate) simulation_state: Option<SimulationState>,
 }
 
 pub enum AppState {
@@ -230,8 +287,9 @@ impl App {
                 StateAction::Keep => self.state = Some(state),
             }
         }
-    }    
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
+    }
+    
+    pub fn draw_main_tab(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
         let flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
@@ -246,37 +304,50 @@ impl App {
         // Remove padding/rounding on main container window
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
-        // let mut bg = ui.clone_style().colors[imgui::sys::ImGuiCol_WindowBg as usize];
-        /*ui.window("ode designer")
-            .size(ui.io().display_size, imgui::Condition::Always)
-            .position([0.0, 0.0], imgui::Condition::Always)
-            .flags(flags)*/
-            //.build(|| {
-                self.draw_menu(ui); 
-                let scope =
-                    imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
-                if let Some(link) = scope.links_created() {
-                    self.add_link(link.start_pin, link.end_pin);
-                } else if let Some(link_id) = scope.get_dropped_link() {
-                    self.remove_link(link_id);
-                }
-            //});
+
+        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
+
+        if let Some(link) = scope.links_created() {
+            self.add_link(link.start_pin, link.end_pin);
+        } else if let Some(link_id) = scope.get_dropped_link() {
+            self.remove_link(link_id);
+        }
 
         self.update();
     }
 
-    pub fn draw_tabs(&mut self,  ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi){
-        let tab_bar: imgui::TabBar<&str> = imgui::TabBar::new("Tabs");
-        tab_bar.build(&ui, || {
-            let tab_model = TabItem::new("Model"); 
-            tab_model.build(ui, || {
-                self.draw(ui, context, plot_ui);
-            }); 
-            let tab_2 = TabItem::new("Tab 0"); 
-            tab_2.build(ui, || {
-                self.draw(ui, context, plot_ui);
+    pub fn draw(&mut self,  ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi){
+        let flags =
+        // No borders etc for top-level window
+        imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
+        // Show menu bar
+        | imgui::WindowFlags::MENU_BAR
+        // Don't raise window on focus (as it'll clobber floating windows)
+        | imgui::WindowFlags::NO_BRING_TO_FRONT_ON_FOCUS | imgui::WindowFlags::NO_NAV_FOCUS
+        // Don't want the dock area's parent to be dockable!
+        | imgui::WindowFlags::NO_DOCKING
+        ;
+
+        ui
+            .window("ode designer")
+            .size(ui.io().display_size, imgui::Condition::Always)
+            .position([0.0, 0.0], imgui::Condition::Always)
+            .flags(flags)
+            .build(|| {
+                self.draw_menu(ui);
+
+                let tab_bar = imgui::TabBar::new("Tabs");
+                tab_bar.build(ui, || {
+                    let tab_model = TabItem::new("Model");
+                    tab_model.build(ui, || {
+                        self.draw_main_tab(ui, context, plot_ui);
+                    });
+
+                    if let Some(simulation_state) = &self.simulation_state {
+                        simulation_state.draw_tabs(ui, plot_ui);
+                    }
+                });
             });
-        });
     }
 
     pub fn new() -> Self {
