@@ -57,6 +57,7 @@ impl CSVData {
 
         data.time = populations.remove(0);
         data.lines = populations;
+        data.labels.remove(0);
 
         Ok(data)
     }

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
-use implot::{ImVec4, PlotUi};
+use implot::{ImVec4, PlotUi, AxisFlags};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -94,16 +94,11 @@ impl SimulationState {
     }
 
     pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi) {
-        // for i in 0..plot_info.plot_data.len() {
-        //     let values: Vec<f64> = plot_data.data
-        //     .iter()
-        //     .map(|x| x[i])
-        //     .collect();
-        // }
-
         imgui::TabItem::new("Tab 0").build(ui, || {
-            implot::Plot::new("Plot")
-                .size([300.0, 200.0])
+            implot::Plot::new("Plot")                
+                .size([600.0, 400.0])
+                .x_label(&self.plot.xlabel)
+                .y_label(&self.plot.ylabel)
                 .build(plot_ui, || {
                     self.plot
                         .data
@@ -111,7 +106,9 @@ impl SimulationState {
                         .iter()
                         .zip(&self.plot.data.labels)
                         .for_each(|(line, label)| {
+                            let lineweight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
                             implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                            lineweight.pop();
                         })
                 });
         });
