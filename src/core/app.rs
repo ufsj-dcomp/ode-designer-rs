@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
-use implot::{ImVec4, PlotUi, AxisFlags};
+use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -45,8 +45,6 @@ impl Link {
 }
 
 const COLORS: &[ImVec4] = &[
-    ImVec4::new(0.98, 0.027, 0.027, 1.0),
-    ImVec4::new(0.09, 0.027, 0.98, 1.0),
     ImVec4::new(0.98, 0.027, 0.027, 1.0), //vermelha
     ImVec4::new(0.09, 0.027, 0.98, 1.0),
     ImVec4::new(0.027, 0.98, 0.12, 1.0), //verde claro
@@ -94,9 +92,13 @@ impl SimulationState {
     }
 
     pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi) {
-        imgui::TabItem::new("Tab 0").build(ui, || {
-            implot::Plot::new("Plot")                
-                .size([600.0, 400.0])
+        let [content_width, content_height] = ui.content_region_avail();
+
+        let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
+
+        imgui::TabItem::new("All").build(ui, || {
+            implot::Plot::new("Plot")
+                .size([content_width, content_height])
                 .x_label(&self.plot.xlabel)
                 .y_label(&self.plot.ylabel)
                 .build(plot_ui, || {
@@ -105,21 +107,61 @@ impl SimulationState {
                         .lines
                         .iter()
                         .zip(&self.plot.data.labels)
-                        .for_each(|(line, label)| {
-                            let lineweight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
+                        .zip(self.colors.iter().cycle())
+                        .for_each(|((line, label), color)| {
+                            let ImVec4 { x, y, z, w } = *color;
+                            let color_token = implot::push_style_color(
+                                &implot::PlotColorElement::Line,
+                                x,
+                                y,
+                                z,
+                                w,
+                            );
                             implot::PlotLine::new(label).plot(&self.plot.data.time, line);
-                            lineweight.pop();
+                            color_token.pop();
                         })
                 });
         });
 
-        // let content_width = ui.window_content_region_min()/ui.window_content_region_max();
-        // int colors_size = colors.len();
-        // for (int i = 0; i < layout.rows*plot_layout.cols; ++i) {
-        //     int index = id + i;
-        //     PlotLine::new(plot.labels[index])).plot(&self.time_data,);
-        //     }
-        // }
+        let populations_per_tab = (self.plot_layout.cols * self.plot_layout.rows) as usize;
+        let individual_plot_size = [
+            content_width / self.plot_layout.cols as f32,
+            content_height / self.plot_layout.rows as f32,
+        ];
+
+        for (tab_idx, tab_populations) in
+            self.plot.data.lines.chunks(populations_per_tab).enumerate()
+        {
+            imgui::TabItem::new(format!("Tab {tab_idx}")).build(ui, || {
+                tab_populations
+                    .iter()
+                    .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
+                    .enumerate()
+                    .for_each(|(idx, (line, label))| {
+                        implot::Plot::new(label)
+                            .size(individual_plot_size)
+                            .x_label(&self.plot.xlabel)
+                            .y_label(&self.plot.ylabel)
+                            .build(plot_ui, || {
+                                let ImVec4 { x, y, z, w } = self.colors
+                                    [(tab_idx * populations_per_tab + idx) % self.colors.len()];
+                                let color_token = implot::push_style_color(
+                                    &implot::PlotColorElement::Line,
+                                    x,
+                                    y,
+                                    z,
+                                    w,
+                                );
+                                implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                                color_token.pop();
+                            });
+
+                        if idx & 1 == 0 {
+                            ui.same_line();
+                        }
+                    });
+            });
+        }
     }
 }
 
