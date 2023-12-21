@@ -756,6 +756,17 @@ impl App {
 
         self.try_read_model(model)
     }
+
+    pub fn clear_state(&mut self) {
+        self.nodes.clear();
+        self.input_pins.clear();
+        self.output_pins.clear();
+        self.links.clear();
+        self.state = None;
+        self.queue = Default::default();
+        self.received_messages.clear();
+        self.simulation_state = None;
+    }
 }
 
 #[cfg(test)]

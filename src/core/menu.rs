@@ -23,10 +23,11 @@ impl App {
         ui.menu_bar(|| {
             ui.menu("File", || {
                 if ui.menu_item("New") {
-                    todo!("New not implemented");
+                    self.clear_state();
                 }
 
                 if ui.menu_item("Load") {
+                    self.clear_state();
                     self.load_state();
                 }
 
