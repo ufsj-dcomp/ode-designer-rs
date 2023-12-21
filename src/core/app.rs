@@ -424,17 +424,6 @@ impl App {
             .find(|link| link.input_pin_id == *input_id)
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) -> Option<Node> {
-        let node = self.nodes.remove(id)?;
-        for input in node.inputs().unwrap_or_default() {
-            self.input_pins.remove(input.id());
-        }
-        for output in node.outputs().unwrap_or_default() {
-            self.output_pins.remove(output.id());
-        }
-        Some(node)
-    }
-
     fn handle_message(&mut self, tagged: TaggedMessage) -> Option<Vec<Message>> {
         match tagged.message {
             Message::SendData(SendData {
@@ -529,6 +518,92 @@ impl App {
                 node_id.set_position(x, y, imnodes::CoordinateSystem::ScreenSpace);
                 None
             }
+            Message::RemoveNode(node_id) => {
+                let Some(mut node) = self.nodes.remove(&node_id) else {
+                    return None;
+                };
+
+                let mut removed_input_ids = HashSet::new();
+
+                if let Some(input_pins) = node.inputs_mut() {
+                    for input_pin in input_pins {
+                        if let Some(output_pin_id) = input_pin.linked_to {
+                            input_pin.unlink(&output_pin_id);
+                            removed_input_ids.insert(input_pin.id);
+
+                            let output_node_id = *self
+                                .output_pins
+                                .get(&output_pin_id)
+                                .expect("If the pin exists, so does the node");
+
+                            let output_node = self
+                                .nodes
+                                .get_mut(&output_node_id)
+                                .expect("If the pin exists, so does the node");
+
+                            output_node
+                                .get_output_mut(&output_pin_id)
+                                .expect("This pin surely exists")
+                                .unlink(&input_pin.id);
+                        }
+                    }
+                }
+
+                let mut removed_output_ids = HashSet::new();
+                let mut notifications = Vec::new();
+
+                if let Some(output_pins) = node.outputs_mut() {
+                    for output_pin in output_pins {
+                        for input_pin_id in output_pin.linked_to.clone() {
+                            output_pin.unlink(&input_pin_id);
+                            removed_output_ids.insert(output_pin.id);
+
+                            let input_node_id = *self
+                                .input_pins
+                                .get(&input_pin_id)
+                                .expect("If the pin exists, so does the node");
+
+                            let input_node = self
+                                .nodes
+                                .get_mut(&input_node_id)
+                                .expect("If the pin exists, so does the node");
+
+                            input_node
+                                .get_input_mut(&input_pin_id)
+                                .expect("This pin surely exists")
+                                .unlink(&output_pin.id);
+
+                            notifications.push((input_node_id, input_pin_id));
+                        }
+                    }
+                }
+
+                let mut links_to_remove = Vec::new();
+
+                for link in &self.links {
+                    if removed_input_ids.contains(&link.input_pin_id)
+                        || removed_output_ids.contains(&link.output_pin_id)
+                    {
+                        links_to_remove.push(link.id);
+                    }
+                }
+
+                for link_id in links_to_remove {
+                    self.remove_link(link_id);
+                }
+
+                notifications
+                    .into_iter()
+                    .filter_map(|(input_node_id, input_pin_id)| {
+                        self.nodes
+                            .get_mut(&input_node_id)
+                            .and_then(|input_node| input_node.notify(LinkEvent::Pop(input_pin_id)))
+                    })
+                    .reduce(|mut acc, notif| {
+                        acc.extend(notif);
+                        acc
+                    })
+            }
         }
     }
 
@@ -601,9 +676,7 @@ impl App {
     }
 
     pub fn generate_code(&self) -> Option<()> {
-        let file_path = FileDialog::new()
-            .add_filter("py", &["py"])
-            .save_file()?;
+        let file_path = FileDialog::new().add_filter("py", &["py"]).save_file()?;
 
         let mut file = File::create(file_path).ok()?;
 

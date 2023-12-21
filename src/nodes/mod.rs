@@ -155,17 +155,35 @@ pub trait NodeImpl {
         ui_node: &mut NodeScope,
     ) -> (Option<Vec<Message>>, Option<AppState>) {
         let mut name_changed = false;
+        let mut remove_node = false;
 
         ui_node.add_titlebar(|| {
+            // Close button
+            {
+                let _col = ui.push_style_color(imgui::StyleColor::Button, crate::style::DIM_RED);
+                let _round = ui.push_style_var(imgui::StyleVar::FrameRounding(50.));
+                remove_node = ui.button(" × ");
+            }
+
+            ui.same_line();
+
             if self.id().is_selected() {
                 let _width = ui.push_item_width((self.name().len() + 1) as f32 * 7.5);
-                name_changed = ui.input_text(&format!("##node_{}", Into::<i32>::into(self.id())), self.name_mut())
+                name_changed = ui
+                    .input_text(
+                        &format!("##node_{}", Into::<i32>::into(self.id())),
+                        self.name_mut(),
+                    )
                     .no_horizontal_scroll(true)
                     .build();
             } else {
                 ui.text(self.name());
             }
         });
+
+        if remove_node {
+            return (Some(vec![Message::RemoveNode(self.id())]), None);
+        }
 
         let mut input_changed = false;
 
@@ -187,7 +205,8 @@ pub trait NodeImpl {
 
         let inner_content_changed = self.draw(ui);
 
-        let messages = ((inner_content_changed || input_changed) && self.state_changed() || name_changed)
+        let messages = ((inner_content_changed || input_changed) && self.state_changed()
+            || name_changed)
             .then(|| self.broadcast_data());
 
         let app_state_change = inner_content_changed
