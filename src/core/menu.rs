@@ -33,19 +33,19 @@ impl App {
                 if ui.menu_item("Save") {
                     self.save_state();
                 }
+            });
+
+            ui.menu("Simulation", || {
+                if ui.menu_item("Generate Code") {
+                    self.generate_code();
+                }
+
+                if ui.menu_item("Run") {
+                    todo!("Simulate not implemented");
+                }
 
                 self.draw_menu_load_csv(ui);
             });
-
-            ui.menu("Edit", || {
-                if ui.menu_item("Generate Code") {
-                    todo!("Generate code not implemented");
-                }
-
-                if ui.menu_item("Simulate") {
-                    todo!("Simulate not implemented");
-                }
-            })
         });
     }
 }

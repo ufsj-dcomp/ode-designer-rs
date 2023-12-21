@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Write};
 use std::path::PathBuf;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -598,6 +598,24 @@ impl App {
             arguments,
             equations,
         }
+    }
+
+    pub fn generate_code(&self) -> Option<()> {
+        let file_path = FileDialog::new()
+            .add_filter("py", &["py"])
+            .save_file()?;
+
+        let mut file = File::create(file_path).ok()?;
+
+        let model: odeir::Model = self.create_json().into();
+
+        let odeir::Model::ODE(ode_model) = model else {
+            unreachable!("This program can only produce ODE models for now");
+        };
+
+        let py_code = odeir::transformations::r4k::render_ode(&ode_model);
+
+        file.write_all(py_code.as_ref()).ok()
     }
 
     pub fn save_state(&self) -> Option<()> {
