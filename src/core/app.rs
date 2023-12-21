@@ -1,9 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
+use std::path::PathBuf;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
+use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::VariantNames;
@@ -12,13 +14,16 @@ use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::{
-    LinkEvent, Node, PendingOperation, PendingOperations, NodeVariant,
-};
+use crate::nodes::{LinkEvent, Node, NodeVariant, PendingOperation, PendingOperations};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{StyleVar, Ui};
+use imgui::{StyleVar, TabItem, Ui};
+
+use crate::core::plot::PlotInfo;
+use crate::core::plot::PlotLayout;
+
+use super::plot::CSVData;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -39,6 +44,127 @@ impl Link {
     }
 }
 
+const COLORS: &[ImVec4] = &[
+    ImVec4::new(0.98, 0.027, 0.027, 1.0), //vermelha
+    ImVec4::new(0.09, 0.027, 0.98, 1.0),
+    ImVec4::new(0.027, 0.98, 0.12, 1.0), //verde claro
+    ImVec4::new(0.96, 0.98, 0.027, 1.0), //amarelo
+    ImVec4::new(0.5, 0., 1.0, 1.0),      //roxo
+    ImVec4::new(1.0, 0.5, 0., 1.0),      //laranja
+    ImVec4::new(0.2, 1.0, 1.0, 1.0),     //ciano
+    ImVec4::new(1.0, 0.2, 0.6, 1.0),     //rosa
+    ImVec4::new(0.4, 0.7, 1.0, 1.0),     //azul claro
+    ImVec4::new(1.0, 0.4, 0.4, 1.0),     //vermelho claro
+    ImVec4::new(1.0, 0.2, 1.0, 1.0),     //magenta
+    ImVec4::new(1.0, 0.7, 0.4, 1.0),     //laranja claro
+    ImVec4::new(0.74, 0.055, 0.055, 1.0),
+    ImVec4::new(0.6, 0.298, 0., 1.0),
+    ImVec4::new(0.1, 0.4, 0.1, 1.0), //verde escuro
+];
+
+#[derive(Default)]
+pub struct SimulationState {
+    pub plot: PlotInfo,
+    pub plot_layout: PlotLayout,
+    pub colors: Vec<ImVec4>,
+    pub flag_simulation: bool,
+    pub flag_plot_all: bool,
+}
+
+impl SimulationState {
+    pub fn from_csv(file_path: PathBuf) -> Self {
+        let csv_data = CSVData::load_data(file_path).unwrap();
+
+        let pane_count = csv_data.population_count().div_ceil(4);
+
+        Self {
+            plot: PlotInfo {
+                data: csv_data,
+                title: String::from("TODO!"),
+                xlabel: String::from("time (days)"),
+                ylabel: String::from("conc/ml"),
+            },
+            plot_layout: PlotLayout::new(2, 2, pane_count as u32),
+            colors: COLORS.to_owned(),
+            flag_simulation: false,
+            flag_plot_all: false,
+        }
+    }
+
+    pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi) {
+        let [content_width, content_height] = ui.content_region_avail();
+
+        let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
+
+        imgui::TabItem::new("All").build(ui, || {
+            implot::Plot::new("Plot")
+                .size([content_width, content_height])
+                .x_label(&self.plot.xlabel)
+                .y_label(&self.plot.ylabel)
+                .build(plot_ui, || {
+                    self.plot
+                        .data
+                        .lines
+                        .iter()
+                        .zip(&self.plot.data.labels)
+                        .zip(self.colors.iter().cycle())
+                        .for_each(|((line, label), color)| {
+                            let ImVec4 { x, y, z, w } = *color;
+                            let color_token = implot::push_style_color(
+                                &implot::PlotColorElement::Line,
+                                x,
+                                y,
+                                z,
+                                w,
+                            );
+                            implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                            color_token.pop();
+                        })
+                });
+        });
+
+        let populations_per_tab = (self.plot_layout.cols * self.plot_layout.rows) as usize;
+        let individual_plot_size = [
+            content_width / self.plot_layout.cols as f32,
+            content_height / self.plot_layout.rows as f32,
+        ];
+
+        for (tab_idx, tab_populations) in
+            self.plot.data.lines.chunks(populations_per_tab).enumerate()
+        {
+            imgui::TabItem::new(format!("Tab {tab_idx}")).build(ui, || {
+                tab_populations
+                    .iter()
+                    .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
+                    .enumerate()
+                    .for_each(|(idx, (line, label))| {
+                        implot::Plot::new(label)
+                            .size(individual_plot_size)
+                            .x_label(&self.plot.xlabel)
+                            .y_label(&self.plot.ylabel)
+                            .build(plot_ui, || {
+                                let ImVec4 { x, y, z, w } = self.colors
+                                    [(tab_idx * populations_per_tab + idx) % self.colors.len()];
+                                let color_token = implot::push_style_color(
+                                    &implot::PlotColorElement::Line,
+                                    x,
+                                    y,
+                                    z,
+                                    w,
+                                );
+                                implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                                color_token.pop();
+                            });
+
+                        if idx & 1 == 0 {
+                            ui.same_line();
+                        }
+                    });
+            });
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct App {
     nodes: HashMap<NodeId, Node>,
@@ -48,6 +174,7 @@ pub struct App {
     state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
+    pub(crate) simulation_state: Option<SimulationState>,
 }
 
 pub enum AppState {
@@ -80,7 +207,11 @@ enum StateAction {
 impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
         match self {
-            AppState::AddingNode { name, index, add_at_screen_space_pos } => {
+            AppState::AddingNode {
+                name,
+                index,
+                add_at_screen_space_pos,
+            } => {
                 let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
                 let _token = ui.push_style_var(StyleVar::WindowPadding([10.0; 2]));
                 if let Some(_popup) = ui.begin_popup("Create Node") {
@@ -90,12 +221,9 @@ impl AppState {
                     ui.text("Node type");
                     ui.same_line();
 
-                    ui.combo(
-                        "##Node Type",
-                        index,
-                        Node::VARIANTS,
-                        |variant_name| (*variant_name).into(),
-                    );
+                    ui.combo("##Node Type", index, Node::VARIANTS, |variant_name| {
+                        (*variant_name).into()
+                    });
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
                     if ui.button("Add") {
@@ -103,12 +231,10 @@ impl AppState {
                             .expect("User tried to construct an out-of-index node specialization");
 
                         let node_id = app.add_node(Node::build_from_ui(name.clone(), node_variant));
-                        app.queue.push(
-                            Message::SetNodePos {
-                                node_id,
-                                screen_space_pos: *add_at_screen_space_pos
-                            }
-                        );
+                        app.queue.push(Message::SetNodePos {
+                            node_id,
+                            screen_space_pos: *add_at_screen_space_pos,
+                        });
 
                         StateAction::Clear
                     } else {
@@ -118,12 +244,11 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-            AppState::AttributingAssignerOperatesOn {
-                attribute_to,
-            } => {
+            AppState::AttributingAssignerOperatesOn { attribute_to } => {
                 ui.open_popup("Hey Modal");
 
-                if let Some(_popup) = ui.modal_popup_config("Hey Modal")
+                if let Some(_popup) = ui
+                    .modal_popup_config("Hey Modal")
                     .movable(false)
                     .resizable(false)
                     .scrollable(false)
@@ -134,26 +259,27 @@ impl AppState {
                     ui.text("Hey, from modal!");
 
                     for (node_id, node) in app.nodes.iter() {
-                        if ui.selectable_config(node.name())
+                        if ui
+                            .selectable_config(node.name())
                             .disabled(node_id == attribute_to)
                             .build()
                         {
-                            app.queue.push(
-                                Message::AttributeAssignerOperatesOn {
-                                    assigner_id: *attribute_to,
-                                    value: *node_id,
-                                }
-                            );
+                            app.queue.push(Message::AttributeAssignerOperatesOn {
+                                assigner_id: *attribute_to,
+                                value: *node_id,
+                            });
 
                             return StateAction::Clear;
                         }
                     }
-    
+
                     StateAction::Keep
                 } else {
-                    unreachable!("If the state is AttributingAssignerOperatesOn, then the modal is open");
+                    unreachable!(
+                        "If the state is AttributingAssignerOperatesOn, then the modal is open"
+                    );
                 }
-            },
+            }
         }
     }
 }
@@ -202,8 +328,14 @@ impl App {
             }
         }
     }
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext) {
-        let flags =
+
+    pub fn draw_main_tab(
+        &mut self,
+        ui: &Ui,
+        context: &mut imnodes::EditorContext,
+        _plot_ui: &mut PlotUi,
+    ) {
+        let _flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
         // Show menu bar
@@ -217,34 +349,49 @@ impl App {
         // Remove padding/rounding on main container window
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
-        // let mut bg = ui.clone_style().colors[imgui::sys::ImGuiCol_WindowBg as usize];
+
+        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
+
+        if let Some(link) = scope.links_created() {
+            self.add_link(link.start_pin, link.end_pin);
+        } else if let Some(link_id) = scope.get_dropped_link() {
+            self.remove_link(link_id);
+        }
+
+        self.update();
+    }
+
+    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
+        let flags =
+        // No borders etc for top-level window
+        imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
+        // Show menu bar
+        | imgui::WindowFlags::MENU_BAR
+        // Don't raise window on focus (as it'll clobber floating windows)
+        | imgui::WindowFlags::NO_BRING_TO_FRONT_ON_FOCUS | imgui::WindowFlags::NO_NAV_FOCUS
+        // Don't want the dock area's parent to be dockable!
+        | imgui::WindowFlags::NO_DOCKING
+        ;
+
         ui.window("ode designer")
             .size(ui.io().display_size, imgui::Condition::Always)
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
-                ui.menu_bar(|| {
-                    ui.menu("File", || {
-                        if ui.menu_item("Save") {
-                            self.save_state();
-                        }
+                self.draw_menu(ui);
 
-                        if ui.menu_item("Load") {
-                            self.load_state();
-                        }
-                    })
+                let tab_bar = imgui::TabBar::new("Tabs");
+                tab_bar.build(ui, || {
+                    let tab_model = TabItem::new("Model");
+                    tab_model.build(ui, || {
+                        self.draw_main_tab(ui, context, plot_ui);
+                    });
+
+                    if let Some(simulation_state) = &self.simulation_state {
+                        simulation_state.draw_tabs(ui, plot_ui);
+                    }
                 });
-
-                let scope =
-                    imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
-                if let Some(link) = scope.links_created() {
-                    self.add_link(link.start_pin, link.end_pin);
-                } else if let Some(link_id) = scope.get_dropped_link() {
-                    self.remove_link(link_id);
-                }
             });
-
-        self.update();
     }
 
     pub fn new() -> Self {
@@ -357,12 +504,16 @@ impl App {
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
             Message::AttributeAssignerOperatesOn { assigner_id, value } => {
-                let target_name = self.nodes.get(&value)
+                let target_name = self
+                    .nodes
+                    .get(&value)
                     .expect("The node must have been chosen from a list of existing nodes")
                     .name()
                     .to_owned();
 
-                let Node::Assigner(assigner) = self.nodes.get_mut(&assigner_id)
+                let Node::Assigner(assigner) = self
+                    .nodes
+                    .get_mut(&assigner_id)
                     .expect("An assigner with this ID must exist, as it asked to open the modal")
                 else {
                     panic!("This node must be an assigner. If not, how could the modal have been opened?");
@@ -370,17 +521,23 @@ impl App {
 
                 assigner.operates_on = Some((value, target_name));
                 None
-            },
-            Message::SetNodePos { node_id, screen_space_pos: [x, y] } => {
+            }
+            Message::SetNodePos {
+                node_id,
+                screen_space_pos: [x, y],
+            } => {
                 node_id.set_position(x, y, imnodes::CoordinateSystem::ScreenSpace);
                 None
-            },
+            }
         }
     }
 
     pub fn add_link(&mut self, start_pin: OutputPinId, end_pin: InputPinId) {
-        self.queue
-            .push(Message::AddLink(Link::new(end_pin, start_pin, Sign::default())));
+        self.queue.push(Message::AddLink(Link::new(
+            end_pin,
+            start_pin,
+            Sign::default(),
+        )));
     }
 
     pub fn remove_link(&mut self, link_id: LinkId) {
@@ -408,29 +565,24 @@ impl App {
         let mut equations = Vec::new();
         let mut positions = odeir::Map::new();
 
-        self
-            .nodes
+        self.nodes
             .values()
             .filter_map(|node| {
                 positions.insert(
                     node.name().to_owned(),
-
                     #[cfg(not(test))]
                     node.id()
                         .get_position(imnodes::CoordinateSystem::ScreenSpace)
                         .convert(),
-
                     #[cfg(test)]
                     odeir::Position { x: 0.0, y: 0.0 },
                 );
 
                 node.to_model_fragment(self)
             })
-            .for_each(|frag| {
-                match frag {
-                    ModelFragment::Argument(arg) => arguments.push(arg),
-                    ModelFragment::Equation(eq) => equations.push(eq),
-                }
+            .for_each(|frag| match frag {
+                ModelFragment::Argument(arg) => arguments.push(arg),
+                ModelFragment::Equation(eq) => equations.push(eq),
             });
 
         odeir::Json {
@@ -458,20 +610,19 @@ impl App {
         let json = self.create_json();
 
         serde_json::to_writer_pretty(file, &json).ok()
-
     }
 
     fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
-        let odeir::CoreModel { equations, arguments, positions } = model.core;
+        let odeir::CoreModel {
+            equations,
+            arguments,
+            positions,
+        } = model.core;
 
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
             .map(Into::<ModelFragment>::into)
-            .chain(
-                equations
-                    .into_iter()
-                    .map(Into::<ModelFragment>::into)
-            )
+            .chain(equations.into_iter().map(Into::<ModelFragment>::into))
             .map(Node::build_from_fragment)
             .collect::<Result<_, _>>()?;
 
@@ -525,39 +676,46 @@ impl App {
                             *output_node.id()
                         };
 
-                        self.queue
-                            .push(Message::AddLink(Link::new(via_pin_id, output_pin_id, sign)))
+                        self.queue.push(Message::AddLink(Link::new(
+                            via_pin_id,
+                            output_pin_id,
+                            sign,
+                        )))
                     }
                     PendingOperation::SetAssignerOperatesOn { target_node_name } => {
-                        let target_node = node_name_map
-                            .get(&target_node_name as &str)
-                            .ok_or_else(|| {
-                                let source_node = self.get_node(node_id).expect("This node surely exists");
-                                InvalidNodeReference {
-                                    source_node: source_node.name().to_owned(),
-                                    tried_linking_to: target_node_name.clone(),
-                                    reason: InvalidNodeReason::NodeDoesNotExist,
-                                }
-                            }
-                        )?;
+                        let target_node =
+                            node_name_map
+                                .get(&target_node_name as &str)
+                                .ok_or_else(|| {
+                                    let source_node =
+                                        self.get_node(node_id).expect("This node surely exists");
+                                    InvalidNodeReference {
+                                        source_node: source_node.name().to_owned(),
+                                        tried_linking_to: target_node_name.clone(),
+                                        reason: InvalidNodeReason::NodeDoesNotExist,
+                                    }
+                                })?;
 
-                        self.queue
-                            .push(Message::AttributeAssignerOperatesOn { assigner_id: node_id, value: target_node.id() })
-                    },
+                        self.queue.push(Message::AttributeAssignerOperatesOn {
+                            assigner_id: node_id,
+                            value: target_node.id(),
+                        })
+                    }
                 }
             }
         }
 
-        positions
-            .into_iter()
-            .for_each(|(node_name, node_pos)| {
-                if let Some(node) = node_name_map.get(&node_name as &str) {
-                    let node_id = node.id();
-                    let screen_space_pos = node_pos.convert();
+        positions.into_iter().for_each(|(node_name, node_pos)| {
+            if let Some(node) = node_name_map.get(&node_name as &str) {
+                let node_id = node.id();
+                let screen_space_pos = node_pos.convert();
 
-                    self.queue.push(Message::SetNodePos { node_id, screen_space_pos })
-                }
-            });
+                self.queue.push(Message::SetNodePos {
+                    node_id,
+                    screen_space_pos,
+                })
+            }
+        });
 
         Ok(())
     }
@@ -587,10 +745,15 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use imnodes::{InputPinId, NodeId};
-    
 
     use super::App;
-    use crate::{nodes::{NodeImpl, Expression, Assigner, LinkEvent, Node, NodeVariant}, exprtree::{ExpressionNode, Operation, Sign}, core::{GeneratesId, initialize_id_generator}, pins::{OutputPin, Pin}, message::Message};
+    use crate::{
+        core::{initialize_id_generator, GeneratesId},
+        exprtree::{ExpressionNode, Operation, Sign},
+        message::Message,
+        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant},
+        pins::{OutputPin, Pin},
+    };
 
     struct ExpressionNodeBuilder<'pin> {
         name: String,
@@ -608,7 +771,8 @@ mod tests {
         fn linked_to(mut self, node: &'pin mut Node, contribution: Sign) -> Self {
             let send_data = node.send_data();
             let output_pin = node.outputs_mut().unwrap().first_mut().unwrap();
-            self.links_to_create.push((output_pin, send_data, contribution));
+            self.links_to_create
+                .push((output_pin, send_data, contribution));
             self
         }
 
@@ -655,31 +819,25 @@ mod tests {
 
     impl AssignerNodeBuilder {
         fn new(name: impl ToString) -> Self {
-            Self { name: name.to_string() }
+            Self {
+                name: name.to_string(),
+            }
         }
 
         fn build(self, argument: &mut Node) -> Node {
             let node_id = NodeId::generate();
             let mut assigner = Assigner::new(node_id, self.name);
 
-            let output_pin = argument
-                .outputs_mut()
-                .unwrap()
-                .first_mut()
-                .unwrap();
+            let output_pin = argument.outputs_mut().unwrap().first_mut().unwrap();
 
             output_pin.link_to(assigner.input.id);
 
-            assigner
-                .input
-                .link_to(output_pin.id);
+            assigner.input.link_to(output_pin.id);
 
-            assigner.on_link_event(
-                LinkEvent::Push {
-                    from_pin_id: assigner.input.id,
-                    payload: argument.send_data(),
-                }
-            );
+            assigner.on_link_event(LinkEvent::Push {
+                from_pin_id: assigner.input.id,
+                payload: argument.send_data(),
+            });
 
             assigner.into()
         }
@@ -690,7 +848,9 @@ mod tests {
     impl AppBuilder {
         fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
             let mut app = App::default();
-            nodes.into_iter().for_each(|node| { app.add_node(node); });
+            nodes.into_iter().for_each(|node| {
+                app.add_node(node);
+            });
 
             app
         }
@@ -724,21 +884,11 @@ mod tests {
             .linked_to(&mut b, Sign::Negative)
             .build(Operation::Add);
 
-        let da_dt = AssignerNodeBuilder::new("dA/dt")
-            .build(&mut a_times_k);
+        let da_dt = AssignerNodeBuilder::new("dA/dt").build(&mut a_times_k);
 
-        let db_dt = AssignerNodeBuilder::new("dB/dt")
-            .build(&mut a_times_k_plus_b);
+        let db_dt = AssignerNodeBuilder::new("dB/dt").build(&mut a_times_k_plus_b);
 
-        AppBuilder::with_nodes([
-            a,
-            b,
-            k,
-            a_times_k,
-            a_times_k_plus_b,
-            da_dt,
-            db_dt,
-        ])
+        AppBuilder::with_nodes([a, b, k, a_times_k, a_times_k_plus_b, da_dt, db_dt])
     }
 
     fn init_id_gen() {
@@ -765,7 +915,11 @@ mod tests {
         }};
     }
 
-    fn assert_expression<'app, const N: usize>(app: &'app App, name: &str, expected_connections: [(NodeId, Sign); N]) -> &'app Expression {
+    fn assert_expression<'app, const N: usize>(
+        app: &'app App,
+        name: &str,
+        expected_connections: [(NodeId, Sign); N],
+    ) -> &'app Expression {
         let expr = assert_get!(app, name, Expression);
         let expected_connections: HashSet<_> = expected_connections.into();
 
@@ -792,7 +946,6 @@ mod tests {
 
     #[test]
     fn test_app_create_model() {
-
         // Given - An app with pre-populated nodes, presumably from the GUI
 
         init_id_gen();
@@ -824,7 +977,6 @@ mod tests {
 
     #[test]
     fn test_app_read_model() {
-
         // Given - An empty app
 
         init_id_gen();
@@ -846,8 +998,9 @@ mod tests {
             ("a*k", [371.7532, 292.3206]),
             ("a*k+b", [1337.0, -240.0]),
             ("dA/dt", [357.0, 611.0]),
-            ("dB/dt", [1.5, 2.5])
-        ].into();
+            ("dB/dt", [1.5, 2.5]),
+        ]
+        .into();
 
         let mut actual_positions = HashMap::new();
 
@@ -855,7 +1008,11 @@ mod tests {
         // raw pointer manip in Imnodes' library code, which of course depends
         // on the GUI existing
         app.queue.messages.retain(|msg| {
-            if let Message::SetNodePos { node_id, screen_space_pos } = msg.message {
+            if let Message::SetNodePos {
+                node_id,
+                screen_space_pos,
+            } = msg.message
+            {
                 let node = app.nodes.get(&node_id).unwrap();
                 actual_positions.insert(node.name(), screen_space_pos);
                 false
@@ -883,19 +1040,15 @@ mod tests {
         assert_eq!(k.initial_value, 30.0);
 
         let a_times_k = assert_expression(
-            &app, "a*k",
-            [
-                (a.id(), Sign::Positive),
-                (k.id(), Sign::Positive),
-            ]
+            &app,
+            "a*k",
+            [(a.id(), Sign::Positive), (k.id(), Sign::Positive)],
         );
 
         let a_times_k_plus_b = assert_expression(
-            &app, "a*k+b",
-            [
-                (a_times_k.id(), Sign::Positive),
-                (b.id(), Sign::Negative),
-            ]
+            &app,
+            "a*k+b",
+            [(a_times_k.id(), Sign::Positive), (b.id(), Sign::Negative)],
         );
 
         let da_dt = assert_get!(&app, "dA/dt", Assigner);
@@ -909,6 +1062,5 @@ mod tests {
             db_dt.input.linked_to,
             Some(output_pin_id) if output_pin_id == a_times_k_plus_b.output.id
         ));
-
     }
 }

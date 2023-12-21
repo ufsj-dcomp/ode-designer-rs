@@ -47,10 +47,13 @@ impl NodeImpl for Term {
     }
 
     fn to_model_fragment(&self, _app: &App) -> Option<ModelFragment> {
-        Some(odeir::Argument::Value {
-            name: self.name().to_owned(),
-            value: self.initial_value,
-        }.into())
+        Some(
+            odeir::Argument::Value {
+                name: self.name().to_owned(),
+                value: self.initial_value,
+            }
+            .into(),
+        )
     }
 
     fn new(node_id: NodeId, name: String) -> Self {

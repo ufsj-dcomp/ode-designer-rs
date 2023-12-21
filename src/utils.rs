@@ -37,7 +37,6 @@ impl VecConversion<[f32; 2]> for ImVec2 {
     }
 }
 
-
 impl VecConversion<ImVec2> for odeir::Position {
     fn convert(self) -> ImVec2 {
         ImVec2 {

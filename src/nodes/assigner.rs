@@ -3,14 +3,13 @@ use std::str::FromStr;
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
+    core::app::AppState,
     exprtree::{ExpressionNode, Sign},
     pins::{InputPin, Pin},
-    utils::ModelFragment, core::app::AppState,
+    utils::ModelFragment,
 };
 
-use super::{
-    ExprWrapper, LinkEvent, PendingOperation, PendingOperations, NodeImpl,
-};
+use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
 
 #[derive(Debug)]
 pub struct Assigner {
@@ -63,22 +62,20 @@ impl NodeImpl for Assigner {
 
         ui.text("Variable: ");
         ui.same_line();
-        
+
         match &self.operates_on {
             Some((_, node_name)) => {
                 ui.text(node_name);
                 ui.button("Change")
-            },
+            }
             None => ui.button("Choose"),
         }
     }
 
     fn trigger_app_state_change(&self) -> Option<AppState> {
-        Some(
-            AppState::AttributingAssignerOperatesOn {
-                attribute_to: self.id,
-            }
-        )
+        Some(AppState::AttributingAssignerOperatesOn {
+            attribute_to: self.id,
+        })
     }
 
     fn inputs(&self) -> Option<&[InputPin]> {
@@ -106,12 +103,15 @@ impl NodeImpl for Assigner {
         let argument = node.name().to_owned();
         let contribution = self.input.sign.into();
 
-        Some(odeir::Equation {
-            name: self.name().to_owned(),
-            operates_on: self.operates_on.clone().map(|(_, name)| name),
-            argument,
-            contribution,
-        }.into())
+        Some(
+            odeir::Equation {
+                name: self.name().to_owned(),
+                operates_on: self.operates_on.clone().map(|(_, name)| name),
+                argument,
+                contribution,
+            }
+            .into(),
+        )
     }
     fn new(node_id: NodeId, name: String) -> Self {
         Self {
@@ -147,21 +147,19 @@ impl NodeImpl for Assigner {
 
         let mut pending_ops = PendingOperations {
             node_id,
-            operations: vec![
-                PendingOperation::LinkWith {
-                    node_name: eq.argument.clone(),
-                    via_pin_id: *node.input.id(),
-                    sign: node.input.sign,
-                }
-            ],
+            operations: vec![PendingOperation::LinkWith {
+                node_name: eq.argument.clone(),
+                via_pin_id: *node.input.id(),
+                sign: node.input.sign,
+            }],
         };
 
         if let Some(target_node_name) = &eq.operates_on {
-            pending_ops.operations.push(
-                PendingOperation::SetAssignerOperatesOn {
+            pending_ops
+                .operations
+                .push(PendingOperation::SetAssignerOperatesOn {
                     target_node_name: target_node_name.to_owned(),
-                }
-            )
+                })
         }
 
         Some((node, Some(pending_ops)))

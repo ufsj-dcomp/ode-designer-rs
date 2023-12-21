@@ -1,6 +1,7 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
 #![feature(lazy_cell)]
+#![feature(int_roundings)]
 
 use core::{initialize_id_generator, style, System};
 
@@ -44,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut showing_plot_demo = true;
 
     system.main_loop(move |_, ui| {
-        app.draw(ui, &mut nodeseditor);
+        app.draw(ui, &mut nodeseditor, &mut plot_ctx.get_plot_ui());
         implot::show_demo_window(&mut showing_plot_demo);
     });
     Ok(())

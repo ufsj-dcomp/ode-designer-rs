@@ -14,6 +14,8 @@ pub use id_gen::{initialize_id_generator, GeneratesId};
 
 pub mod app;
 mod id_gen;
+pub mod menu;
+pub mod plot;
 pub mod style;
 
 pub struct System {

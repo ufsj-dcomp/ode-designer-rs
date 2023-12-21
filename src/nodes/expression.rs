@@ -10,9 +10,7 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{
-    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations,
-};
+use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
 
 #[derive(Debug)]
 pub struct Expression {
@@ -138,11 +136,14 @@ impl NodeImpl for Expression {
             });
         }
 
-        Some(odeir::Argument::Composite {
-            name: self.name().to_owned(),
-            operation: Into::<char>::into(self.expr_wrapper.join_op).into(),
-            composition,
-        }.into())
+        Some(
+            odeir::Argument::Composite {
+                name: self.name().to_owned(),
+                operation: Into::<char>::into(self.expr_wrapper.join_op).into(),
+                composition,
+            }
+            .into(),
+        )
     }
 
     fn new(node_id: NodeId, name: String) -> Self {
@@ -192,11 +193,13 @@ impl NodeImpl for Expression {
                 .iter()
                 .cloned()
                 .zip(node.inputs.iter())
-                .map(|(comp, input_pin)| Some(PendingOperation::LinkWith {
-                    node_name: comp.name,
-                    via_pin_id: *input_pin.id(),
-                    sign: comp.contribution.try_into().ok()?,
-                }))
+                .map(|(comp, input_pin)| {
+                    Some(PendingOperation::LinkWith {
+                        node_name: comp.name,
+                        via_pin_id: *input_pin.id(),
+                        sign: comp.contribution.try_into().ok()?,
+                    })
+                })
                 .collect::<Option<Vec<PendingOperation>>>()?,
         };
 
