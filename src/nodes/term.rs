@@ -28,6 +28,10 @@ impl NodeImpl for Term {
         &self.leaf.symbol
     }
 
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.leaf.symbol
+    }
+
     fn send_data(&self) -> ExpressionNode<InputPinId> {
         ExpressionNode::Leaf(self.leaf.clone())
     }

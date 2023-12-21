@@ -96,6 +96,8 @@ pub trait NodeImpl {
 
     fn name(&self) -> &str;
 
+    fn name_mut(&mut self) -> &mut String;
+
     fn on_link_event(&mut self, _link_event: LinkEvent) -> bool {
         false
     }
@@ -152,7 +154,18 @@ pub trait NodeImpl {
         ui: &Ui,
         ui_node: &mut NodeScope,
     ) -> (Option<Vec<Message>>, Option<AppState>) {
-        ui_node.add_titlebar(|| ui.text(self.name()));
+        let mut name_changed = false;
+
+        ui_node.add_titlebar(|| {
+            if self.id().is_selected() {
+                let _width = ui.push_item_width((self.name().len() + 1) as f32 * 7.5);
+                name_changed = ui.input_text(&format!("##node_{}", Into::<i32>::into(self.id())), self.name_mut())
+                    .no_horizontal_scroll(true)
+                    .build();
+            } else {
+                ui.text(self.name());
+            }
+        });
 
         let mut input_changed = false;
 
@@ -174,7 +187,7 @@ pub trait NodeImpl {
 
         let inner_content_changed = self.draw(ui);
 
-        let messages = ((inner_content_changed || input_changed) && self.state_changed())
+        let messages = ((inner_content_changed || input_changed) && self.state_changed() || name_changed)
             .then(|| self.broadcast_data());
 
         let app_state_change = inner_content_changed

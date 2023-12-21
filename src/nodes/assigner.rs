@@ -29,6 +29,10 @@ impl NodeImpl for Assigner {
         &self.name
     }
 
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
     fn send_data(&self) -> ExpressionNode<InputPinId> {
         unreachable!("This node doesn't feature an output pin")
     }

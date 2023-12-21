@@ -30,6 +30,10 @@ impl NodeImpl for Expression {
         &self.name
     }
 
+    fn name_mut(&mut self) -> &mut String {
+        &mut self.name
+    }
+
     fn send_data(&self) -> ExpressionNode<InputPinId> {
         ExpressionNode::SubExpr(self.expr_wrapper.clone())
     }
