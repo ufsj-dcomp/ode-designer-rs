@@ -6,7 +6,7 @@ use crate::{
     core::app::AppState,
     exprtree::{ExpressionNode, Sign},
     pins::{InputPin, Pin},
-    utils::ModelFragment,
+    utils::ModelFragment, message::Message,
 };
 
 use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
@@ -35,6 +35,10 @@ impl NodeImpl for Assigner {
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {
         unreachable!("This node doesn't feature an output pin")
+    }
+
+    fn broadcast_data(&self) -> Vec<Message> {
+        vec![]
     }
 
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
