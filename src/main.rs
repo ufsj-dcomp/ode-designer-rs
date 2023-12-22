@@ -2,6 +2,7 @@
 #![feature(try_blocks)]
 #![feature(lazy_cell)]
 #![feature(int_roundings)]
+#![feature(let_chains)]
 
 use core::{initialize_id_generator, style, System};
 

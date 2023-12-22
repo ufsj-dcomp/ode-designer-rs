@@ -205,9 +205,19 @@ pub trait NodeImpl {
 
         let inner_content_changed = self.draw(ui);
 
-        let messages = ((inner_content_changed || input_changed) && self.state_changed()
+        let mut messages = ((inner_content_changed || input_changed) && self.state_changed()
             || name_changed)
             .then(|| self.broadcast_data());
+
+        if name_changed {
+            let node_rename_msg = Message::RenameNode(self.id(), self.name().to_owned());
+
+            if let Some(ref mut msg) = messages {
+                msg.push(node_rename_msg);
+            } else {
+                messages = Some(vec![node_rename_msg]);
+            }
+        }
 
         let app_state_change = inner_content_changed
             .then(|| self.trigger_app_state_change())

@@ -604,6 +604,18 @@ impl App {
                         acc
                     })
             }
+            Message::RenameNode(node_id, node_name) => {
+                for (_, node) in self.nodes.iter_mut() {
+                    if let Node::Assigner(asg) = node
+                        && let Some((asg_node_id, _)) = asg.operates_on
+                        && asg_node_id == node_id
+                    {
+                        asg.operates_on = Some((node_id, node_name.clone()));
+                    }
+                }
+
+                None
+            }
         }
     }
 

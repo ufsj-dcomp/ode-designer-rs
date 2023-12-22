@@ -24,6 +24,7 @@ pub enum Message {
         screen_space_pos: [f32; 2],
     },
     RemoveNode(NodeId),
+    RenameNode(NodeId, String),
 }
 
 #[derive(Debug, Clone)]

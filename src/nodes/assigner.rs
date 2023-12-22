@@ -5,8 +5,9 @@ use imnodes::{InputPinId, NodeId};
 use crate::{
     core::app::AppState,
     exprtree::{ExpressionNode, Sign},
+    message::Message,
     pins::{InputPin, Pin},
-    utils::ModelFragment, message::Message,
+    utils::ModelFragment,
 };
 
 use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
