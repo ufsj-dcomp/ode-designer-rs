@@ -616,6 +616,14 @@ impl App {
 
                 None
             }
+            Message::RegisterPin(node_id, pin_id) => {
+                self.input_pins.insert(pin_id, node_id);
+                None
+            }
+            Message::UnregisterPin(pin_id) => {
+                self.input_pins.remove(&pin_id);
+                None
+            }
         }
     }
 
