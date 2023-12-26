@@ -218,7 +218,7 @@ impl NodeImpl for Expression {
         expr_wrapper
             .set_join_op(Operation::from_str(operation).expect("Should be a valid operation"));
 
-        let node = Self::new(node_id, name.clone(), composition.len());
+        let node = Self::new(node_id, name.clone(), composition.len().max(MINIMUM_PIN_COUNT));
 
         let pending_ops = PendingOperations {
             node_id,
