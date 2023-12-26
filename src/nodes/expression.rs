@@ -6,8 +6,9 @@ use strum::StaticVariantsArray;
 use crate::{
     core::App,
     exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
+    message::Message,
     pins::{InputPin, OutputPin, Pin},
-    utils::ModelFragment, message::Message,
+    utils::ModelFragment,
 };
 
 use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
@@ -32,13 +33,17 @@ impl Expression {
             name,
             expr_wrapper: Default::default(),
             message_buffer: vec![],
-            inputs: std::iter::repeat_with(|| InputPin::new(node_id)).take(input_count).collect(),
+            inputs: std::iter::repeat_with(|| InputPin::new(node_id))
+                .take(input_count)
+                .collect(),
             output: Pin::new(node_id),
         }
     }
 
     pub fn all_pins_linked(&self, notifying_pin_id: InputPinId) -> bool {
-        self.inputs.iter().all(|pin| (pin.id == notifying_pin_id) || pin.has_links())
+        self.inputs
+            .iter()
+            .all(|pin| (pin.id == notifying_pin_id) || pin.has_links())
     }
 }
 
@@ -65,9 +70,10 @@ impl NodeImpl for Expression {
                 from_pin_id,
                 payload,
             } => {
-                if self.all_pins_linked(from_pin_id) { 
+                if self.all_pins_linked(from_pin_id) {
                     let input_pin = InputPin::new_signed(self.id, Sign::Positive);
-                    self.message_buffer.push(Message::RegisterPin(self.id, input_pin.id));
+                    self.message_buffer
+                        .push(Message::RegisterPin(self.id, input_pin.id));
                     self.inputs.push(input_pin);
                 }
 
@@ -86,11 +92,12 @@ impl NodeImpl for Expression {
                     let idx = self.inputs.iter().position(|pin| pin.id == from_pin_id);
                     if let Some(idx) = idx {
                         let removed_pin = self.inputs.remove(idx);
-                        self.message_buffer.push(Message::UnregisterPin(removed_pin.id))
+                        self.message_buffer
+                            .push(Message::UnregisterPin(removed_pin.id))
                     }
                 }
                 self.expr_wrapper.members.remove(&from_pin_id)
-            },
+            }
         };
 
         self.expr_wrapper.resolution.reset();
@@ -98,12 +105,9 @@ impl NodeImpl for Expression {
     }
 
     fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
-        self
-            .on_link_event(link_event)
+        self.on_link_event(link_event)
             .then(|| self.broadcast_data())
-            .map(|data|
-                [std::mem::take(&mut self.message_buffer), data].concat()
-            )
+            .map(|data| [std::mem::take(&mut self.message_buffer), data].concat())
     }
 
     fn state_changed(&mut self) -> bool {
@@ -196,8 +200,9 @@ impl NodeImpl for Expression {
     }
 
     fn new(node_id: NodeId, name: String) -> Self
-        where
-            Self: Sized {
+    where
+        Self: Sized,
+    {
         Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 
@@ -218,7 +223,11 @@ impl NodeImpl for Expression {
         expr_wrapper
             .set_join_op(Operation::from_str(operation).expect("Should be a valid operation"));
 
-        let node = Self::new(node_id, name.clone(), composition.len().max(MINIMUM_PIN_COUNT));
+        let node = Self::new(
+            node_id,
+            name.clone(),
+            composition.len().max(MINIMUM_PIN_COUNT),
+        );
 
         let pending_ops = PendingOperations {
             node_id,
@@ -239,4 +248,3 @@ impl NodeImpl for Expression {
         Some((node, Some(pending_ops)))
     }
 }
-
