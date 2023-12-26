@@ -12,6 +12,8 @@ use crate::{
 
 use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
 
+const MINIMUM_PIN_COUNT: usize = 2;
+
 #[derive(Debug)]
 pub struct Expression {
     pub id: NodeId,
@@ -80,9 +82,12 @@ impl NodeImpl for Expression {
                     .insert(from_pin_id, pin.map_data(payload))
             }
             LinkEvent::Pop(from_pin_id) => {
-                if self.inputs.len() > 2 {
-                    let removed_pin = self.inputs.pop().unwrap();
-                    self.message_buffer.push(Message::UnregisterPin(removed_pin.id))
+                if self.inputs.len() > MINIMUM_PIN_COUNT {
+                    let idx = self.inputs.iter().position(|pin| pin.id == from_pin_id);
+                    if let Some(idx) = idx {
+                        let removed_pin = self.inputs.remove(idx);
+                        self.message_buffer.push(Message::UnregisterPin(removed_pin.id))
+                    }
                 }
                 self.expr_wrapper.members.remove(&from_pin_id)
             },
@@ -193,7 +198,7 @@ impl NodeImpl for Expression {
     fn new(node_id: NodeId, name: String) -> Self
         where
             Self: Sized {
-        Self::new(node_id, name, 2)
+        Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 
     fn try_from_model_fragment(
