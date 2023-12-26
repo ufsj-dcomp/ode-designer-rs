@@ -37,8 +37,8 @@ impl Expression {
         }
     }
 
-    pub fn connected_input_amount(&self) -> usize {
-        self.expr_wrapper.members.len()
+    pub fn all_pins_linked(&self, notifying_pin_id: InputPinId) -> bool {
+        self.inputs.iter().all(|pin| (pin.id == notifying_pin_id) || pin.has_links())
     }
 }
 
@@ -65,7 +65,7 @@ impl NodeImpl for Expression {
                 from_pin_id,
                 payload,
             } => {
-                if self.inputs.len() - self.connected_input_amount() <= 1 { 
+                if self.all_pins_linked(from_pin_id) { 
                     let input_pin = InputPin::new_signed(self.id, Sign::Positive);
                     self.message_buffer.push(Message::RegisterPin(self.id, input_pin.id));
                     self.inputs.push(input_pin);
