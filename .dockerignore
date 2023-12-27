@@ -1,0 +1,15 @@
+.dockerignore
+.git/
+.gitignore
+
+target/
+libs/
+
+Dockerfile
+docker-compose.yml
+
+*.json
+*.csv
+*.txt
+*.pdf
+*.py

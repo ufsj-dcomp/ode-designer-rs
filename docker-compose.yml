@@ -1,0 +1,10 @@
+version: "3.7"
+
+services:
+  appimage-builder:
+    command: cargo appimage
+    build:
+      context: .
+    volumes:
+      - ./container-context/target:/ode-designer/target/
+      - ./:/ode-designer/
