@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   appimage-builder:
-    command: cargo appimage
+    command: appimage/scripts/build-appimage.sh
     build:
       context: .
     volumes:

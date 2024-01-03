@@ -4,6 +4,7 @@
 
 target/
 libs/
+container-context/
 
 Dockerfile
 docker-compose.yml
@@ -11,5 +12,6 @@ docker-compose.yml
 *.json
 *.csv
 *.txt
+!requirements.txt
 *.pdf
 *.py

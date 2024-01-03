@@ -1,0 +1,6 @@
+libc.so
+libdl.so
+libpthread.so
+librt.so
+libm.so
+libstdc++.so

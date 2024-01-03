@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ODE Designer
+Exec=ode-designer-rs
+Comment=A graphical designer for ODEs
+Icon=ode-designer
+Categories=Development;Math;Education;
+Terminal=false
