@@ -43,7 +43,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
 
     let plot_ctx = implot::Context::create();
-    let mut showing_plot_demo = true;
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor, &mut plot_ctx.get_plot_ui());

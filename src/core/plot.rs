@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::io::Read;
 
 #[derive(Default, Debug)]
 pub struct CSVData {
@@ -24,9 +24,8 @@ pub struct PlotLayout {
 }
 
 impl CSVData {
-    pub fn load_data<A: AsRef<Path>>(file_path: A) -> std::io::Result<Self> {
-        let fp = std::fs::File::open(file_path)?;
-        let mut rdr = csv::Reader::from_reader(fp);
+    pub fn load_data(reader: impl Read) -> std::io::Result<Self> {
+        let mut rdr = csv::Reader::from_reader(reader);
 
         let mut data = CSVData::default();
 

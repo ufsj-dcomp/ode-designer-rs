@@ -3,6 +3,8 @@ use imgui::Ui;
 use crate::App;
 use rfd::FileDialog;
 
+use std::process::{Command, Stdio};
+
 use super::app::SimulationState;
 
 impl App {
@@ -14,7 +16,8 @@ impl App {
                 .pick_file();
 
             if let Some(file_path) = file {
-                self.simulation_state = Some(SimulationState::from_csv(file_path));
+                let fp = std::fs::File::open(file_path).unwrap();
+                self.simulation_state = Some(SimulationState::from_csv(fp));
             }
         }
     }
@@ -38,11 +41,22 @@ impl App {
 
             ui.menu("Simulation", || {
                 if ui.menu_item("Generate Code") {
-                    self.generate_code();
+                    let py_code = self.generate_code();
+                    self.save_to_file(py_code, "py");
                 }
 
                 if ui.menu_item("Run") {
-                    todo!("Simulate not implemented");
+                    let py_code = self.generate_code();
+                    let python_out = Command::new("python3")
+                        .arg("-c")
+                        .arg(py_code)
+                        .arg("--csv")
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .unwrap();
+
+                    self.simulation_state =
+                        Some(SimulationState::from_csv(python_out.stdout.unwrap()));
                 }
 
                 self.draw_menu_load_csv(ui);

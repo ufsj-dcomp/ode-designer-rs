@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{BufReader, Write};
-use std::path::PathBuf;
+use std::io::{BufReader, Read, Write};
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
@@ -72,8 +71,8 @@ pub struct SimulationState {
 }
 
 impl SimulationState {
-    pub fn from_csv(file_path: PathBuf) -> Self {
-        let csv_data = CSVData::load_data(file_path).unwrap();
+    pub fn from_csv(reader: impl Read) -> Self {
+        let csv_data = CSVData::load_data(reader).unwrap();
 
         let pane_count = csv_data.population_count().div_ceil(4);
 
@@ -695,20 +694,21 @@ impl App {
         }
     }
 
-    pub fn generate_code(&self) -> Option<()> {
-        let file_path = FileDialog::new().add_filter("py", &["py"]).save_file()?;
-
-        let mut file = File::create(file_path).ok()?;
-
+    pub fn generate_code(&self) -> String {
         let model: odeir::Model = self.create_json().into();
 
         let odeir::Model::ODE(ode_model) = model else {
             unreachable!("This program can only produce ODE models for now");
         };
 
-        let py_code = odeir::transformations::r4k::render_ode(&ode_model);
+        odeir::transformations::r4k::render_ode(&ode_model)
+    }
 
-        file.write_all(py_code.as_ref()).ok()
+    pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
+        let file_path = FileDialog::new().add_filter(ext, &[ext]).save_file()?;
+
+        let mut file = File::create(file_path).ok()?;
+        file.write_all(content.as_ref()).ok()
     }
 
     pub fn save_state(&self) -> Option<()> {

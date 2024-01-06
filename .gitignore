@@ -1,3 +1,13 @@
 /target
 /container-context
 /libs
+
+*.json
+!src/**.json
+
+*.csv
+*.py
+*.pdf
+
+*.png
+!appimage/**.png
