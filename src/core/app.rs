@@ -17,12 +17,13 @@ use crate::nodes::{LinkEvent, Node, NodeVariant, PendingOperation, PendingOperat
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{StyleVar, TabItem, Ui};
+use imgui::{TabItem, Ui, StyleVar};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
 use super::plot::CSVData;
+use super::widgets;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -184,18 +185,8 @@ pub enum AppState {
     },
     AttributingAssignerOperatesOn {
         attribute_to: NodeId,
+        search_query: String
     },
-}
-
-pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
-    [r as f32, b as f32, g as f32, 255.0].map(|x| x / 255.0)
-}
-
-pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
-    let _width = ui.push_item_width(50.0);
-    ui.input_scalar(label, value)
-        .display_format("%.2lf")
-        .build()
 }
 
 enum StateAction {
@@ -205,14 +196,20 @@ enum StateAction {
 
 impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
+        // Cancel action
+        if ui.is_key_pressed(imgui::Key::Escape) {
+            return StateAction::Clear
+        }
+
+        let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
+        let _token = ui.push_style_var(StyleVar::WindowPadding([10.0; 2]));
+
         match self {
             AppState::AddingNode {
                 name,
                 index,
                 add_at_screen_space_pos,
             } => {
-                let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
-                let _token = ui.push_style_var(StyleVar::WindowPadding([10.0; 2]));
                 if let Some(_popup) = ui.begin_popup("Create Node") {
                     ui.text("Name");
                     ui.same_line();
@@ -243,41 +240,47 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-            AppState::AttributingAssignerOperatesOn { attribute_to } => {
-                ui.open_popup("Hey Modal");
+            AppState::AttributingAssignerOperatesOn { attribute_to, ref mut search_query } => {
+                ui.open_popup("PopulationChooser");
 
-                if let Some(_popup) = ui
-                    .modal_popup_config("Hey Modal")
+                let title = "Choose your population";
+                let title_size = ui.calc_text_size(title);
+                let min_width = title_size[0];
+                let min_height = title_size[1]*12.0;
+
+                let _win = ui.push_style_var(imgui::StyleVar::WindowMinSize([min_width, min_height]));
+
+                ui
+                    .modal_popup_config("PopulationChooser")
                     .movable(false)
                     .resizable(false)
                     .scrollable(false)
                     .collapsible(false)
-                    .title_bar(true)
-                    .begin_popup()
-                {
-                    ui.text("Hey, from modal!");
+                    .title_bar(false)
+                    .build(|| {
+                        ui.text(title);
+                        widgets::search_bar(ui, search_query);
+                        ui.separator();
+                        ui.child_window("##population list").build(|| {
+                            for (node_id, node) in app.nodes.iter().filter(|(_, node)| node.is_assignable() && node.name().contains(search_query.as_str())) {
+                                if ui
+                                    .selectable_config(node.name())
+                                    .disabled(node_id == attribute_to)
+                                    .build()
+                                {
+                                    app.queue.push(Message::AttributeAssignerOperatesOn {
+                                        assigner_id: *attribute_to,
+                                        value: *node_id,
+                                    });
 
-                    for (node_id, node) in app.nodes.iter() {
-                        if ui
-                            .selectable_config(node.name())
-                            .disabled(node_id == attribute_to)
-                            .build()
-                        {
-                            app.queue.push(Message::AttributeAssignerOperatesOn {
-                                assigner_id: *attribute_to,
-                                value: *node_id,
-                            });
-
-                            return StateAction::Clear;
-                        }
-                    }
-
-                    StateAction::Keep
-                } else {
-                    unreachable!(
+                                    return StateAction::Clear;
+                                }
+                            }
+                            StateAction::Keep
+                        }).unwrap()
+                    }).expect(
                         "If the state is AttributingAssignerOperatesOn, then the modal is open"
-                    );
-                }
+                    )
             }
         }
     }
@@ -390,6 +393,7 @@ impl App {
                         simulation_state.draw_tabs(ui, plot_ui);
                     }
                 });
+
             });
     }
 
@@ -841,8 +845,12 @@ impl App {
 
         let file = File::open(file_path)?;
 
-        let reader = BufReader::new(file);
+        let mut reader = BufReader::new(file);
 
+        self.load_model_from_reader(&mut reader)
+    }
+
+    pub fn load_model_from_reader(&mut self, reader: &mut dyn Read) -> anyhow::Result<()> {
         let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
             Err(NotCorrectModel::NotODE)?
         };
