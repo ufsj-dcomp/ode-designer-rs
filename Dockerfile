@@ -17,9 +17,9 @@ FROM python-appimage-downloader as python-appimage
 ARG PYTHON_BASE_APPIMAGE_PATH
 ENV PYTHON_BASE_APPIMAGE_PATH=${PYTHON_BASE_APPIMAGE_PATH}
 
-COPY requirements.txt ./requirements.txt
-
-RUN ./squashfs-root/usr/bin/pip3 \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=bind,source=requirements.txt,target=requirements.txt \
+    ./squashfs-root/usr/bin/pip3 \
     install \
     -r requirements.txt
 
@@ -38,28 +38,35 @@ RUN apt-get update && \
 
 WORKDIR /ode-designer
 
-COPY Cargo.toml Cargo.lock ./
-COPY src/ src/
-COPY crates/ crates/
-COPY .cargo/ .cargo/
-
 # ------------------------------------------------------------------------------
 
 FROM setup AS planner
 
 RUN cargo install cargo-chef
 
-RUN cargo chef prepare --recipe-path recipe.json
+RUN --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
+    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
+    --mount=type=bind,source=src/,target=src/ \
+    --mount=type=bind,source=crates/,target=crates/ \
+    --mount=type=bind,source=.cargo/,target=.cargo/ \
+    --mount=type=cache,target=/root/.cargo/ \
+    cargo chef prepare --recipe-path recipe.json
 
 # ------------------------------------------------------------------------------
 
 FROM planner AS cacher
 
-RUN cargo chef cook --release --recipe-path recipe.json
+COPY Cargo.toml Cargo.lock ./
+COPY src/ src/
+COPY crates/ crates/
+COPY .cargo/ .cargo/
+
+RUN --mount=type=cache,target=/root/.cargo/ \
+    cargo chef cook --release --recipe-path recipe.json
 
 # ------------------------------------------------------------------------------
 
-FROM setup AS builder
+FROM setup AS builder-dependencies
 ARG PYTHON_BASE_APPIMAGE_PATH
 ENV PYTHON_BASE_APPIMAGE_PATH=${PYTHON_BASE_APPIMAGE_PATH}
 
@@ -69,3 +76,11 @@ COPY --from=python-appimage $PYTHON_BASE_APPIMAGE_PATH $PYTHON_BASE_APPIMAGE_PAT
 
 COPY --from=appimagecrafters/appimage-builder /opt/appimage-tool.AppDir /opt/appimage-tool.AppDir
 RUN ln -s /opt/appimage-tool.AppDir/AppRun /usr/bin/appimagetool
+
+# ------------------------------------------------------------------------------
+
+FROM builder-dependencies AS builder
+
+COPY . .
+
+ENTRYPOINT [ "appimage/scripts/build-appimage.sh" ]

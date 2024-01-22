@@ -5,6 +5,7 @@ services:
     command: appimage/scripts/build-appimage.sh
     build:
       context: .
+      target: builder-dependencies
     volumes:
       - ./container-context/target:/ode-designer/target/
       - ./:/ode-designer/
