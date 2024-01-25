@@ -20,7 +20,8 @@ jobs:
         run: mkdir -p container-target
 
       - name: Build the AppImage
-        uses: docker compose up
+        shell: bash
+        run: docker compose up
 
       - name: Attach AppImage to Release
         shell: bash
