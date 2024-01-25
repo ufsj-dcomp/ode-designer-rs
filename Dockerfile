@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     install \
     -r requirements.txt
 
-RUN mv ./squashfs-root $PYTHON_BASE_APPIMAGE_PATH
+RUN cp -r ./squashfs-root $PYTHON_BASE_APPIMAGE_PATH
 
 # ------------------------------------------------------------------------------
 

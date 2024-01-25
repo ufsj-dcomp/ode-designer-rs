@@ -37,30 +37,46 @@ impl App {
                 if ui.menu_item("Save") {
                     self.save_state();
                 }
+
+                self.draw_menu_load_csv(ui);
             });
 
-            ui.menu("Simulation", || {
+            ui.menu("Export", || {
                 if ui.menu_item("Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
                 }
 
-                if ui.menu_item("Run") {
-                    let py_code = self.generate_code();
-                    let python_out = Command::new("python3")
-                        .arg("-c")
-                        .arg(py_code)
-                        .arg("--csv")
-                        .stdout(Stdio::piped())
-                        .spawn()
-                        .unwrap();
-
-                    self.simulation_state =
-                        Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+                if ui.menu_item("Plot to PDF") {
+                    if let Some(file_path) = FileDialog::new()
+                        .add_filter("pdf", &["pdf"])
+                        .save_file()
+                    {
+                        let py_code = self.generate_code();
+                        Command::new("python3")
+                            .arg("-c")
+                            .arg(py_code)
+                            .arg("--output")
+                            .arg(file_path)
+                            .spawn()
+                            .unwrap();
+                    }
                 }
-
-                self.draw_menu_load_csv(ui);
             });
+
+            if ui.menu_item("Run") {
+                let py_code = self.generate_code();
+                let python_out = Command::new("python3")
+                    .arg("-c")
+                    .arg(py_code)
+                    .arg("--csv")
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .unwrap();
+
+                self.simulation_state =
+                    Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+            }
         });
     }
 }
