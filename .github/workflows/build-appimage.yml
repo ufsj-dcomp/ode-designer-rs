@@ -1,0 +1,29 @@
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Build Path Exists
+        shell: bash
+        run: mkdir -p container-target
+
+      - name: Build the AppImage
+        uses: docker compose up
+
+      - name: Attach AppImage to Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload ${{ github.event.release.tag_name }} ./container-target/appimage/ode-designer-rs.AppImage

@@ -7,5 +7,5 @@ services:
       context: .
       target: builder-dependencies
     volumes:
-      - ./container-context/target:/ode-designer/target/
       - ./:/ode-designer/
+      - ./container-target/:/ode-designer/target/
