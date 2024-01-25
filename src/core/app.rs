@@ -349,6 +349,28 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
 
+        let table_group = ui.begin_group();
+
+        if let Some(_t) = ui.begin_table("Basic-Table", 1) {
+            ui.table_next_row();
+        
+            ui.table_next_column();
+            ui.text("Ícone 1");
+        
+            ui.table_next_column();
+            ui.text("Ícone 2");
+            
+            ui.table_next_column();
+            ui.text("Ícone 3");
+        
+            ui.table_next_column();
+            ui.text("Ícone 4");
+        }
+
+        table_group.end();
+
+        ui.same_line();
+
         let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
 
         if let Some(link) = scope.links_created() {
