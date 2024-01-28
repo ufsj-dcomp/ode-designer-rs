@@ -42,7 +42,7 @@ impl App {
             });
 
             ui.menu("Export", || {
-                if ui.menu_item("Generate Code") {
+                if ui.menu_item("Generate Code") {                    
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
                 }

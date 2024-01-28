@@ -87,11 +87,11 @@ impl<OriginType: Hash> ExpressionTree<OriginType> {
             .members
             .values()
             .map(ExpressionNode::resolve_into_equation_part)
-            .map(|mut eq| {
+            /* .map(|mut eq| {
                 eq.insert(0, '(');
                 eq.push(')');
                 eq
-            })
+            })*/
             .fold(String::new(), |mut acc, expr| {
                 acc.push_str(&expr);
                 acc.push(op_char);
@@ -121,7 +121,13 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
                 Sign::Positive => symbol.clone(),
                 Sign::Negative => format!("-{}", symbol),
             },
-            ExpressionNode::SubExpr(exprtree) => exprtree.resolve_into_equation(),
+            ExpressionNode::SubExpr(exprtree) =>
+            {   
+                let mut eq: String = exprtree.resolve_into_equation();
+                eq.insert(0, '(');
+                eq.push(')');
+                eq
+            },
         }
     }
 
