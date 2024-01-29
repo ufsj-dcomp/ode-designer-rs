@@ -290,6 +290,9 @@ impl App {
 
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
+            let _col = imnodes::ColorStyle::TitleBar.push_color(node.color());
+            let _col2 = imnodes::ColorStyle::TitleBarSelected.push_color(node.selected_color());
+            let _col3 = imnodes::ColorStyle::TitleBarHovered.push_color(node.hovered_color());
             editor.add_node(*id, |mut ui_node| {
                 let (msgs, app_state_change) = node.process_node(ui, &mut ui_node);
                 if let Some(msgs) = msgs {

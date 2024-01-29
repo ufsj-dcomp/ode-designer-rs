@@ -10,7 +10,7 @@ pub use expression::Expression;
 use strum::{EnumDeref, EnumDiscriminants, EnumVariantNames, FromRepr};
 pub use term::Term;
 
-use imgui::Ui;
+use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
@@ -81,6 +81,7 @@ impl Node {
 }
 
 pub trait NodeImpl {
+
     fn new(node_id: NodeId, name: String) -> Self
     where
         Self: Sized;
@@ -97,6 +98,17 @@ pub trait NodeImpl {
     fn name(&self) -> &str;
 
     fn name_mut(&mut self) -> &mut String;
+
+    #[inline]
+    fn color(&self) -> ImColor32;
+
+    #[inline]
+    fn hovered_color(&self) -> ImColor32 {
+        self.selected_color()
+    }
+
+    #[inline]
+    fn selected_color(&self) -> ImColor32;
 
     fn on_link_event(&mut self, _link_event: LinkEvent) -> bool {
         false
