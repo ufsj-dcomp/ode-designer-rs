@@ -1,0 +1,337 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.0,
+    "end_time": 0.0,
+    "positions": {
+      "E": {
+        "x": 114.0,
+        "y": 372.0
+      },
+      "EI": {
+        "x": 312.0,
+        "y": 791.0
+      },
+      "ES": {
+        "x": 576.0,
+        "y": 205.0
+      },
+      "ES_eq": {
+        "x": 1020.0,
+        "y": 190.0
+      },
+      "E_eq": {
+        "x": 1394.0,
+        "y": 399.0
+      },
+      "I": {
+        "x": 115.0,
+        "y": 521.0
+      },
+      "I_eq": {
+        "x": 764.0,
+        "y": 673.0
+      },
+      "P": {
+        "x": 1052.0,
+        "y": 387.0
+      },
+      "S": {
+        "x": 109.0,
+        "y": 257.0
+      },
+      "S_eq": {
+        "x": 732.1795654296875,
+        "y": -40.413604736328125
+      },
+      "dEIdt": {
+        "x": 1023.891357421875,
+        "y": 851.639892578125
+      },
+      "dESst": {
+        "x": 1468.0,
+        "y": 183.0
+      },
+      "dEdt": {
+        "x": 2009.0,
+        "y": 475.0
+      },
+      "dIdt": {
+        "x": 1051.0,
+        "y": 661.0
+      },
+      "dPdt": {
+        "x": 1055.0,
+        "y": 496.0
+      },
+      "dSdt": {
+        "x": 1117.0,
+        "y": -85.0
+      },
+      "k1": {
+        "x": 136.0,
+        "y": 157.0
+      },
+      "k2": {
+        "x": 573.0,
+        "y": 318.0
+      },
+      "k3": {
+        "x": 565.0,
+        "y": 462.0
+      },
+      "k4": {
+        "x": 123.0,
+        "y": 650.0
+      },
+      "k5": {
+        "x": 316.0,
+        "y": 883.0
+      },
+      "reaction1": {
+        "x": 411.0,
+        "y": 80.0
+      },
+      "reaction2": {
+        "x": 816.0,
+        "y": 287.0
+      },
+      "reaction3": {
+        "x": 814.0,
+        "y": 477.0
+      },
+      "reaction4": {
+        "x": 370.0,
+        "y": 523.0
+      },
+      "reaction5": {
+        "x": 588.0,
+        "y": 778.0
+      }
+    }
+  },
+  "arguments": [
+    {
+      "name": "I",
+      "value": 5.0
+    },
+    {
+      "name": "k5",
+      "value": 0.05
+    },
+    {
+      "name": "ES",
+      "value": 0.05
+    },
+    {
+      "name": "k3",
+      "value": 0.5
+    },
+    {
+      "name": "reaction3",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "ES",
+          "contribution": "+"
+        },
+        {
+          "name": "k3",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "reaction4",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "E",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        },
+        {
+          "name": "k4",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "reaction5",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "EI",
+          "contribution": "+"
+        },
+        {
+          "name": "k5",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "EI",
+      "value": 0.0
+    },
+    {
+      "name": "reaction2",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "ES",
+          "contribution": "+"
+        },
+        {
+          "name": "k2",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "ES_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "S_eq",
+          "contribution": "-"
+        },
+        {
+          "name": "reaction3",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "k1",
+      "value": 0.2
+    },
+    {
+      "name": "S_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "reaction2",
+          "contribution": "+"
+        },
+        {
+          "name": "reaction1",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "k4",
+      "value": 0.05
+    },
+    {
+      "name": "E_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "S_eq",
+          "contribution": "+"
+        },
+        {
+          "name": "reaction3",
+          "contribution": "+"
+        },
+        {
+          "name": "I_eq",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "k2",
+      "value": 0.1
+    },
+    {
+      "name": "S",
+      "value": 30.0
+    },
+    {
+      "name": "I_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "reaction5",
+          "contribution": "+"
+        },
+        {
+          "name": "reaction4",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "reaction1",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "k1",
+          "contribution": "+"
+        },
+        {
+          "name": "S",
+          "contribution": "+"
+        },
+        {
+          "name": "E",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "P",
+      "value": 0.0
+    },
+    {
+      "name": "E",
+      "value": 15.0
+    }
+  ],
+  "equations": [
+    {
+      "name": "dESst",
+      "operates_on": "ES",
+      "argument": "ES_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dPdt",
+      "operates_on": "P",
+      "argument": "reaction3",
+      "contribution": "+"
+    },
+    {
+      "name": "dIdt",
+      "operates_on": "I",
+      "argument": "I_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dEIdt",
+      "operates_on": "EI",
+      "argument": "I_eq",
+      "contribution": "-"
+    },
+    {
+      "name": "dEdt",
+      "operates_on": "E",
+      "argument": "E_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dSdt",
+      "operates_on": "S",
+      "argument": "S_eq",
+      "contribution": "+"
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.0,
+    "end_time": 0.0,
+    "positions": {
+      "I": {
+        "x": 232.0,
+        "y": 438.0
+      },
+      "I_eq": {
+        "x": 971.0,
+        "y": 546.0
+      },
+      "Infection": {
+        "x": 685.0,
+        "y": 236.0
+      },
+      "R": {
+        "x": 243.0,
+        "y": 710.0
+      },
+      "R_eq": {
+        "x": 988.0,
+        "y": 786.0
+      },
+      "Recover": {
+        "x": 546.0,
+        "y": 517.0
+      },
+      "S": {
+        "x": 202.0,
+        "y": 329.0
+      },
+      "S_eq": {
+        "x": 925.0,
+        "y": 329.0
+      },
+      "Susceptible_again": {
+        "x": 606.0,
+        "y": 754.0
+      },
+      "alpha": {
+        "x": 232.0,
+        "y": 563.0
+      },
+      "beta": {
+        "x": 248.0,
+        "y": 222.0
+      },
+      "dIdt": {
+        "x": 1371.0,
+        "y": 557.0
+      },
+      "dRdt": {
+        "x": 1357.0,
+        "y": 740.0
+      },
+      "dSdt": {
+        "x": 1271.0,
+        "y": 331.0
+      },
+      "gamma": {
+        "x": 301.0,
+        "y": 880.0
+      }
+    }
+  },
+  "arguments": [
+    {
+      "name": "I_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "Infection",
+          "contribution": "+"
+        },
+        {
+          "name": "Recover",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "R",
+      "value": 0.0
+    },
+    {
+      "name": "Infection",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "beta",
+          "contribution": "+"
+        },
+        {
+          "name": "S",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "S",
+      "value": 500.0
+    },
+    {
+      "name": "I",
+      "value": 5.0
+    },
+    {
+      "name": "gamma",
+      "value": 0.3
+    },
+    {
+      "name": "Susceptible_again",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "R",
+          "contribution": "+"
+        },
+        {
+          "name": "gamma",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "beta",
+      "value": 0.008
+    },
+    {
+      "name": "R_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "Recover",
+          "contribution": "+"
+        },
+        {
+          "name": "Susceptible_again",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "S_eq",
+      "operation": "+",
+      "composition": [
+        {
+          "name": "Infection",
+          "contribution": "-"
+        },
+        {
+          "name": "Susceptible_again",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "alpha",
+      "value": 0.1
+    },
+    {
+      "name": "Recover",
+      "operation": "*",
+      "composition": [
+        {
+          "name": "I",
+          "contribution": "+"
+        },
+        {
+          "name": "alpha",
+          "contribution": "+"
+        }
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "name": "dSdt",
+      "operates_on": "S",
+      "argument": "S_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dRdt",
+      "operates_on": "R",
+      "argument": "R_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dIdt",
+      "operates_on": "I",
+      "argument": "I_eq",
+      "contribution": "+"
+    }
+  ]
+}
