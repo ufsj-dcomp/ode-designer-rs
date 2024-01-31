@@ -15,6 +15,9 @@ for arg in "$@"; do
         --release)
             buildtype=release
             ;;
+        *)
+            die "Unknown flag: $arg"
+            ;;
     esac
 done
 
@@ -38,22 +41,13 @@ if [[ $buildtype == release ]]; then
     args+=(--release)
 fi
 
-cargo build ${args[@]}
+cargo build --target "$target" ${args[@]}
 
-files=()
+executable="target/$target/$buildtype/ode-designer-rs.exe"
+mingw_dir='/usr/x86_64-w64-mingw32/bin'
 
-push-file() {
-    if [[ -f "$1" ]]; then
-        files+=("$1")
-    else
-        die "Failed to find file $1"
-    fi
-}
-
-push-file "target/$target/$buildtype/ode-designer-rs.exe"
-
-push-file "/usr/x86_64-w64-mingw32/bin/libstdc++-6.dll"
-
-echo ${files[@]}
-
-zip -j windows-build.zip "${files[@]}"
+{
+    echo $executable & python scripts/mingw-ldd.py "$executable" \
+    --output-format filelist\
+    --dll-lookup-dirs $mingw_dir
+} | zip -@ -j "windows-build-$buildtype.zip"
