@@ -23,6 +23,7 @@ use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
 use super::plot::CSVData;
+use super::side_bar::{self, SideBarState};
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -174,6 +175,7 @@ pub struct App {
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
     pub(crate) simulation_state: Option<SimulationState>,
+    sidebar_state: SideBarState,
 }
 
 pub enum AppState {
@@ -312,6 +314,7 @@ impl App {
             && self.state.is_none()
         {
             let mouse_screen_space_pos = ui.io().mouse_pos;
+
             ui.open_popup("Create Node");
             self.state = Some(AppState::AddingNode {
                 name: String::new(),
@@ -349,28 +352,6 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
 
-        let table_group = ui.begin_group();
-
-        if let Some(_t) = ui.begin_table("Basic-Table", 1) {
-            ui.table_next_row();
-        
-            ui.table_next_column();
-            ui.text("Ícone 1");
-        
-            ui.table_next_column();
-            ui.text("Ícone 2");
-            
-            ui.table_next_column();
-            ui.text("Ícone 3");
-        
-            ui.table_next_column();
-            ui.text("Ícone 4");
-        }
-
-        table_group.end();
-
-        ui.same_line();
-
         let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
 
         if let Some(link) = scope.links_created() {
@@ -405,6 +386,9 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new("Model");
                     tab_model.build(ui, || {
+                        if let Some(node) = self.sidebar_state.draw(ui) {
+                            self.add_node(node);
+                        }
                         self.draw_main_tab(ui, context, plot_ui);
                     });
 
