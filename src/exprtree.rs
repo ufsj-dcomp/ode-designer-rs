@@ -121,13 +121,12 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
                 Sign::Positive => symbol.clone(),
                 Sign::Negative => format!("-{}", symbol),
             },
-            ExpressionNode::SubExpr(exprtree) =>
-            {   
+            ExpressionNode::SubExpr(exprtree) => {
                 let mut eq: String = exprtree.resolve_into_equation();
                 eq.insert(0, '(');
                 eq.push(')');
                 eq
-            },
+            }
         }
     }
 

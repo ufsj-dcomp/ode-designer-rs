@@ -16,6 +16,7 @@ pub mod app;
 mod id_gen;
 pub mod menu;
 pub mod plot;
+pub mod side_bar;
 pub mod style;
 pub mod widgets;
 
