@@ -1668,7 +1668,6 @@ dependencies = [
  "paste",
  "rfd",
  "serde_json",
- "smithay-client-toolkit",
  "sorted-vec",
  "strum",
  "thiserror",
