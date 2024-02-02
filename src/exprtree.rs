@@ -162,13 +162,13 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
 )]
 #[repr(u8)]
 pub enum Operation {
-    #[default]
     #[strum(serialize = "+")]
     Add,
     #[strum(serialize = "-")]
     Sub,
     #[strum(serialize = "/", serialize = "÷")]
     Div,
+    #[default]
     #[strum(serialize = "*", serialize = "×")]
     Mul,
 }

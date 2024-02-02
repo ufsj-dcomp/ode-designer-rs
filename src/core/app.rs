@@ -17,7 +17,7 @@ use crate::nodes::{LinkEvent, Node, NodeVariant, PendingOperation, PendingOperat
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{TabItem, Ui, StyleVar};
+use imgui::{Key, StyleVar, TabItem, Ui};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
@@ -224,7 +224,10 @@ impl AppState {
                     });
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
-                    if ui.button("Add") {
+
+                    let enter_pressed = ui.is_key_pressed(Key::Enter);
+
+                    if ui.button("Add") || enter_pressed {
                         let node_variant = NodeVariant::from_repr(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
