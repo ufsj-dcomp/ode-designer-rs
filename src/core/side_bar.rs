@@ -15,6 +15,7 @@ pub struct SideBarState {
 }
 impl SideBarState {
     pub fn draw(&mut self, ui: &Ui) -> Option<Node> {
+        
         let table_group = ui.begin_group();
         let mut node_variant = None;
 

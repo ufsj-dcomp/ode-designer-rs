@@ -236,7 +236,7 @@ impl AppState {
                             node_id,
                             screen_space_pos: *add_at_screen_space_pos,
                         });
-
+                        
                         StateAction::Clear
                     } else {
                         StateAction::Keep
@@ -314,7 +314,7 @@ impl App {
             && self.state.is_none()
         {
             let mouse_screen_space_pos = ui.io().mouse_pos;
-
+        
             ui.open_popup("Create Node");
             self.state = Some(AppState::AddingNode {
                 name: String::new(),
@@ -329,6 +329,8 @@ impl App {
                 StateAction::Keep => self.state = Some(state),
             }
         }
+
+        
     }
 
     pub fn draw_main_tab(
@@ -359,8 +361,17 @@ impl App {
         } else if let Some(link_id) = scope.get_dropped_link() {
             self.remove_link(link_id);
         }
-
+        
         self.update();
+       
+    }
+
+    //Função para adicionar os shortcut, mas ainda precisa ser revista e repensada. Porque talvez nem sentido faça
+    pub fn shortcut(&mut self, ui: &Ui){
+
+        if ui.is_key_pressed(imgui::Key::LeftShift) && ui.is_key_pressed(imgui::Key::S){
+            self.save_state();
+        }
     }
 
     pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
@@ -381,7 +392,9 @@ impl App {
             .flags(flags)
             .build(|| {
                 self.draw_menu(ui);
-
+                
+                self.shortcut(ui); //<- Chamada da função sortcut
+                
                 let tab_bar = imgui::TabBar::new("Tabs");
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new("Model");
@@ -398,6 +411,8 @@ impl App {
                 });
             });
     }
+
+    
 
     pub fn new() -> Self {
         Self::default()
