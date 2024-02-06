@@ -1,4 +1,4 @@
-use imgui::Ui;
+use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
@@ -35,6 +35,14 @@ impl NodeImpl for Term {
 
     fn name_mut(&mut self) -> &mut String {
         &mut self.leaf.symbol
+    }
+
+    fn color(&self) -> ImColor32 {
+        ImColor32::from_rgb(48, 99, 142)
+    }
+
+    fn selected_color(&self) -> ImColor32 {
+        ImColor32::from_rgb(17, 138, 178)
     }
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
@@ -32,6 +33,14 @@ impl NodeImpl for Assigner {
 
     fn name_mut(&mut self) -> &mut String {
         &mut self.name
+    }
+
+    fn color(&self) -> ImColor32 {
+        ImColor32::from_rgb(209, 73, 91)
+    }
+
+    fn selected_color(&self) -> ImColor32 {
+        ImColor32::from_rgb(239, 71, 111)
     }
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {

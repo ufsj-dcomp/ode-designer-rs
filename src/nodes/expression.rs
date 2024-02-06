@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 use strum::StaticVariantsArray;
 
@@ -62,6 +63,14 @@ impl NodeImpl for Expression {
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {
         ExpressionNode::SubExpr(self.expr_wrapper.clone())
+    }
+
+    fn color(&self) -> ImColor32 {
+        ImColor32::from_rgb(0, 160, 110)
+    }
+
+    fn selected_color(&self) -> ImColor32 {
+        ImColor32::from_rgb(6, 214, 140)
     }
 
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
