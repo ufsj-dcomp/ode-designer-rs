@@ -40,6 +40,10 @@ impl Expression {
             output: Pin::new(node_id),
         }
     }
+    fn with_expr_wapper(mut self, expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>) -> Self {
+        self.expr_wrapper = expr_wrapper;
+        self
+    }
 
     pub fn all_pins_linked(&self, notifying_pin_id: InputPinId) -> bool {
         self.inputs
@@ -236,7 +240,7 @@ impl NodeImpl for Expression {
             node_id,
             name.clone(),
             composition.len().max(MINIMUM_PIN_COUNT),
-        );
+        ).with_expr_wapper(expr_wrapper);
 
         let pending_ops = PendingOperations {
             node_id,
