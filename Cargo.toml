@@ -32,6 +32,8 @@ rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] 
 anyhow = "1.0.75"
 csv = "1.3.0"
 nom = "7.1.3"
+minijinja = "1.0.12"
+serde = { version = "1.0.196", features = ["derive"] }
 
 [target.'cfg(target_os = "linux")'.dependencies.winit]
 version = "0.27.5"
