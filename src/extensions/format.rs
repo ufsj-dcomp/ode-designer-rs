@@ -121,6 +121,14 @@ mod tests {
             D(N("y".to_string())),
         ]
     )]
+    #[case(
+        "π$r²",
+        &[
+            S("π".to_string()),
+            D(N("r".to_string())),
+            S("²".to_string()),
+        ]
+    )]
     fn test_format_parsing(
         #[case] input: &str,
         #[case] expected_format: &[FormatPart]
