@@ -3,6 +3,7 @@
 #![feature(lazy_cell)]
 #![feature(int_roundings)]
 #![feature(let_chains)]
+#![feature(iter_collect_into)]
 
 use core::{initialize_id_generator, style, System};
 
@@ -18,6 +19,7 @@ pub mod exprtree;
 pub mod nodes;
 pub mod pins;
 pub mod utils;
+pub mod extensions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
