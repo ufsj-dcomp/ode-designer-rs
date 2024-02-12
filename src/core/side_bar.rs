@@ -15,12 +15,11 @@ pub struct SideBarState {
 }
 impl SideBarState {
     pub fn draw(&mut self, ui: &Ui) -> Option<Node> {
-        
         let table_group = ui.begin_group();
         let mut node_variant = None;
 
         ui.set_next_item_width(13.0 * 7.0);
-        
+
         ui.input_text("##Node name", &mut self.node_name)
             .hint("Type the node name:")
             .build();
@@ -44,6 +43,5 @@ impl SideBarState {
             let name = std::mem::take(&mut self.node_name);
             Node::build_from_ui(name, variant)
         })
-        
     }
 }

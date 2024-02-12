@@ -236,7 +236,7 @@ impl AppState {
                             node_id,
                             screen_space_pos: *add_at_screen_space_pos,
                         });
-                        
+
                         StateAction::Clear
                     } else {
                         StateAction::Keep
@@ -314,7 +314,7 @@ impl App {
             && self.state.is_none()
         {
             let mouse_screen_space_pos = ui.io().mouse_pos;
-        
+
             ui.open_popup("Create Node");
             self.state = Some(AppState::AddingNode {
                 name: String::new(),
@@ -329,8 +329,6 @@ impl App {
                 StateAction::Keep => self.state = Some(state),
             }
         }
-
-        
     }
 
     pub fn draw_main_tab(
@@ -361,22 +359,20 @@ impl App {
         } else if let Some(link_id) = scope.get_dropped_link() {
             self.remove_link(link_id);
         }
-        
+
         self.update();
-       
     }
 
-    pub fn shortcut(&mut self, ui: &Ui){
-
-        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::S){
+    pub fn shortcut(&mut self, ui: &Ui) {
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::S) {
             self.save_state();
         }
 
-        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::N){
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::N) {
             self.clear_state();
         }
 
-        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O){
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O) {
             self.clear_state();
             self.load_state();
         }
@@ -399,10 +395,9 @@ impl App {
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
-                
                 self.shortcut(ui);
                 self.draw_menu(ui);
-                
+
                 let tab_bar = imgui::TabBar::new("Tabs");
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new("Model");

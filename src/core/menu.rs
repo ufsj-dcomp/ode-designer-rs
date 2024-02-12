@@ -21,11 +21,10 @@ impl App {
             }
         }
     }
-    
+
     pub fn draw_menu(&mut self, ui: &Ui) {
         ui.menu_bar(|| {
             ui.menu("File", || {
-               
                 if ui.menu_item_config("New").shortcut("Ctrl + N").build() {
                     self.clear_state();
                 }
@@ -35,7 +34,7 @@ impl App {
                     self.load_state();
                 }
 
-                if ui.menu_item_config("Save").shortcut("Ctrl + S").build(){
+                if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
                     self.save_state();
                 }
 
