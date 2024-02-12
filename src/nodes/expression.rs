@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
-use strum::StaticVariantsArray;
+use strum::VariantArray;
 
 use crate::{
     core::App,
@@ -146,7 +146,7 @@ impl NodeImpl for Expression {
         if ui.combo(
             "##Expression operation select",
             &mut selected,
-            Operation::ALL_VARIANTS,
+            Operation::VARIANTS,
             |op| format!("{op}").into(),
         ) {
             self.expr_wrapper.join_op = Operation::from_repr(selected as u8)

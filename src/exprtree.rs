@@ -158,7 +158,7 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
     strum::EnumVariantNames,
     strum::EnumString,
     strum::FromRepr,
-    strum::StaticVariantsArray,
+    strum::VariantArray,
 )]
 #[repr(u8)]
 pub enum Operation {

@@ -10,7 +10,8 @@ imgui = ["dep:imgui-glium-renderer", "dep:imgui-winit-support", "dep:winit", "de
 color-eyre = "0.6.2"
 derive_more = "0.99.17"
 log = "0.4.17"
-strum = { git = "https://github.com/Syndelis/strum/", branch = "next", features = ["strum_macros", "derive"] }
+strum = { version = "0.26.1", features = ["strum_macros", "derive"] }
+enutil = { version = "0.1.0", features = ["derive"] }
 glium = "0.32.1"
 imnodes = { path = "./crates/imnodes" }
 odeir = { path = "./crates/odeir" }

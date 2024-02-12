@@ -8,7 +8,7 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
-use strum::{StaticVariantsArray, VariantNames};
+use strum::{VariantArray, VariantNames};
 
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
@@ -416,7 +416,7 @@ impl<'n> App<'n> {
             node_types: Node::VARIANTS
                 .iter()
                 .copied()
-                .zip(NodeVariant::ALL_VARIANTS)
+                .zip(NodeVariant::VARIANTS)
                 .map(|(name, variant)| {
                     (Cow::from(name), variant.clone())
                 })
