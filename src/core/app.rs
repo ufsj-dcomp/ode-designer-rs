@@ -366,11 +366,19 @@ impl App {
        
     }
 
-    //Função para adicionar os shortcut, mas ainda precisa ser revista e repensada. Porque talvez nem sentido faça
     pub fn shortcut(&mut self, ui: &Ui){
 
-        if ui.is_key_pressed(imgui::Key::LeftShift) && ui.is_key_pressed(imgui::Key::S){
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::S){
             self.save_state();
+        }
+
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::N){
+            self.clear_state();
+        }
+
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O){
+            self.clear_state();
+            self.load_state();
         }
     }
 
@@ -391,9 +399,9 @@ impl App {
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
-                self.draw_menu(ui);
                 
-                self.shortcut(ui); //<- Chamada da função sortcut
+                self.shortcut(ui);
+                self.draw_menu(ui);
                 
                 let tab_bar = imgui::TabBar::new("Tabs");
                 tab_bar.build(ui, || {
@@ -411,8 +419,6 @@ impl App {
                 });
             });
     }
-
-    
 
     pub fn new() -> Self {
         Self::default()

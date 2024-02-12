@@ -26,16 +26,16 @@ impl App {
         ui.menu_bar(|| {
             ui.menu("File", || {
                
-                if ui.menu_item("New") {
+                if ui.menu_item_config("New").shortcut("Ctrl + N").build() {
                     self.clear_state();
                 }
 
-                if ui.menu_item("Load") {
+                if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
                     self.load_state();
                 }
 
-                if ui.menu_item("Save"){
+                if ui.menu_item_config("Save").shortcut("Ctrl + S").build(){
                     self.save_state();
                 }
 
