@@ -1,4 +1,4 @@
-use std::{default, io::Empty};
+use std::{borrow::Cow, default, io::Empty};
 
 use imgui::Ui;
 
@@ -14,7 +14,7 @@ pub struct SideBarState {
     node_name: String,
 }
 impl SideBarState {
-    pub fn draw(&mut self, ui: &Ui) -> Option<Node> {
+    pub fn draw(&mut self, ui: &Ui, node_types: &[(Cow<str>, NodeVariant)]) -> Option<Node> {
         let table_group = ui.begin_group();
         let mut node_variant = None;
 
@@ -24,16 +24,10 @@ impl SideBarState {
             .hint("Type the node name:")
             .build();
 
-        if ui.button("New Expression") {
-            node_variant = Some(NodeVariant::Expression);
-        }
-
-        if ui.button("New Term ") {
-            node_variant = Some(NodeVariant::Term);
-        }
-
-        if ui.button("Assigner") {
-            node_variant = Some(NodeVariant::Assigner);
+        for (name, variant) in node_types {
+            if ui.button(name) {
+                node_variant = Some(variant)
+            }
         }
 
         table_group.end();
@@ -41,7 +35,7 @@ impl SideBarState {
         ui.same_line();
         node_variant.map(|variant| {
             let name = std::mem::take(&mut self.node_name);
-            Node::build_from_ui(name, variant)
+            Node::build_from_ui(name, *variant)
         })
         
     }

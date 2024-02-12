@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 
 pub use assigner::Assigner;
 pub use expression::Expression;
-use strum::{EnumDeref, EnumDiscriminants, EnumVariantNames, FromRepr};
+use strum::{EnumDeref, EnumDiscriminants, EnumVariantNames, FromRepr, StaticVariantsArray};
 pub use term::Term;
 
 use imgui::{ImColor32, Ui};
@@ -43,7 +43,7 @@ pub enum LinkEvent {
 #[derive(Debug, EnumDeref, EnumDiscriminants, EnumVariantNames, From)]
 #[strum_deref_target(dyn NodeImpl)]
 #[strum_discriminants(name(NodeVariant))]
-#[strum_discriminants(derive(FromRepr))]
+#[strum_discriminants(derive(StaticVariantsArray, FromRepr))]
 pub enum Node {
     Term(Term),
     Expression(Expression),

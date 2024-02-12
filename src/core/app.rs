@@ -1,3 +1,4 @@
+use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
@@ -7,7 +8,7 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
-use strum::VariantNames;
+use strum::{StaticVariantsArray, VariantNames};
 
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
@@ -167,7 +168,8 @@ impl SimulationState {
 }
 
 #[derive(Default)]
-pub struct App {
+pub struct App<'n> {
+    node_types: Vec<(Cow<'n, str>, NodeVariant)>,
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
@@ -219,8 +221,8 @@ impl AppState {
                     ui.text("Node type");
                     ui.same_line();
 
-                    ui.combo("##Node Type", index, Node::VARIANTS, |variant_name| {
-                        (*variant_name).into()
+                    ui.combo("##Node Type", index, &app.node_types, |(variant_name, _)| {
+                        Cow::Borrowed(variant_name.borrow())
                     });
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
@@ -291,7 +293,7 @@ impl AppState {
     }
 }
 
-impl App {
+impl<'n> App<'n> {
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -395,7 +397,7 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new("Model");
                     tab_model.build(ui, || {
-                        if let Some(node) = self.sidebar_state.draw(ui) {
+                        if let Some(node) = self.sidebar_state.draw(ui, &self.node_types) {
                             self.add_node(node);
                         }
                         self.draw_main_tab(ui, context, plot_ui);
@@ -410,7 +412,17 @@ impl App {
     }
 
     pub fn new() -> Self {
-        Self::default()
+        Self { 
+            node_types: Node::VARIANTS
+                .iter()
+                .copied()
+                .zip(NodeVariant::ALL_VARIANTS)
+                .map(|(name, variant)| {
+                    (Cow::from(name), variant.clone())
+                })
+                .collect(),
+            ..Self::default()
+        }
     }
 
     pub fn add_node(&mut self, node: Node) -> NodeId {
@@ -988,7 +1000,7 @@ mod tests {
     struct AppBuilder;
 
     impl AppBuilder {
-        fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
+        fn with_nodes<'n, const N: usize>(nodes: [Node; N]) -> App<'n> {
             let mut app = App::default();
             nodes.into_iter().for_each(|node| {
                 app.add_node(node);
@@ -1000,7 +1012,7 @@ mod tests {
 
     const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
 
-    fn app_with_nodes_abk() -> App {
+    fn app_with_nodes_abk<'n>() -> App<'n> {
         let mut a = Node::build_from_ui("A".to_owned(), NodeVariant::Term);
         if let Node::Term(ref mut a) = &mut a {
             a.initial_value = 10.0;

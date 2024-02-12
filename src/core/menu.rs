@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 
 use super::app::SimulationState;
 
-impl App {
+impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
         if ui.menu_item("Plot CSV file") {
             let file = FileDialog::new()
