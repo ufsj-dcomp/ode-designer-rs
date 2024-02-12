@@ -12,13 +12,16 @@ def __jsonify_func(func, format=None):
         "name": func.__name__,
         "required_arguments": [*argspec.args, *argspec.kwonlyargs],
         "features_variadic": argspec.varargs is not None,
+        "format": format,
     })
 
 def node(func=None, format=None):
     if func is None and format is not None:
         def inner(inners_func):
             __jsonify_func(inners_func, format)
-    
+        
+        return inner
+
     else:
         __jsonify_func(func)
 

@@ -11,6 +11,7 @@ struct NodeFunction {
     name: String,
     required_arguments: Vec<String>,
     features_variadic: bool,
+    format: Option<String>,
 }
 
 #[derive(Debug)]
@@ -31,8 +32,6 @@ fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionErr
 
     let py_code = env.render_str(INSPECTOR_TEMPLATE, &mut ctx)
         .map_err(TemplateError)?;
-
-    println!("{}", py_code);
 
     let python_out = Command::new("python3")
         .arg("-c")
@@ -75,6 +74,19 @@ def sen(x):
             name: "sen".to_string(),
             required_arguments: vec!["x".to_string()],
             features_variadic: false,
+            format: None,
+        }
+    ])]
+    #[case(r"
+@node(format='$x ^ $y')
+def pow(x, y):
+    return x ** y
+", &[
+        NodeFunction {
+            name: "pow".to_string(),
+            required_arguments: ["x", "y"].into_iter().map(String::from).collect(),
+            features_variadic: false,
+            format: Some("$x ^ $y".to_string())
         }
     ])]
     fn test_node_functions(#[case] user_code_input: &str, #[case] expected_node_funcs: &[NodeFunction]) {
