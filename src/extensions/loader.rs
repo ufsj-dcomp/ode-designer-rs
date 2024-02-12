@@ -17,7 +17,7 @@ struct NodeFunction {
 #[derive(Debug)]
 enum InspectionError {
     TemplateError(JinjaError),
-    PythonCommandUnavailable,
+    PythonInvocationError(std::io::Error),
     PythonExecutionError(String),
     DeserializationError(SerdeJsonError),
 }
@@ -39,7 +39,7 @@ fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionErr
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|_| PythonCommandUnavailable)?;
+        .map_err(PythonInvocationError)?;
 
     let mut inspection_res = String::new();
 
