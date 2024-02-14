@@ -7,11 +7,11 @@ use minijinja::{Environment, context, Error as JinjaError};
 const INSPECTOR_TEMPLATE: &str = include_str!("templates/inspect_node_functions.py.jinja");
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-struct NodeFunction {
-    name: String,
-    required_arguments: Vec<String>,
-    features_variadic: bool,
-    format: Option<String>,
+pub struct NodeFunction {
+    pub name: String,
+    pub required_arguments: Vec<String>,
+    pub features_variadic: bool,
+    pub format: Option<String>,
 }
 
 #[derive(Debug)]
