@@ -27,9 +27,9 @@ impl Format {
         )
     }
 
-    pub fn format_args<'a, T: Display + 'a>(&self, args: impl Iterator<Item=&'a T>) -> String {
+    pub fn format_args<T: Display>(&self, args: Vec<T>) -> String {
         let mut str_buf = [0; 4];
-        let display_args: Vec<_> = args.map(ToString::to_string).collect();
+        let display_args: Vec<_> = args.into_iter().map(|arg| arg.to_string()).collect();
 
         self
             .0
@@ -225,12 +225,12 @@ mod tests {
         &['A', 'B', 'C', 'D'],
         "Sum = A+B+C+D",
     )]
-    fn test_format_args<T: Display>(
+    fn test_format_args<T: Display + Clone>(
         #[case] format: Format,
         #[case] args: &'static [T],
         #[case] expected_formatted_text: &'static str,
     ) {
-        let res = format.format_args(args.iter());
+        let res = format.format_args(args.to_vec());
         assert_eq!(res, expected_formatted_text);
     }
 }

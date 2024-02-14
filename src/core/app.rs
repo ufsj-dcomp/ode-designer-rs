@@ -171,7 +171,7 @@ impl SimulationState {
 
 #[derive(Default)]
 pub struct App<'n> {
-    node_types: Vec<NodeTypeRepresentation<'n>>,
+    pub node_types: Vec<NodeTypeRepresentation<'n>>,
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
@@ -318,7 +318,7 @@ impl AppState {
                         }
 
                         if ui.button("Load Extension") {
-                            dbg!(app.load_extension_file());
+                            app.pick_extension_file();
                         }
                     });
 
@@ -755,6 +755,11 @@ impl<'n> App<'n> {
                     end_time: 0.0,
                 }),
                 positions,
+                extension_files: self
+                    .extensions
+                    .iter()
+                    .map(|ext| ext.filename.clone())
+                    .collect(),
             },
             arguments,
             equations,
@@ -797,11 +802,15 @@ impl<'n> App<'n> {
             positions,
         } = model.core;
 
+        model.extension_files
+            .into_iter()
+            .try_for_each(|file| self.load_extension_from_path(file.into()))?;
+
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
             .map(Into::<ModelFragment>::into)
             .chain(equations.into_iter().map(Into::<ModelFragment>::into))
-            .map(Node::build_from_fragment)
+            .map(|frag| Node::build_from_fragment(frag, &self))
             .collect::<Result<_, _>>()?;
 
         let pending_ops: Vec<PendingOperations> = nodes_and_ops

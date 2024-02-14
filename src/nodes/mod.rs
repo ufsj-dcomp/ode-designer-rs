@@ -3,6 +3,7 @@ pub mod errors;
 pub mod expression;
 pub mod term;
 pub mod custom;
+pub mod composition_utils;
 
 use std::{borrow::Cow, ops::{Deref, DerefMut}, rc::Rc};
 
@@ -78,21 +79,26 @@ impl Node {
     }
 
     pub fn build_from_fragment(
-        frag: ModelFragment,
+        frag: ModelFragment, app: &App,
     ) -> Result<(Self, Option<PendingOperations>), NotANode> {
         let node_id = NodeId::generate();
 
-        Term::try_from_model_fragment(node_id, &frag)
+        Term::try_from_model_fragment(node_id, &frag, app)
             .map(|(node_impl, ops)| (node_impl.into(), ops))
             .or_else(|| {
-                Expression::try_from_model_fragment(node_id, &frag)
+                Expression::try_from_model_fragment(node_id, &frag, app)
                     .map(|(node_impl, ops)| (node_impl.into(), ops))
                     .or_else(|| {
-                        Assigner::try_from_model_fragment(node_id, &frag)
+                        Assigner::try_from_model_fragment(node_id, &frag, app)
                             .map(|(node_impl, ops)| (node_impl.into(), ops))
+                            .or_else(|| {
+                                CustomFunctionNode::try_from_model_fragment(node_id, &frag, app)
+                                .map(|(node_impl, ops)| (node_impl.into(), ops))
+                            })
                     })
             })
             .ok_or(NotANode(frag))
+
     }
 }
 
@@ -107,6 +113,7 @@ pub trait NodeImpl {
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)>
     where
         Self: Sized;

@@ -1,8 +1,8 @@
-use std::{fs::File, io::Read, str::FromStr};
+use std::{borrow::Cow, fs::File, io::{BufReader, Read}, path::PathBuf, rc::Rc, str::FromStr};
 
 use rfd::FileDialog;
 
-use crate::core::App;
+use crate::{core::App, nodes::{NodeTypeRepresentation, NodeVariant}};
 
 use self::{format::Format, loader::NodeFunction};
 
@@ -11,7 +11,7 @@ mod loader;
 
 pub struct Extension {
     pub filename: String,
-    pub nodes: Vec<CustomNodeSpecification>,
+    pub nodes: Vec<Rc<CustomNodeSpecification>>,
 }
 
 #[derive(Debug)]
@@ -42,7 +42,8 @@ impl From<NodeFunction> for CustomNodeSpecification {
 }
 
 impl<'n> App<'n> {
-    pub fn load_extension_file(&mut self) -> color_eyre::Result<()> {
+
+    pub fn pick_extension_file(&mut self) -> anyhow::Result<()> {
         let file_path = FileDialog::new()
             .add_filter("Python", &["py"])
             .pick_file()
@@ -50,18 +51,32 @@ impl<'n> App<'n> {
                 std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
             })?;
 
-        let mut file = File::open(&file_path)?;
-        let mut user_code = String::new();
+        self.load_extension_from_path(file_path)
+    }
 
+    pub fn load_extension_from_path(&mut self, origin: PathBuf) -> anyhow::Result<()> {
+
+        let mut file = File::open(&origin)?;
+        let mut user_code = String::new();
         file.read_to_string(&mut user_code)?;
 
-        let node_specs = loader::inspect_user_code(&user_code)?
+        let node_specs: Vec<_> = loader::inspect_user_code(&user_code)?
             .into_iter()
             .map(CustomNodeSpecification::from)
+            .map(Rc::from)
+            .inspect(|node_spec| {
+                self.node_types.push(
+                    NodeTypeRepresentation {
+                        name: Cow::from(node_spec.function.name.clone()),
+                        variant: NodeVariant::Custom,
+                        custom_node_spec: Some(Rc::clone(node_spec)),
+                    }
+                );
+            })
             .collect();
-        
+
         self.extensions.push(Extension {
-            filename: file_path
+            filename: origin
                 .file_name()
                 .map(std::ffi::OsStr::to_string_lossy)
                 .map(Into::into)

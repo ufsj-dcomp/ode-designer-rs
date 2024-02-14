@@ -31,7 +31,7 @@ impl<'n> App<'n> {
 
                 if ui.menu_item("Load") {
                     self.clear_state();
-                    self.load_state();
+                    self.load_state().unwrap();
                 }
 
                 if ui.menu_item("Save") {
@@ -65,6 +65,7 @@ impl<'n> App<'n> {
 
             if ui.menu_item("Run") {
                 let py_code = self.generate_code();
+                println!("{}", py_code);
                 let python_out = Command::new("python3")
                     .arg("-c")
                     .arg(py_code)

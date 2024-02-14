@@ -4,7 +4,7 @@ use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
-    core::app::AppState,
+    core::{app::AppState, App},
     exprtree::{ExpressionNode, Sign},
     message::Message,
     pins::{InputPin, Pin},
@@ -148,6 +148,7 @@ impl NodeImpl for Assigner {
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         let ModelFragment::Equation(eq) = frag else {
             return None;

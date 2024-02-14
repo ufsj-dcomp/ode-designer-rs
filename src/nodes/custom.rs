@@ -2,10 +2,11 @@ use std::{collections::HashMap, rc::Rc};
 
 use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
+use odeir::models::CompositionStyle;
 
-use crate::{exprtree::{ExpressionNode, Leaf}, extensions::CustomNodeSpecification, pins::{InputPin, OutputPin, Pin}};
+use crate::{core::App, exprtree::{ExpressionNode, ExpressionTree, Leaf}, extensions::CustomNodeSpecification, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment};
 
-use super::{LinkEvent, NodeImpl, ResolutionStatus};
+use super::{composition_utils::{build_composition, build_from_composition}, ExprWrapper, LinkEvent, NodeImpl, ResolutionStatus, Resolvable};
 
 #[derive(Debug)]
 pub struct CustomFunctionNode {
@@ -13,7 +14,7 @@ pub struct CustomFunctionNode {
     pub name: String,
     pub inputs: Vec<InputPin>,
     pub output: OutputPin,
-    input_data: HashMap<InputPinId, String>,
+    pub expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
     spec: Rc<CustomNodeSpecification>,
     formatted_args: Leaf,
 }
@@ -27,9 +28,9 @@ impl CustomFunctionNode {
                 .take(spec.input_count())
                 .collect(),
             output: Pin::new(node_id),
-            input_data: HashMap::new(),
+            expr_wrapper: Default::default(),
             formatted_args: Leaf {
-                symbol: spec.format.format_args::<i32>([].iter()),
+                symbol: spec.format.format_args::<i32>(vec![]),
                 unary_op: Default::default(),
             },
             spec,
@@ -37,7 +38,13 @@ impl CustomFunctionNode {
     }
 
     fn reformat_args(&mut self) {
-        self.formatted_args.symbol = self.spec.format.format_args(self.input_data.values());
+        self.formatted_args.symbol = self.spec.format.format_args(
+            self
+                .expr_wrapper
+                .get_expr_repr()
+                .map(|expr| expr.split_ascii_whitespace().collect())
+                .unwrap_or_default()
+        );
     }
 }
 
@@ -68,16 +75,53 @@ impl NodeImpl for CustomFunctionNode {
         )
     }
 
+    fn inputs(&self) -> Option<&[InputPin]> {
+        Some(&self.inputs)
+    }
+
+    fn inputs_mut(&mut self) -> Option<&mut [InputPin]> {
+        Some(&mut self.inputs)
+    }
+
+    fn outputs(&self) -> Option<&[OutputPin]> {
+        Some(std::array::from_ref(&self.output))
+    }
+
+    fn outputs_mut(&mut self) -> Option<&mut [OutputPin]> {
+        Some(std::array::from_mut(&mut self.output))
+    }
+
+    fn state_changed(&mut self) -> bool {
+        for input in &self.inputs {
+            if let Some(input_tree) = self.expr_wrapper.members.get_mut(input.id()) {
+                input_tree.set_unary(input.sign);
+            };
+        }
+
+        self.expr_wrapper.resolution.reset();
+        self.reformat_args();
+        true
+    }
+
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
         match link_event {
             LinkEvent::Push { from_pin_id, payload } => {
-                self.input_data.insert(from_pin_id, payload.resolve_into_equation_part());
+                let pin = self
+                    .inputs
+                    .iter()
+                    .find(|pin| pin.id() == &from_pin_id)
+                    .expect("The pin must exist if we received data through it");
+
+                self.expr_wrapper
+                    .members
+                    .insert(from_pin_id, pin.map_data(payload));
             }
             LinkEvent::Pop(from_pin_id) => {
-                self.input_data.remove(&from_pin_id);
+                self.expr_wrapper.members.remove(&from_pin_id);
             }
         }
 
+        self.expr_wrapper.resolution.reset();
         self.reformat_args();
         true
     }
@@ -89,14 +133,53 @@ impl NodeImpl for CustomFunctionNode {
 
     fn try_from_model_fragment(
         node_id: imnodes::NodeId,
-        frag: &crate::utils::ModelFragment,
+        frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<super::PendingOperations>)>
     where
-        Self: Sized {
-        todo!()
+        Self: Sized
+    {
+        let ModelFragment::Argument(odeir::Argument::Composite {
+            operation,
+            style: CompositionStyle::Prefixed,
+            ..
+        }) = &frag
+        else {
+            return None;
+        };
+
+        let Some(spec) = app
+            .extensions
+            .iter()
+            .flat_map(|ext| ext.nodes.iter())
+            .find(|node_spec| &node_spec.function.name == operation)
+        else {
+            return None;
+        };
+
+        build_from_composition(
+            node_id,
+            frag,
+            |name, composition, expr_wrapper| {
+                let mut node = Self::from_spec(
+                    node_id,
+                    name.to_owned(),
+                    Rc::clone(spec),
+                );
+
+                node.expr_wrapper = expr_wrapper;
+                node
+            }
+        )
     }
 
     fn to_model_fragment(&self, app: &crate::core::App) -> Option<crate::utils::ModelFragment> {
-        todo!()
+        build_composition(
+            &self.name,
+            &self.inputs,
+            self.spec.function.name.clone(),
+            CompositionStyle::Prefixed,
+            app
+        )
     }
 }

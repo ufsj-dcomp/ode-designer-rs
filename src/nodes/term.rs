@@ -90,6 +90,7 @@ impl NodeImpl for Term {
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         let ModelFragment::Argument(odeir::Argument::Value { name, value }) = frag else {
             return None;
