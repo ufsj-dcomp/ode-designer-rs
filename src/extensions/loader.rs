@@ -3,6 +3,7 @@ use std::{io::Read, process::{Command, Stdio}};
 use serde::Deserialize;
 use serde_json::Error as SerdeJsonError;
 use minijinja::{Environment, context, Error as JinjaError};
+use thiserror::Error;
 
 const INSPECTOR_TEMPLATE: &str = include_str!("templates/inspect_node_functions.py.jinja");
 
@@ -14,15 +15,16 @@ pub struct NodeFunction {
     pub format: Option<String>,
 }
 
-#[derive(Debug)]
-enum InspectionError {
-    TemplateError(JinjaError),
-    PythonInvocationError(std::io::Error),
-    PythonExecutionError(String),
-    DeserializationError(SerdeJsonError),
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub enum InspectionError {
+    Template(JinjaError),
+    PythonInvocation(std::io::Error),
+    PythonExecution(String),
+    Deserialization(SerdeJsonError),
 }
 
-fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionError> {
+pub fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionError> {
     use InspectionError::*;
 
     let env = Environment::new();
@@ -31,7 +33,7 @@ fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionErr
     };
 
     let py_code = env.render_str(INSPECTOR_TEMPLATE, &mut ctx)
-        .map_err(TemplateError)?;
+        .map_err(Template)?;
 
     let python_out = Command::new("python3")
         .arg("-c")
@@ -39,21 +41,21 @@ fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, InspectionErr
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(PythonInvocationError)?;
+        .map_err(PythonInvocation)?;
 
     let mut inspection_res = String::new();
 
     python_out.stderr.unwrap().read_to_string(&mut inspection_res).unwrap();
 
     if !inspection_res.is_empty() {
-        return Err(PythonExecutionError(inspection_res));
+        return Err(PythonExecution(inspection_res));
     }
         
     inspection_res.clear();
     python_out.stdout.unwrap().read_to_string(&mut inspection_res).unwrap();
 
     serde_json::from_str(&inspection_res)
-        .map_err(DeserializationError)
+        .map_err(Deserialization)
 
 }
 

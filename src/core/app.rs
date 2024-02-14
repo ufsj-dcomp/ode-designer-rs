@@ -14,7 +14,7 @@ use strum::{VariantArray, VariantNames};
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
-use crate::extensions::CustomNodeSpecification;
+use crate::extensions::{CustomNodeSpecification, Extension};
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations};
 use crate::pins::Pin;
@@ -176,11 +176,12 @@ pub struct App<'n> {
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
     links: Vec<Link>,
-    state: Option<AppState>,
+    pub state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
     pub(crate) simulation_state: Option<SimulationState>,
     sidebar_state: SideBarState,
+    pub extensions: Vec<Extension>,
 }
 
 pub enum AppState {
@@ -193,6 +194,7 @@ pub enum AppState {
         attribute_to: NodeId,
         search_query: String
     },
+    ManagingExtensions,
 }
 
 enum StateAction {
@@ -292,6 +294,40 @@ impl AppState {
                         "If the state is AttributingAssignerOperatesOn, then the modal is open"
                     )
             }
+            AppState::ManagingExtensions => {
+                let mut user_kept_open = true;
+                ui.window("Extensions")
+                    .collapsible(false)
+                    .opened(&mut user_kept_open)
+                    .build(|| {
+                        if let Some(_t) = ui.begin_table("Extensions", 2) {
+                            ui.table_setup_column("Origin");
+                            ui.table_setup_column("Implements nodes");
+                            ui.table_headers_row();
+
+                            for ext in &app.extensions {
+                                ui.table_next_row();
+                                ui.table_next_column();
+                                ui.text(&ext.filename);
+
+                                ui.table_next_column();
+                                for node_spec in &ext.nodes {
+                                    ui.text(&node_spec.function.name);
+                                }
+                            }
+                        }
+
+                        if ui.button("Load Extension") {
+                            dbg!(app.load_extension_file());
+                        }
+                    });
+
+                if user_kept_open {
+                    StateAction::Keep
+                } else {
+                    StateAction::Clear
+                }
+            }
         }
     }
 }
@@ -303,9 +339,9 @@ impl<'n> App<'n> {
 
         // Draw nodes
         for (id, node) in self.nodes.iter_mut() {
-            let _col = imnodes::ColorStyle::TitleBar.push_color(node.color());
-            let _col2 = imnodes::ColorStyle::TitleBarSelected.push_color(node.selected_color());
-            let _col3 = imnodes::ColorStyle::TitleBarHovered.push_color(node.hovered_color());
+            // let _col = imnodes::ColorStyle::TitleBar.push_color(node.color());
+            // let _col2 = imnodes::ColorStyle::TitleBarSelected.push_color(node.selected_color());
+            // let _col3 = imnodes::ColorStyle::TitleBarHovered.push_color(node.hovered_color());
             editor.add_node(*id, |mut ui_node| {
                 let (msgs, app_state_change) = node.process_node(ui, &mut ui_node);
                 if let Some(msgs) = msgs {
@@ -325,7 +361,6 @@ impl<'n> App<'n> {
         // Enters "Create Node Popup" state
         if editor.is_hovered()
             && ui.is_mouse_clicked(imgui::MouseButton::Right)
-            && self.state.is_none()
         {
             let mouse_screen_space_pos = ui.io().mouse_pos;
 

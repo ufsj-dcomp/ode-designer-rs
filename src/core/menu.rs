@@ -5,7 +5,7 @@ use rfd::FileDialog;
 
 use std::process::{Command, Stdio};
 
-use super::app::SimulationState;
+use super::app::{AppState, SimulationState};
 
 impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
@@ -74,6 +74,14 @@ impl<'n> App<'n> {
                     .unwrap();
 
                 self.simulation_state = Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+            }
+
+            if ui.menu_item("Manage Extensions") {
+                self.state = if let Some(AppState::ManagingExtensions) = self.state {
+                    None
+                } else {
+                    Some(AppState::ManagingExtensions)
+                }
             }
         });
     }
