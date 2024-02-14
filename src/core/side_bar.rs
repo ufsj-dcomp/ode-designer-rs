@@ -18,14 +18,16 @@ impl SideBarState {
         let table_group = ui.begin_group();
         let mut selected_node_type = None;
 
-        ui.set_next_item_width(13.0 * 7.0);
-        
+        const WIDTH: f32 = 13.0 * 7.0;
+
+        ui.set_next_item_width(WIDTH);
+
         ui.input_text("##Node name", &mut self.node_name)
-            .hint("Type the node name:")
+            .hint("Node name")
             .build();
 
         for node_type in node_types {
-            if ui.button(&node_type.name) {
+            if ui.button_with_size(&node_type.name, [WIDTH, 0.0]) {
                 selected_node_type = Some(node_type)
             }
         }
