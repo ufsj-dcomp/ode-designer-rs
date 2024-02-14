@@ -27,9 +27,9 @@ impl Format {
         )
     }
 
-    pub fn format_args<T: Display>(&self, args: &[T]) -> String {
+    pub fn format_args<'a, T: Display + 'a>(&self, args: impl Iterator<Item=&'a T>) -> String {
         let mut str_buf = [0; 4];
-        let display_args: Vec<_> = args.into_iter().map(ToString::to_string).collect();
+        let display_args: Vec<_> = args.map(ToString::to_string).collect();
 
         self
             .0
@@ -230,7 +230,7 @@ mod tests {
         #[case] args: &'static [T],
         #[case] expected_formatted_text: &'static str,
     ) {
-        let res = format.format_args(args);
+        let res = format.format_args(args.iter());
         assert_eq!(res, expected_formatted_text);
     }
 }

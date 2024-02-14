@@ -2,6 +2,7 @@ use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
+use std::rc::Rc;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
@@ -13,8 +14,9 @@ use strum::{VariantArray, VariantNames};
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
+use crate::extensions::CustomNodeSpecification;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::{LinkEvent, Node, NodeVariant, PendingOperation, PendingOperations};
+use crate::nodes::{LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -169,7 +171,7 @@ impl SimulationState {
 
 #[derive(Default)]
 pub struct App<'n> {
-    node_types: Vec<(Cow<'n, str>, NodeVariant)>,
+    node_types: Vec<NodeTypeRepresentation<'n>>,
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
@@ -221,8 +223,8 @@ impl AppState {
                     ui.text("Node type");
                     ui.same_line();
 
-                    ui.combo("##Node Type", index, &app.node_types, |(variant_name, _)| {
-                        Cow::Borrowed(variant_name.borrow())
+                    ui.combo("##Node Type", index, &app.node_types, |NodeTypeRepresentation { name, .. }| {
+                        Cow::Borrowed(name.borrow())
                     });
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
@@ -230,10 +232,11 @@ impl AppState {
                     let enter_pressed = ui.is_key_pressed(Key::Enter);
 
                     if ui.button("Add") || enter_pressed {
-                        let node_variant = NodeVariant::from_repr(*index)
+                        let node_type = app.node_types
+                            .get(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
-                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_variant));
+                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_type));
                         app.queue.push(Message::SetNodePos {
                             node_id,
                             screen_space_pos: *add_at_screen_space_pos,
@@ -417,8 +420,9 @@ impl<'n> App<'n> {
                 .iter()
                 .copied()
                 .zip(NodeVariant::VARIANTS)
+                .filter(|(_, variant)| variant != &&NodeVariant::Custom)
                 .map(|(name, variant)| {
-                    (Cow::from(name), variant.clone())
+                    NodeTypeRepresentation::new(name, *variant, None)
                 })
                 .collect(),
             ..Self::default()
@@ -905,7 +909,7 @@ mod tests {
         core::{initialize_id_generator, GeneratesId},
         exprtree::{ExpressionNode, Operation, Sign},
         message::Message,
-        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, SimpleNodeBuilder, NodeVariant},
+        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term},
         pins::{OutputPin, Pin},
     };
 
@@ -1013,20 +1017,26 @@ mod tests {
     const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
 
     fn app_with_nodes_abk<'n>() -> App<'n> {
-        let mut a = Node::build_from_ui("A".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut a) = &mut a {
-            a.initial_value = 10.0;
-        }
+        let mut a = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "A".to_owned());
+            node.initial_value = 10.0;
+            node.into()
+        };
 
-        let mut b = Node::build_from_ui("B".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut b) = &mut b {
-            b.initial_value = 20.0;
-        }
+        let mut b = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "B".to_owned());
+            node.initial_value = 20.0;
+            node.into()
+        };
 
-        let mut k = Node::build_from_ui("K".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut k) = &mut k {
-            k.initial_value = 30.0;
-        }
+        let mut k = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "K".to_owned());
+            node.initial_value = 30.0;
+            node.into()
+        };
 
         let mut a_times_k = ExpressionNodeBuilder::new("a*k")
             .linked_to(&mut a, Sign::Positive)

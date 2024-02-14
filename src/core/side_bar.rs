@@ -4,7 +4,7 @@ use imgui::Ui;
 
 use crate::{
     message::Message,
-    nodes::{Expression, Node, NodeImpl, NodeVariant},
+    nodes::{Expression, Node, NodeImpl, NodeTypeRepresentation, NodeVariant},
 };
 
 use super::App;
@@ -14,9 +14,9 @@ pub struct SideBarState {
     node_name: String,
 }
 impl SideBarState {
-    pub fn draw(&mut self, ui: &Ui, node_types: &[(Cow<str>, NodeVariant)]) -> Option<Node> {
+    pub fn draw(&mut self, ui: &Ui, node_types: &[NodeTypeRepresentation]) -> Option<Node> {
         let table_group = ui.begin_group();
-        let mut node_variant = None;
+        let mut selected_node_type = None;
 
         ui.set_next_item_width(13.0 * 7.0);
         
@@ -24,18 +24,18 @@ impl SideBarState {
             .hint("Type the node name:")
             .build();
 
-        for (name, variant) in node_types {
-            if ui.button(name) {
-                node_variant = Some(variant)
+        for node_type in node_types {
+            if ui.button(&node_type.name) {
+                selected_node_type = Some(node_type)
             }
         }
 
         table_group.end();
 
         ui.same_line();
-        node_variant.map(|variant| {
+        selected_node_type.map(|nt| {
             let name = std::mem::take(&mut self.node_name);
-            Node::build_from_ui(name, *variant)
+            Node::build_from_ui(name, nt)
         })
         
     }

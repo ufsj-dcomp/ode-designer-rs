@@ -4,7 +4,7 @@ pub mod expression;
 pub mod term;
 pub mod custom;
 
-use std::ops::{Deref, DerefMut};
+use std::{borrow::Cow, ops::{Deref, DerefMut}, rc::Rc};
 
 pub use assigner::Assigner;
 use enutil::EnumDeref;
@@ -16,17 +16,12 @@ use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
-    core::App,
-    core::{app::AppState, GeneratesId},
-    exprtree::{ExpressionNode, ExpressionTree, Sign},
-    message::{Message, SendData},
-    pins::{InputPin, OutputPin, Pin},
-    utils::ModelFragment,
+    core::{app::AppState, App, GeneratesId}, exprtree::{ExpressionNode, ExpressionTree, Sign}, extensions::CustomNodeSpecification, message::{Message, SendData}, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
 };
 
 use derive_more::From;
 
-use self::errors::NotANode;
+use self::{custom::CustomFunctionNode, errors::NotANode};
 
 #[derive(Debug, Clone, From)]
 pub enum LinkPayload {
@@ -42,6 +37,22 @@ pub enum LinkEvent {
     Pop(InputPinId),
 }
 
+pub struct NodeTypeRepresentation<'n> {
+    pub name: Cow<'n, str>,
+    pub variant: NodeVariant,
+    pub custom_node_spec: Option<Rc<CustomNodeSpecification>>,
+}
+
+impl<'n> NodeTypeRepresentation<'n> {
+    pub fn new(name: &'n str, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
+        Self {
+            name: Cow::from(name),
+            variant,
+            custom_node_spec,
+        }
+    }
+}
+
 #[derive(Debug, EnumDeref, EnumDiscriminants, VariantNames, From)]
 #[enum_deref_target(dyn NodeImpl)]
 #[strum_discriminants(name(NodeVariant))]
@@ -50,16 +61,19 @@ pub enum Node {
     Term(Term),
     Expression(Expression),
     Assigner(Assigner),
+    Custom(CustomFunctionNode),
 }
 
 impl Node {
-    pub fn build_from_ui(name: String, variant: NodeVariant) -> Self {
+    pub fn build_from_ui(name: String, node_type: &NodeTypeRepresentation) -> Self {
         let node_id = NodeId::generate();
 
-        match variant {
-            NodeVariant::Term => Term::new(node_id, name).into(),
-            NodeVariant::Expression => Expression::new(node_id, name).into(),
-            NodeVariant::Assigner => Assigner::new(node_id, name).into(),
+        match (node_type.variant, &node_type.custom_node_spec) {
+            (NodeVariant::Term, None) => Term::new(node_id, name).into(),
+            (NodeVariant::Expression, None) => Expression::new(node_id, name).into(),
+            (NodeVariant::Assigner, None) => Assigner::new(node_id, name).into(),
+            (NodeVariant::Custom, Some(node_spec)) => CustomFunctionNode::from_spec(node_id, name, Rc::clone(node_spec)).into(),
+            _ => todo!("Custom node without spec? Default node with spec?")
         }
     }
 
