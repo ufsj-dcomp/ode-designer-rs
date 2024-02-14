@@ -38,7 +38,11 @@ impl Format {
                 match part {
                     FormatPart::Static(s) => s.clone(),
                     FormatPart::Dynamic(arg_spec) => match arg_spec {
-                        ArgumentSpecifier::Indexed(idx) => display_args[*idx - 1].clone(),
+                        ArgumentSpecifier::Indexed(idx) =>
+                            display_args
+                                .get(*idx - 1)
+                                .map(Clone::clone)
+                                .unwrap_or_else(|| "_".to_string()),
                         ArgumentSpecifier::Named(_) => todo!("Named parameters are still not supported"),
                         ArgumentSpecifier::All { separator } => {
                             display_args.join(separator.encode_utf8(&mut str_buf))
@@ -193,6 +197,15 @@ mod tests {
         ]),
         &["x"],
         "cos( x )",
+    )]
+    #[case(
+        Format(vec![
+            S("cos(".to_string()),
+            D(I(1)),
+            S(")".to_string()),
+        ]),
+        &[] as &[&str],
+        "cos( _ )",
     )]
     #[case(
         Format(vec![
