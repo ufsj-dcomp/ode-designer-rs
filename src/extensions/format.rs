@@ -1,30 +1,74 @@
+use std::{fmt::Display, str::FromStr};
+
 use nom::{
     branch::alt,
-    bytes::complete::{is_a, is_not, tag, take_while},
+    bytes::complete::{is_not, tag},
     character::complete::{alpha1, alphanumeric1, anychar, space0},
-    character::complete::{char, space1},
-    character::{
-        complete::{digit1, multispace0},
-        is_digit,
-    },
-    combinator::rest,
-    combinator::{cut, map, opt, value},
-    combinator::{map_parser, recognize},
-    complete::take,
-    error::ParseError,
-    multi::{many0, many0_count, many1, separated_list0},
-    sequence::{delimited, pair, preceded},
+    character::complete::digit1,
+    combinator::map,
+    combinator::recognize,
+    multi::{many0, many0_count, many1},
+    sequence::{pair, preceded},
     IResult,
 };
 
+#[derive(Debug)]
+pub struct Format(Vec<FormatPart>);
+
+impl Format {
+    pub fn default_with_name(fn_name: &str) -> Self {
+        Self(
+            vec![
+                FormatPart::Static(fn_name.to_owned()),
+                FormatPart::Static("(".to_owned()),
+                FormatPart::Dynamic(ArgumentSpecifier::All { separator: ',' }),
+                FormatPart::Static(")".to_owned()),
+            ]
+        )
+    }
+
+    pub fn format_args<T: Display>(&self, args: &[T]) -> String {
+        let mut str_buf = [0; 4];
+        let display_args: Vec<_> = args.into_iter().map(ToString::to_string).collect();
+
+        self
+            .0
+            .iter()
+            .map(|part| {
+                match part {
+                    FormatPart::Static(s) => s.clone(),
+                    FormatPart::Dynamic(arg_spec) => match arg_spec {
+                        ArgumentSpecifier::Indexed(idx) => display_args[*idx - 1].clone(),
+                        ArgumentSpecifier::Named(_) => todo!("Named parameters are still not supported"),
+                        ArgumentSpecifier::All { separator } => {
+                            display_args.join(separator.encode_utf8(&mut str_buf))
+                        },
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+impl FromStr for Format {
+    type Err = nom::Err<nom::error::Error<String>>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_format(s)
+            .map(|(_rest, parts)| Self(parts))
+            .map_err(|err| err.to_owned())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
-enum FormatPart {
+pub enum FormatPart {
     Static(String),
     Dynamic(ArgumentSpecifier),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum ArgumentSpecifier {
+pub enum ArgumentSpecifier {
     Indexed(usize),
     Named(String),
     All { separator: char },
@@ -138,5 +182,42 @@ mod tests {
         assert!(rest.is_empty(), "There was a string remainder: '{rest}'");
 
         assert_eq!(parsed, expected_format);
+    }
+
+    #[rstest]
+    #[case(
+        Format(vec![
+            S("cos(".to_string()),
+            D(I(1)),
+            S(")".to_string()),
+        ]),
+        &["x"],
+        "cos( x )",
+    )]
+    #[case(
+        Format(vec![
+            D(I(1)),
+            S("*".to_string()),
+            D(I(2)),
+        ]),
+        &[10, 20],
+        "10 * 20",
+    )]
+    #[case(
+        Format(vec![
+            S("Sum".to_string()),
+            S("=".to_string()),
+            D(All { separator: '+' }),
+        ]),
+        &['A', 'B', 'C', 'D'],
+        "Sum = A+B+C+D",
+    )]
+    fn test_format_args<T: Display>(
+        #[case] format: Format,
+        #[case] args: &'static [T],
+        #[case] expected_formatted_text: &'static str,
+    ) {
+        let res = format.format_args(args);
+        assert_eq!(res, expected_formatted_text);
     }
 }
