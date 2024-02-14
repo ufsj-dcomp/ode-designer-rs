@@ -2,6 +2,7 @@ mod assigner;
 pub mod errors;
 pub mod expression;
 pub mod term;
+pub mod custom;
 
 use std::ops::{Deref, DerefMut};
 
@@ -81,11 +82,13 @@ impl Node {
     }
 }
 
-pub trait NodeImpl {
-
+pub trait SimpleNodeBuilder: NodeImpl {
     fn new(node_id: NodeId, name: String) -> Self
     where
         Self: Sized;
+}
+
+pub trait NodeImpl {
 
     fn try_from_model_fragment(
         node_id: NodeId,

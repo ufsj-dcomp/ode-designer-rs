@@ -905,7 +905,7 @@ mod tests {
         core::{initialize_id_generator, GeneratesId},
         exprtree::{ExpressionNode, Operation, Sign},
         message::Message,
-        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant},
+        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, SimpleNodeBuilder, NodeVariant},
         pins::{OutputPin, Pin},
     };
 

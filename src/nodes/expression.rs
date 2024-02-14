@@ -12,7 +12,7 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
+use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder};
 
 const MINIMUM_PIN_COUNT: usize = 2;
 
@@ -49,6 +49,15 @@ impl Expression {
         self.inputs
             .iter()
             .all(|pin| (pin.id == notifying_pin_id) || pin.has_links())
+    }
+}
+
+impl SimpleNodeBuilder for Expression {
+    fn new(node_id: NodeId, name: String) -> Self
+    where
+        Self: Sized,
+    {
+        Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 }
 
@@ -210,13 +219,6 @@ impl NodeImpl for Expression {
             }
             .into(),
         )
-    }
-
-    fn new(node_id: NodeId, name: String) -> Self
-    where
-        Self: Sized,
-    {
-        Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 
     fn try_from_model_fragment(
