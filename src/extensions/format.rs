@@ -12,7 +12,7 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Format(Vec<FormatPart>);
 
 impl Format {
@@ -65,13 +65,13 @@ impl FromStr for Format {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FormatPart {
     Static(String),
     Dynamic(ArgumentSpecifier),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ArgumentSpecifier {
     Indexed(usize),
     Named(String),

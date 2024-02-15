@@ -146,7 +146,7 @@ impl NodeImpl for Expression {
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        let mut selected = self.expr_wrapper.join_op as usize;
+        let mut selected = self.expr_wrapper.join_op() as usize;
         let mut changed = false;
 
         // Needs to be assigned to a variable other than `_`. Otherwise, the
@@ -160,8 +160,10 @@ impl NodeImpl for Expression {
             Operation::VARIANTS,
             |op| format!("{op}").into(),
         ) {
-            self.expr_wrapper.join_op = Operation::from_repr(selected as u8)
-                .expect("ImGui returned an out-of-range value in combobox");
+            self.expr_wrapper.set_join_op(
+                Operation::from_repr(selected as u8)
+                .expect("ImGui returned an out-of-range value in combobox")
+            );
 
             changed = true
         }
@@ -194,7 +196,7 @@ impl NodeImpl for Expression {
         build_composition(
             &self.name,
             &self.inputs,
-            Into::<char>::into(self.expr_wrapper.join_op).into(),
+            Into::<char>::into(self.expr_wrapper.join_op()).into(),
             CompositionStyle::Infixed,
             app
         )

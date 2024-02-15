@@ -6,7 +6,7 @@ use crate::{core::App, nodes::{NodeTypeRepresentation, NodeVariant}};
 
 use self::{format::Format, loader::NodeFunction};
 
-mod format;
+pub mod format;
 mod loader;
 
 pub struct Extension {
