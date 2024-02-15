@@ -16,11 +16,16 @@ pub struct CustomFunctionNode {
     pub output: OutputPin,
     pub expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
     spec: Rc<CustomNodeSpecification>,
-    formatted_args: Leaf,
 }
 
 impl CustomFunctionNode {
     pub fn from_spec(node_id: NodeId, name: String, spec: Rc<CustomNodeSpecification>) -> Self {
+        let mut expr_wrapper = ExprWrapper::<ExpressionTree<InputPinId>>::default();
+        #[allow(clippy::field_reassign_with_default)]
+        {
+            expr_wrapper.format = spec.format.clone();
+        }
+
         Self {
             id: node_id,
             name,
@@ -28,23 +33,9 @@ impl CustomFunctionNode {
                 .take(spec.input_count())
                 .collect(),
             output: Pin::new(node_id),
-            expr_wrapper: Default::default(),
-            formatted_args: Leaf {
-                symbol: spec.format.format_args::<i32>(vec![]),
-                unary_op: Default::default(),
-            },
+            expr_wrapper,
             spec,
         }
-    }
-
-    fn reformat_args(&mut self) {
-        self.formatted_args.symbol = self.spec.format.format_args(
-            self
-                .expr_wrapper
-                .get_expr_repr()
-                .map(|expr| expr.split_ascii_whitespace().collect())
-                .unwrap_or_default()
-        );
     }
 }
 
@@ -70,9 +61,7 @@ impl NodeImpl for CustomFunctionNode {
     }
 
     fn send_data(&self) -> ExpressionNode<InputPinId> {
-        ExpressionNode::Leaf(
-            self.formatted_args.clone()
-        )
+        ExpressionNode::SubExpr(self.expr_wrapper.clone())
     }
 
     fn inputs(&self) -> Option<&[InputPin]> {
@@ -99,7 +88,6 @@ impl NodeImpl for CustomFunctionNode {
         }
 
         self.expr_wrapper.resolution.reset();
-        self.reformat_args();
         true
     }
 
@@ -122,12 +110,14 @@ impl NodeImpl for CustomFunctionNode {
         }
 
         self.expr_wrapper.resolution.reset();
-        self.reformat_args();
         true
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        ui.text(&self.formatted_args.symbol);
+        match self.expr_wrapper.get_expr_repr() {
+            Some(expr) => ui.text(expr),
+            None => ui.text("Nothing yet!"),
+        };
         false
     }
 
