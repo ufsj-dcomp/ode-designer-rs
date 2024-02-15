@@ -240,7 +240,8 @@ impl NodeImpl for Expression {
             node_id,
             name.clone(),
             composition.len().max(MINIMUM_PIN_COUNT),
-        ).with_expr_wapper(expr_wrapper);
+        )
+        .with_expr_wapper(expr_wrapper);
 
         let pending_ops = PendingOperations {
             node_id,

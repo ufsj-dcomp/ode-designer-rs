@@ -23,8 +23,8 @@ use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
 use super::plot::CSVData;
-use super::widgets;
 use super::side_bar::SideBarState;
+use super::widgets;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -70,6 +70,7 @@ pub struct SimulationState {
     pub colors: Vec<ImVec4>,
     pub flag_simulation: bool,
     pub flag_plot_all: bool,
+    pub close_button_clicked: bool,
 }
 
 impl SimulationState {
@@ -89,13 +90,18 @@ impl SimulationState {
             colors: COLORS.to_owned(),
             flag_simulation: false,
             flag_plot_all: false,
+            close_button_clicked: false,
         }
     }
 
-    pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi) {
+    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi) {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
+
+        if ui.button("Close Simulation") {
+            self.close_button_clicked = true;
+        }
 
         imgui::TabItem::new("All").build(ui, || {
             implot::Plot::new("Plot")
@@ -187,7 +193,7 @@ pub enum AppState {
     },
     AttributingAssignerOperatesOn {
         attribute_to: NodeId,
-        search_query: String
+        search_query: String,
     },
 }
 
@@ -200,7 +206,7 @@ impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
         // Cancel action
         if ui.is_key_pressed(imgui::Key::Escape) {
-            return StateAction::Clear
+            return StateAction::Clear;
         }
 
         let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
@@ -245,18 +251,21 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-            AppState::AttributingAssignerOperatesOn { attribute_to, ref mut search_query } => {
+            AppState::AttributingAssignerOperatesOn {
+                attribute_to,
+                ref mut search_query,
+            } => {
                 ui.open_popup("PopulationChooser");
 
                 let title = "Choose your population";
                 let title_size = ui.calc_text_size(title);
                 let min_width = title_size[0];
-                let min_height = title_size[1]*12.0;
+                let min_height = title_size[1] * 12.0;
 
-                let _win = ui.push_style_var(imgui::StyleVar::WindowMinSize([min_width, min_height]));
+                let _win =
+                    ui.push_style_var(imgui::StyleVar::WindowMinSize([min_width, min_height]));
 
-                ui
-                    .modal_popup_config("PopulationChooser")
+                ui.modal_popup_config("PopulationChooser")
                     .movable(false)
                     .resizable(false)
                     .scrollable(false)
@@ -266,26 +275,30 @@ impl AppState {
                         ui.text(title);
                         widgets::search_bar(ui, search_query);
                         ui.separator();
-                        ui.child_window("##population list").build(|| {
-                            for (node_id, node) in app.nodes.iter().filter(|(_, node)| node.is_assignable() && node.name().contains(search_query.as_str())) {
-                                if ui
-                                    .selectable_config(node.name())
-                                    .disabled(node_id == attribute_to)
-                                    .build()
-                                {
-                                    app.queue.push(Message::AttributeAssignerOperatesOn {
-                                        assigner_id: *attribute_to,
-                                        value: *node_id,
-                                    });
+                        ui.child_window("##population list")
+                            .build(|| {
+                                for (node_id, node) in app.nodes.iter().filter(|(_, node)| {
+                                    node.is_assignable()
+                                        && node.name().contains(search_query.as_str())
+                                }) {
+                                    if ui
+                                        .selectable_config(node.name())
+                                        .disabled(node_id == attribute_to)
+                                        .build()
+                                    {
+                                        app.queue.push(Message::AttributeAssignerOperatesOn {
+                                            assigner_id: *attribute_to,
+                                            value: *node_id,
+                                        });
 
-                                    return StateAction::Clear;
+                                        return StateAction::Clear;
+                                    }
                                 }
-                            }
-                            StateAction::Keep
-                        }).unwrap()
-                    }).expect(
-                        "If the state is AttributingAssignerOperatesOn, then the modal is open"
-                    )
+                                StateAction::Keep
+                            })
+                            .unwrap()
+                    })
+                    .expect("If the state is AttributingAssignerOperatesOn, then the modal is open")
             }
         }
     }
@@ -417,11 +430,17 @@ impl App {
                         self.draw_main_tab(ui, context, plot_ui);
                     });
 
-                    if let Some(simulation_state) = &self.simulation_state {
+                    if let Some(mut simulation_state) = self.simulation_state.take() {
                         simulation_state.draw_tabs(ui, plot_ui);
+
+                        if simulation_state.close_button_clicked {
+                            self.simulation_state = None;
+                            simulation_state.close_button_clicked = false;
+                        } else {
+                            self.simulation_state = Some(simulation_state);
+                        }
                     }
                 });
-
             });
     }
 

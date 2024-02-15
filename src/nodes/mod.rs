@@ -81,7 +81,6 @@ impl Node {
 }
 
 pub trait NodeImpl {
-
     fn new(node_id: NodeId, name: String) -> Self
     where
         Self: Sized;

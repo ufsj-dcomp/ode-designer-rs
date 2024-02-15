@@ -93,7 +93,7 @@ impl NodeImpl for Assigner {
     fn trigger_app_state_change(&self) -> Option<AppState> {
         Some(AppState::AttributingAssignerOperatesOn {
             attribute_to: self.id,
-            search_query: "".into()
+            search_query: "".into(),
         })
     }
 

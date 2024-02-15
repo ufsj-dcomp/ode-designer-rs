@@ -1,4 +1,4 @@
-use imgui::{ Ui, StyleVar };
+use imgui::{StyleVar, Ui};
 
 pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
     [r as f32, b as f32, g as f32, 255.0].map(|x| x / 255.0)

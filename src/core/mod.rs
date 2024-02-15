@@ -3,7 +3,7 @@ use glium::glutin::event::{Event, WindowEvent};
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::window::WindowBuilder;
 use glium::{glutin, Display, Surface};
-use imgui::{Context, FontSource, Ui, FontConfig, FontGlyphRanges};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
@@ -68,13 +68,17 @@ impl System {
         let font_size = 13.0f32;
         let font_awesome_size = font_size;
 
-        let font_awesome = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/fork-awesome.ttf"));
+        let font_awesome = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/fonts/fork-awesome.ttf"
+        ));
 
-        imgui
-            .fonts()
-            .add_font(&[
-                FontSource::DefaultFontData { config: None },
-                FontSource::TtfData { data: font_awesome, size_pixels: font_awesome_size, config: Some(FontConfig {
+        imgui.fonts().add_font(&[
+            FontSource::DefaultFontData { config: None },
+            FontSource::TtfData {
+                data: font_awesome,
+                size_pixels: font_awesome_size,
+                config: Some(FontConfig {
                     // Makes the font act monospaced,
                     glyph_min_advance_x: font_size,
                     // Magic values copied from https://github.com/juliettef/IconFontCppHeaders
@@ -82,8 +86,9 @@ impl System {
                     // Prevent the default font from looking too ugly.
                     pixel_snap_h: true,
                     ..Default::default()
-                }) }
-            ]);
+                }),
+            },
+        ]);
 
         let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
