@@ -372,6 +372,21 @@ impl App {
         self.update();
     }
 
+    pub fn shortcut(&mut self, ui: &Ui) {
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::S) {
+            self.save_state();
+        }
+
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::N) {
+            self.clear_state();
+        }
+
+        if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O) {
+            self.clear_state();
+            self.load_state();
+        }
+    }
+
     pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
         let flags =
         // No borders etc for top-level window
@@ -389,6 +404,7 @@ impl App {
             .position([0.0, 0.0], imgui::Condition::Always)
             .flags(flags)
             .build(|| {
+                self.shortcut(ui);
                 self.draw_menu(ui);
 
                 let tab_bar = imgui::TabBar::new("Tabs");
