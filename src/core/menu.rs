@@ -70,16 +70,17 @@ impl App {
                     .arg(&py_code)
                     .arg("--csv")
                     .stdout(Stdio::piped())
-                    .spawn() {
+                    .spawn()
+                {
                     Ok(process) => process,
                     Err(e) => {
                         eprintln!("Error: Failed to start python process: {}", e);
                         return;
                     }
                 };
-            
+
                 let status = python_process.wait().unwrap();
-            
+
                 if status.success() {
                     if let Some(output) = python_process.stdout {
                         self.simulation_state = Some(SimulationState::from_csv(output));
@@ -87,7 +88,10 @@ impl App {
                         eprintln!("Error: python process output is not available.");
                     }
                 } else {
-                    eprintln!("Error: python process failed with exit code {}", status.code().unwrap());
+                    eprintln!(
+                        "Error: python process failed with exit code {}",
+                        status.code().unwrap()
+                    );
                 }
             }
         });
