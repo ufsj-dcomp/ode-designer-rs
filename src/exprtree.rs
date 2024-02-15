@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, hash::Hash};
+use std::{collections::BTreeMap, fmt::Write, hash::Hash};
 
 use strum::EnumString;
 
@@ -9,7 +9,7 @@ pub struct ExpressionTree<OriginType: Hash> {
     pub unary_op: Sign,
     join_op: Operation,
     pub format: Format,
-    pub members: HashMap<OriginType, ExpressionNode<OriginType>>,
+    pub members: BTreeMap<OriginType, ExpressionNode<OriginType>>,
 }
 
 impl<OriginType: Hash> Default for ExpressionTree<OriginType> {
