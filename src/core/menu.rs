@@ -65,15 +65,30 @@ impl App {
 
             if ui.menu_item("Run") {
                 let py_code = self.generate_code();
-                let python_out = Command::new("python3")
+                let mut python_process = match Command::new("python3")
                     .arg("-c")
-                    .arg(py_code)
+                    .arg(&py_code)
                     .arg("--csv")
                     .stdout(Stdio::piped())
-                    .spawn()
-                    .unwrap();
-
-                self.simulation_state = Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+                    .spawn() {
+                    Ok(process) => process,
+                    Err(e) => {
+                        eprintln!("Error: Failed to start python process: {}", e);
+                        return;
+                    }
+                };
+            
+                let status = python_process.wait().unwrap();
+            
+                if status.success() {
+                    if let Some(output) = python_process.stdout {
+                        self.simulation_state = Some(SimulationState::from_csv(output));
+                    } else {
+                        eprintln!("Error: python process output is not available.");
+                    }
+                } else {
+                    eprintln!("Error: python process failed with exit code {}", status.code().unwrap());
+                }
             }
         });
     }
