@@ -5,9 +5,9 @@ use rfd::FileDialog;
 
 use std::process::{Command, Stdio};
 
-use super::app::SimulationState;
+use super::app::{AppState, SimulationState};
 
-impl App {
+impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
         if ui.menu_item("Plot CSV file") {
             let file = FileDialog::new()
@@ -31,7 +31,7 @@ impl App {
 
                 if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
-                    self.load_state();
+                    self.load_state().unwrap();
                 }
 
                 if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
@@ -65,6 +65,7 @@ impl App {
 
             if ui.menu_item("Run") {
                 let py_code = self.generate_code();
+                println!("{}", py_code);
                 let python_out = Command::new("python3")
                     .arg("-c")
                     .arg(py_code)
@@ -74,6 +75,14 @@ impl App {
                     .unwrap();
 
                 self.simulation_state = Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+            }
+
+            if ui.menu_item("Manage Extensions") {
+                self.state = if let Some(AppState::ManagingExtensions) = self.state {
+                    None
+                } else {
+                    Some(AppState::ManagingExtensions)
+                }
             }
         });
     }
