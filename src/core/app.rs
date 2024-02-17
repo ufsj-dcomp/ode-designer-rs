@@ -2,6 +2,7 @@ use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -795,7 +796,7 @@ impl<'n> App<'n> {
         serde_json::to_writer_pretty(file, &json).ok()
     }
 
-    fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
+    fn try_read_model(&mut self, model: OdeModel, path: PathBuf) -> anyhow::Result<()> {
         let odeir::CoreModel {
             equations,
             arguments,
@@ -804,7 +805,12 @@ impl<'n> App<'n> {
 
         model.extension_files
             .into_iter()
-            .try_for_each(|file| self.load_extension_from_path(file.into()))?;
+            .try_for_each(|file| self.load_extension_from_path(
+                path.parent()
+                    .map(Path::to_path_buf)
+                    .unwrap_or_default()
+                    .join(file)
+            ))?;
 
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
@@ -915,19 +921,15 @@ impl<'n> App<'n> {
                 std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
             })?;
 
-        let file = File::open(file_path)?;
+        let file = File::open(&file_path)?;
 
-        let mut reader = BufReader::new(file);
+        let reader = BufReader::new(file);
 
-        self.load_model_from_reader(&mut reader)
-    }
-
-    pub fn load_model_from_reader(&mut self, reader: &mut dyn Read) -> anyhow::Result<()> {
         let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
             Err(NotCorrectModel::NotODE)?
         };
 
-        self.try_read_model(model)
+        self.try_read_model(model, file_path)
     }
 
     pub fn clear_state(&mut self) {
@@ -944,7 +946,7 @@ impl<'n> App<'n> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::{collections::{HashMap, HashSet}, path::PathBuf};
 
     use imnodes::{InputPinId, NodeId};
 
@@ -1197,7 +1199,7 @@ mod tests {
             panic!("Unable to extract ODE Model from ABK JSON");
         };
 
-        let result = app.try_read_model(ode_model);
+        let result = app.try_read_model(ode_model, PathBuf::default());
 
         let expected_positions: HashMap<_, _> = [
             ("A", [-355.0, 469.0]),
