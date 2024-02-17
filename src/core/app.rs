@@ -774,7 +774,15 @@ impl<'n> App<'n> {
             unreachable!("This program can only produce ODE models for now");
         };
 
-        odeir::transformations::r4k::render_ode(&ode_model)
+        let extension_lookup_paths: Vec<_> = self.extensions
+            .iter()
+            .map(|ext| &ext.file_path)
+            .collect();
+
+        odeir::transformations::r4k::render_ode(
+            &ode_model,
+            &extension_lookup_paths,
+        )
     }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {

@@ -11,6 +11,7 @@ mod loader;
 
 pub struct Extension {
     pub filename: String,
+    pub file_path: PathBuf,
     pub file_hash: u32,
     pub nodes: Vec<Rc<CustomNodeSpecification>>,
 }
@@ -98,6 +99,7 @@ impl<'n> App<'n> {
         self.extensions.push(Extension {
             filename,
             file_hash,
+            file_path: origin,
             nodes: node_specs,
         });
 
