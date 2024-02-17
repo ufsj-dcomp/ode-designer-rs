@@ -11,6 +11,7 @@ mod loader;
 
 pub struct Extension {
     pub filename: String,
+    pub file_hash: u32,
     pub nodes: Vec<Rc<CustomNodeSpecification>>,
 }
 
@@ -60,6 +61,25 @@ impl<'n> App<'n> {
         let mut user_code = String::new();
         file.read_to_string(&mut user_code)?;
 
+        let file_hash = crc32fast::hash(user_code.as_bytes());
+        let filename = origin
+            .file_name()
+            .map(std::ffi::OsStr::to_string_lossy)
+            .map(Into::into)
+            .unwrap_or_else(|| String::from("Unknown"));
+
+        if let Some((idx, ext)) = self.extensions
+            .iter()
+            .enumerate()
+            .find(|(_idx, ext)| ext.filename == filename)
+        {
+            if ext.file_hash == file_hash {
+                return Ok(());
+            }
+
+            self.extensions.remove(idx);
+        }
+
         let node_specs: Vec<_> = loader::inspect_user_code(&user_code)?
             .into_iter()
             .map(CustomNodeSpecification::from)
@@ -76,11 +96,8 @@ impl<'n> App<'n> {
             .collect();
 
         self.extensions.push(Extension {
-            filename: origin
-                .file_name()
-                .map(std::ffi::OsStr::to_string_lossy)
-                .map(Into::into)
-                .unwrap_or_else(|| String::from("Unknown")),
+            filename,
+            file_hash,
             nodes: node_specs,
         });
 
