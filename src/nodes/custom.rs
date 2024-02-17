@@ -150,16 +150,11 @@ impl NodeImpl for CustomFunctionNode {
         build_from_composition(
             node_id,
             frag,
-            |name, composition, expr_wrapper| {
-                let mut node = Self::from_spec(
-                    node_id,
-                    name.to_owned(),
-                    Rc::clone(spec),
-                );
-
-                node.expr_wrapper = expr_wrapper;
-                node
-            }
+            |name, composition, expr_wrapper| Self::from_spec(
+                node_id,
+                name.to_owned(),
+                Rc::clone(spec),
+            )
         )
     }
 
