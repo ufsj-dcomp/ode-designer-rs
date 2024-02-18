@@ -115,75 +115,15 @@ impl Node {
             })
             .ok_or(NotANode(frag))
     }
-}
 
-pub trait SimpleNodeBuilder: NodeImpl {
-    fn new(node_id: NodeId, name: String) -> Self
-    where
-        Self: Sized;
-}
-
-pub trait NodeImpl {
-    fn try_from_model_fragment(
-        node_id: NodeId,
-        frag: &ModelFragment,
-        app: &App,
-    ) -> Option<(Self, Option<PendingOperations>)>
-    where
-        Self: Sized;
-
-    fn id(&self) -> NodeId;
-
-    fn name(&self) -> &str;
-
-    fn name_mut(&mut self) -> &mut String;
-
-    #[inline]
-    fn color(&self) -> ImColor32;
-
-    #[inline]
-    fn hovered_color(&self) -> ImColor32 {
-        self.selected_color()
-    }
-
-    #[inline]
-    fn selected_color(&self) -> ImColor32;
-
-    fn on_link_event(&mut self, _link_event: LinkEvent) -> bool {
-        false
-    }
-
-    fn send_data(&self) -> ExpressionNode<InputPinId>;
-
-    fn trigger_app_state_change(&self) -> Option<AppState> {
-        None
-    }
-
-    #[inline]
-    fn is_assignable(&self) -> bool {
-        false
-    }
-
-    fn draw(&mut self, ui: &Ui) -> bool;
-
-    fn inputs(&self) -> Option<&[InputPin]> {
-        None
-    }
-    fn outputs(&self) -> Option<&[OutputPin]> {
-        None
-    }
-
-    fn inputs_mut(&mut self) -> Option<&mut [InputPin]> {
-        None
-    }
-    fn outputs_mut(&mut self) -> Option<&mut [OutputPin]> {
-        None
-    }
-
-    fn broadcast_data(&self) -> Vec<Message> {
+    /// Broadcasts messages from a node. Essentially, relays all messages sent by [`NodeImpl::send_data`] to the output pins.
+    pub fn broadcast_data(&self) -> Vec<Message> {
+        let Some(outputs) = self.outputs() else {
+            log::warn!("Tried broadcasting data to node without any output pins");
+            return vec![]
+        };
         let data = self.send_data();
-        self.outputs()
-            .expect("Tried broadcasting data to node without any output pins")
+        outputs
             .iter()
             .flat_map(|output| {
                 output.linked_to.iter().copied().map(|to_input| SendData {
@@ -196,16 +136,10 @@ pub trait NodeImpl {
             .collect()
     }
 
-    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
-        self.on_link_event(link_event)
-            .then(|| self.broadcast_data())
-    }
 
-    fn state_changed(&mut self) -> bool {
-        true
-    }
-
-    fn process_node(
+    /// Displays the node, but also handles the surrounding functionality like: implementing a
+    /// "close" button, relays messages and app state, and node renaming.
+    pub fn process_node(
         &mut self,
         ui: &Ui,
         ui_node: &mut NodeScope,
@@ -280,6 +214,73 @@ pub trait NodeImpl {
             .flatten();
 
         (messages, app_state_change)
+    }
+
+}
+
+pub trait SimpleNodeBuilder: NodeImpl {
+    fn new(node_id: NodeId, name: String) -> Self
+    where
+        Self: Sized;
+}
+
+pub trait NodeImpl {
+    fn try_from_model_fragment(
+        node_id: NodeId,
+        frag: &ModelFragment,
+        app: &App,
+    ) -> Option<(Self, Option<PendingOperations>)>
+    where
+        Self: Sized;
+
+    fn id(&self) -> NodeId;
+
+    fn name(&self) -> &str;
+
+    fn name_mut(&mut self) -> &mut String;
+
+    fn color(&self) -> ImColor32;
+
+    #[inline]
+    fn hovered_color(&self) -> ImColor32 {
+        self.selected_color()
+    }
+
+    fn selected_color(&self) -> ImColor32;
+
+    fn send_data(&self) -> ExpressionNode<InputPinId>;
+
+    fn trigger_app_state_change(&self) -> Option<AppState> {
+        None
+    }
+
+    #[inline]
+    fn is_assignable(&self) -> bool {
+        false
+    }
+
+    fn draw(&mut self, ui: &Ui) -> bool;
+
+    fn inputs(&self) -> Option<&[InputPin]> {
+        None
+    }
+    fn outputs(&self) -> Option<&[OutputPin]> {
+        None
+    }
+
+    fn inputs_mut(&mut self) -> Option<&mut [InputPin]> {
+        None
+    }
+    fn outputs_mut(&mut self) -> Option<&mut [OutputPin]> {
+        None
+    }
+
+    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
+        None
+    }
+
+    fn state_changed(&mut self) -> bool {
+        true
     }
 
     fn get_input(&self, input_pin_id: &InputPinId) -> Option<&InputPin> {

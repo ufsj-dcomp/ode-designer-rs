@@ -25,8 +25,6 @@ pub struct Expression {
     pub expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>,
     pub inputs: Vec<InputPin>,
     pub output: OutputPin,
-
-    message_buffer: Vec<Message>,
 }
 
 impl Expression {
@@ -35,7 +33,6 @@ impl Expression {
             id: node_id,
             name,
             expr_wrapper: Default::default(),
-            message_buffer: vec![],
             inputs: std::iter::repeat_with(|| InputPin::new(node_id))
                 .take(input_count)
                 .collect(),
@@ -89,7 +86,8 @@ impl NodeImpl for Expression {
         ImColor32::from_rgb(6, 214, 140)
     }
 
-    fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
+    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
+        let mut message = None;
         match link_event {
             LinkEvent::Push {
                 from_pin_id,
@@ -97,8 +95,7 @@ impl NodeImpl for Expression {
             } => {
                 if self.all_pins_linked(from_pin_id) {
                     let input_pin = InputPin::new_signed(self.id, Sign::Positive);
-                    self.message_buffer
-                        .push(Message::RegisterPin(self.id, input_pin.id));
+                    message = Some(vec![Message::RegisterPin(self.id, input_pin.id)]);
                     self.inputs.push(input_pin);
                 }
 
@@ -117,8 +114,7 @@ impl NodeImpl for Expression {
                     let idx = self.inputs.iter().position(|pin| pin.id == from_pin_id);
                     if let Some(idx) = idx {
                         let removed_pin = self.inputs.remove(idx);
-                        self.message_buffer
-                            .push(Message::UnregisterPin(removed_pin.id))
+                        message = Some(vec!(Message::UnregisterPin(removed_pin.id)));
                     }
                 }
                 self.expr_wrapper.members.remove(&from_pin_id)
@@ -126,13 +122,7 @@ impl NodeImpl for Expression {
         };
 
         self.expr_wrapper.resolution.reset();
-        true
-    }
-
-    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
-        self.on_link_event(link_event)
-            .then(|| self.broadcast_data())
-            .map(|data| [std::mem::take(&mut self.message_buffer), data].concat())
+        message
     }
 
     fn state_changed(&mut self) -> bool {

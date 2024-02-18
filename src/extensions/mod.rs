@@ -51,7 +51,7 @@ impl From<NodeFunction> for CustomNodeSpecification {
 }
 
 impl<'n> App<'n> {
-    pub fn pick_extension_file(&mut self) -> anyhow::Result<()> {
+    pub fn pick_extension_file(&mut self) -> color_eyre::Result<()> {
         let file_path = FileDialog::new()
             .add_filter("Python", &["py"])
             .pick_file()
@@ -62,7 +62,7 @@ impl<'n> App<'n> {
         self.load_extension_from_path(file_path)
     }
 
-    pub fn load_extension_from_path(&mut self, origin: PathBuf) -> anyhow::Result<()> {
+    pub fn load_extension_from_path(&mut self, origin: PathBuf) -> color_eyre::Result<()> {
         let mut file = File::open(&origin)?;
         let mut user_code = String::new();
         file.read_to_string(&mut user_code)?;
