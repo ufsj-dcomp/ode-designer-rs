@@ -2,29 +2,27 @@ mod assigner;
 pub mod errors;
 pub mod expression;
 pub mod term;
+pub mod custom;
+pub mod composition_utils;
 
-use std::ops::{Deref, DerefMut};
+use std::{borrow::Cow, ops::{Deref, DerefMut}, rc::Rc};
 
 pub use assigner::Assigner;
+use enutil::EnumDeref;
 pub use expression::Expression;
-use strum::{EnumDeref, EnumDiscriminants, EnumVariantNames, FromRepr};
+use strum::{EnumDiscriminants, VariantNames, FromRepr, VariantArray};
 pub use term::Term;
 
 use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
-    core::App,
-    core::{app::AppState, GeneratesId},
-    exprtree::{ExpressionNode, ExpressionTree, Sign},
-    message::{Message, SendData},
-    pins::{InputPin, OutputPin, Pin},
-    utils::ModelFragment,
+    core::{app::AppState, App, GeneratesId}, exprtree::{ExpressionNode, ExpressionTree, Sign}, extensions::CustomNodeSpecification, message::{Message, SendData}, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
 };
 
 use derive_more::From;
 
-use self::errors::NotANode;
+use self::{custom::CustomFunctionNode, errors::NotANode};
 
 #[derive(Debug, Clone, From)]
 pub enum LinkPayload {
@@ -40,54 +38,82 @@ pub enum LinkEvent {
     Pop(InputPinId),
 }
 
-#[derive(Debug, EnumDeref, EnumDiscriminants, EnumVariantNames, From)]
-#[strum_deref_target(dyn NodeImpl)]
+pub struct NodeTypeRepresentation<'n> {
+    pub name: Cow<'n, str>,
+    pub variant: NodeVariant,
+    pub custom_node_spec: Option<Rc<CustomNodeSpecification>>,
+}
+
+impl<'n> NodeTypeRepresentation<'n> {
+    pub fn new(name: &'n str, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
+        Self {
+            name: Cow::from(name),
+            variant,
+            custom_node_spec,
+        }
+    }
+}
+
+#[derive(Debug, EnumDeref, EnumDiscriminants, VariantNames, From)]
+#[enum_deref_target(dyn NodeImpl)]
 #[strum_discriminants(name(NodeVariant))]
-#[strum_discriminants(derive(FromRepr))]
+#[strum_discriminants(derive(VariantArray, FromRepr))]
 pub enum Node {
     Term(Term),
     Expression(Expression),
     Assigner(Assigner),
+    Custom(CustomFunctionNode),
 }
 
 impl Node {
-    pub fn build_from_ui(name: String, variant: NodeVariant) -> Self {
+    pub fn build_from_ui(name: String, node_type: &NodeTypeRepresentation) -> Self {
         let node_id = NodeId::generate();
 
-        match variant {
-            NodeVariant::Term => Term::new(node_id, name).into(),
-            NodeVariant::Expression => Expression::new(node_id, name).into(),
-            NodeVariant::Assigner => Assigner::new(node_id, name).into(),
+        match (node_type.variant, &node_type.custom_node_spec) {
+            (NodeVariant::Term, None) => Term::new(node_id, name).into(),
+            (NodeVariant::Expression, None) => Expression::new(node_id, name).into(),
+            (NodeVariant::Assigner, None) => Assigner::new(node_id, name).into(),
+            (NodeVariant::Custom, Some(node_spec)) => CustomFunctionNode::from_spec(node_id, name, Rc::clone(node_spec)).into(),
+            _ => todo!("Custom node without spec? Default node with spec?")
         }
     }
 
     pub fn build_from_fragment(
-        frag: ModelFragment,
+        frag: ModelFragment, app: &App,
     ) -> Result<(Self, Option<PendingOperations>), NotANode> {
         let node_id = NodeId::generate();
 
-        Term::try_from_model_fragment(node_id, &frag)
+        Term::try_from_model_fragment(node_id, &frag, app)
             .map(|(node_impl, ops)| (node_impl.into(), ops))
             .or_else(|| {
-                Expression::try_from_model_fragment(node_id, &frag)
+                Expression::try_from_model_fragment(node_id, &frag, app)
                     .map(|(node_impl, ops)| (node_impl.into(), ops))
                     .or_else(|| {
-                        Assigner::try_from_model_fragment(node_id, &frag)
+                        Assigner::try_from_model_fragment(node_id, &frag, app)
                             .map(|(node_impl, ops)| (node_impl.into(), ops))
+                            .or_else(|| {
+                                CustomFunctionNode::try_from_model_fragment(node_id, &frag, app)
+                                .map(|(node_impl, ops)| (node_impl.into(), ops))
+                            })
                     })
             })
             .ok_or(NotANode(frag))
+
     }
 }
 
-pub trait NodeImpl {
+pub trait SimpleNodeBuilder: NodeImpl {
     fn new(node_id: NodeId, name: String) -> Self
     where
         Self: Sized;
+}
+
+pub trait NodeImpl {
 
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)>
     where
         Self: Sized;

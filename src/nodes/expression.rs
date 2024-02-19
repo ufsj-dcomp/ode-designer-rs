@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
 use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
-use strum::StaticVariantsArray;
+use odeir::models::CompositionStyle;
+use strum::VariantArray;
 
 use crate::{
     core::App,
@@ -12,7 +11,7 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
+use super::{composition_utils::{build_composition, build_from_composition}, ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder};
 
 const MINIMUM_PIN_COUNT: usize = 2;
 
@@ -40,6 +39,7 @@ impl Expression {
             output: Pin::new(node_id),
         }
     }
+
     fn with_expr_wapper(mut self, expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>>) -> Self {
         self.expr_wrapper = expr_wrapper;
         self
@@ -49,6 +49,15 @@ impl Expression {
         self.inputs
             .iter()
             .all(|pin| (pin.id == notifying_pin_id) || pin.has_links())
+    }
+}
+
+impl SimpleNodeBuilder for Expression {
+    fn new(node_id: NodeId, name: String) -> Self
+    where
+        Self: Sized,
+    {
+        Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 }
 
@@ -135,7 +144,7 @@ impl NodeImpl for Expression {
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
-        let mut selected = self.expr_wrapper.join_op as usize;
+        let mut selected = self.expr_wrapper.join_op() as usize;
         let mut changed = false;
 
         // Needs to be assigned to a variable other than `_`. Otherwise, the
@@ -146,11 +155,13 @@ impl NodeImpl for Expression {
         if ui.combo(
             "##Expression operation select",
             &mut selected,
-            Operation::ALL_VARIANTS,
+            Operation::VARIANTS,
             |op| format!("{op}").into(),
         ) {
-            self.expr_wrapper.join_op = Operation::from_repr(selected as u8)
-                .expect("ImGui returned an out-of-range value in combobox");
+            self.expr_wrapper.set_join_op(
+                Operation::from_repr(selected as u8)
+                .expect("ImGui returned an out-of-range value in combobox")
+            );
 
             changed = true
         }
@@ -180,85 +191,35 @@ impl NodeImpl for Expression {
     }
 
     fn to_model_fragment(&self, app: &App) -> Option<ModelFragment> {
-        let mut composition = Vec::with_capacity(self.inputs.len());
-
-        for input_pin in &self.inputs {
-            let Some(linked_pin_id) = input_pin.linked_to else {
-                continue;
-            };
-
-            let node_id = app
-                .output_pins
-                .get(&linked_pin_id)
-                .expect("The node must exist, otherwise this should have been unlinked");
-
-            let node = app
-                .get_node(*node_id)
-                .expect("The node must exist, otherwise this should have been unlinked");
-
-            composition.push(odeir::models::Component {
-                name: node.name().to_owned(),
-                contribution: input_pin.sign.into(),
-            });
-        }
-
-        Some(
-            odeir::Argument::Composite {
-                name: self.name().to_owned(),
-                operation: Into::<char>::into(self.expr_wrapper.join_op).into(),
-                composition,
-            }
-            .into(),
+        build_composition(
+            &self.name,
+            &self.inputs,
+            Into::<char>::into(self.expr_wrapper.join_op()).into(),
+            CompositionStyle::Infixed,
+            app
         )
-    }
-
-    fn new(node_id: NodeId, name: String) -> Self
-    where
-        Self: Sized,
-    {
-        Self::new(node_id, name, MINIMUM_PIN_COUNT)
     }
 
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
-        let ModelFragment::Argument(odeir::Argument::Composite {
-            name,
-            operation,
-            composition,
-        }) = frag
-        else {
+        if !matches!(frag, ModelFragment::Argument(odeir::Argument::Composite {
+            style: CompositionStyle::Infixed,
+            ..
+        })) {
             return None;
         };
 
-        let mut expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>> = Default::default();
-        expr_wrapper
-            .set_join_op(Operation::from_str(operation).expect("Should be a valid operation"));
-
-        let node = Self::new(
+        build_from_composition(
             node_id,
-            name.clone(),
-            composition.len().max(MINIMUM_PIN_COUNT),
+            frag,
+            |name, composition, expr_wrapper| Self::new(
+                node_id,
+                name.to_owned(),
+                composition.len().max(MINIMUM_PIN_COUNT),
+            ).with_expr_wapper(expr_wrapper)
         )
-        .with_expr_wapper(expr_wrapper);
-
-        let pending_ops = PendingOperations {
-            node_id,
-            operations: composition
-                .iter()
-                .cloned()
-                .zip(node.inputs.iter())
-                .map(|(comp, input_pin)| {
-                    Some(PendingOperation::LinkWith {
-                        node_name: comp.name,
-                        via_pin_id: *input_pin.id(),
-                        sign: comp.contribution.try_into().ok()?,
-                    })
-                })
-                .collect::<Option<Vec<PendingOperation>>>()?,
-        };
-
-        Some((node, Some(pending_ops)))
     }
 }
