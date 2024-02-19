@@ -1,18 +1,23 @@
-use std::{collections::HashMap, fmt::Write, hash::Hash};
+use std::{collections::BTreeMap, fmt::Write, hash::Hash};
 
 use strum::EnumString;
+
+use crate::extensions::format::Format;
 
 #[derive(Debug, Clone)]
 pub struct ExpressionTree<OriginType: Hash> {
     pub unary_op: Sign,
-    pub join_op: Operation,
-    pub members: HashMap<OriginType, ExpressionNode<OriginType>>,
+    join_op: Operation,
+    pub format: Format,
+    pub members: BTreeMap<OriginType, ExpressionNode<OriginType>>,
 }
 
 impl<OriginType: Hash> Default for ExpressionTree<OriginType> {
     fn default() -> Self {
+        let join_op = Default::default();
         Self {
-            join_op: Default::default(),
+            join_op,
+            format: join_op.into(),
             members: Default::default(),
             unary_op: Default::default(),
         }
@@ -82,24 +87,12 @@ impl TryFrom<char> for Sign {
 
 impl<OriginType: Hash> ExpressionTree<OriginType> {
     pub fn resolve_into_equation(&self) -> String {
-        let op_char: char = self.join_op.into();
-        let mut result = self
-            .members
-            .values()
-            .map(ExpressionNode::resolve_into_equation_part)
-            /* .map(|mut eq| {
-                eq.insert(0, '(');
-                eq.push(')');
-                eq
-            })*/
-            .fold(String::new(), |mut acc, expr| {
-                acc.push_str(&expr);
-                acc.push(op_char);
-                acc
-            });
-
-        // result.truncate(result.len() - ...)
-        result.pop();
+        let mut result = self.format.format_args(
+            self.members
+                .values()
+                .map(ExpressionNode::resolve_into_equation_part)
+                .collect(),
+        );
 
         if let Sign::Negative = self.unary_op {
             result.insert_str(0, "-(");
@@ -109,8 +102,13 @@ impl<OriginType: Hash> ExpressionTree<OriginType> {
         result
     }
 
+    pub fn join_op(&self) -> Operation {
+        self.join_op
+    }
+
     pub fn set_join_op(&mut self, join_op: Operation) {
         self.join_op = join_op;
+        self.format = join_op.into();
     }
 }
 
@@ -155,10 +153,10 @@ impl<OriginType: Hash> ExpressionNode<OriginType> {
     PartialEq,
     Eq,
     strum::EnumIter,
-    strum::EnumVariantNames,
+    strum::VariantNames,
     strum::EnumString,
     strum::FromRepr,
-    strum::StaticVariantsArray,
+    strum::VariantArray,
 )]
 #[repr(u8)]
 pub enum Operation {
@@ -204,5 +202,11 @@ impl std::fmt::Display for Operation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let c: char = (*self).into();
         f.write_char(c)
+    }
+}
+
+impl From<Operation> for Format {
+    fn from(value: Operation) -> Self {
+        format!("$@{value}").parse().unwrap()
     }
 }

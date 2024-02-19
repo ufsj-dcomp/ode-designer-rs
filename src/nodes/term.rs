@@ -9,7 +9,7 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{NodeImpl, PendingOperations};
+use super::{NodeImpl, PendingOperations, SimpleNodeBuilder};
 
 #[derive(Debug)]
 pub struct Term {
@@ -17,6 +17,20 @@ pub struct Term {
     pub leaf: Leaf,
     pub initial_value: f64,
     pub output: OutputPin,
+}
+
+impl SimpleNodeBuilder for Term {
+    fn new(node_id: NodeId, name: String) -> Self {
+        Self {
+            id: node_id,
+            leaf: Leaf {
+                symbol: name,
+                unary_op: Sign::Positive,
+            },
+            initial_value: 0.00,
+            output: Pin::new(node_id),
+        }
+    }
 }
 
 impl NodeImpl for Term {
@@ -73,21 +87,10 @@ impl NodeImpl for Term {
         )
     }
 
-    fn new(node_id: NodeId, name: String) -> Self {
-        Self {
-            id: node_id,
-            leaf: Leaf {
-                symbol: name,
-                unary_op: Sign::Positive,
-            },
-            initial_value: 0.00,
-            output: Pin::new(node_id),
-        }
-    }
-
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         let ModelFragment::Argument(odeir::Argument::Value { name, value }) = frag else {
             return None;

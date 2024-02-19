@@ -3,11 +3,14 @@ use imgui::Ui;
 use crate::App;
 use rfd::FileDialog;
 
-use std::process::{Command, Stdio};
+use std::{
+    fs::read_to_string,
+    process::{Command, Stdio},
+};
 
-use super::app::SimulationState;
+use super::app::{AppState, SimulationState};
 
-impl App {
+impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
         if ui.menu_item("Plot CSV file") {
             let file = FileDialog::new()
@@ -16,8 +19,11 @@ impl App {
                 .pick_file();
 
             if let Some(file_path) = file {
-                let fp = std::fs::File::open(file_path).unwrap();
-                self.simulation_state = Some(SimulationState::from_csv(fp));
+                if let Ok(file_content) = read_to_string(&file_path) {
+                    self.simulation_state = Some(SimulationState::from_csv(file_content));
+                } else {
+                    eprintln!("Error: Failed to read file content.");
+                }
             }
         }
     }
@@ -31,7 +37,7 @@ impl App {
 
                 if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
-                    self.load_state();
+                    self.load_state().unwrap();
                 }
 
                 if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
@@ -52,46 +58,57 @@ impl App {
                         FileDialog::new().add_filter("pdf", &["pdf"]).save_file()
                     {
                         let py_code = self.generate_code();
-                        Command::new("python3")
+
+                        let mut command = Command::new("python3");
+                        command
                             .arg("-c")
-                            .arg(py_code)
+                            .arg(&py_code)
                             .arg("--output")
-                            .arg(file_path)
-                            .spawn()
-                            .unwrap();
+                            .arg(file_path);
+
+                        let result = App::<'n>::execute_python_code(&mut command);
+
+                        if !result.success {
+                            eprintln!(
+                                "Error: {}",
+                                result
+                                    .error_message
+                                    .unwrap_or_else(|| "Unknown error".to_string())
+                            );
+                        }
                     }
                 }
             });
 
             if ui.menu_item("Run") {
                 let py_code = self.generate_code();
-                let mut python_process = match Command::new("python3")
-                    .arg("-c")
-                    .arg(&py_code)
-                    .arg("--csv")
-                    .stdout(Stdio::piped())
-                    .spawn()
-                {
-                    Ok(process) => process,
-                    Err(e) => {
-                        eprintln!("Error: Failed to start python process: {}", e);
-                        return;
-                    }
-                };
 
-                let status = python_process.wait().unwrap();
+                let mut command = Command::new("python3");
+                command.arg("-c").arg(&py_code).arg("--csv");
 
-                if status.success() {
-                    if let Some(output) = python_process.stdout {
+                let result = App::<'n>::execute_python_code(&mut command);
+
+                if !result.success {
+                    eprintln!(
+                        "Error: {}",
+                        result
+                            .error_message
+                            .unwrap_or_else(|| "Unknown error".to_string())
+                    );
+                } else {
+                    if let Some(output) = result.output {
                         self.simulation_state = Some(SimulationState::from_csv(output));
                     } else {
-                        eprintln!("Error: python process output is not available.");
+                        eprintln!("Error: Python process output is not available.");
                     }
+                }
+            }
+
+            if ui.menu_item("Manage Extensions") {
+                self.state = if let Some(AppState::ManagingExtensions) = self.state {
+                    None
                 } else {
-                    eprintln!(
-                        "Error: python process failed with exit code {}",
-                        status.code().unwrap()
-                    );
+                    Some(AppState::ManagingExtensions)
                 }
             }
         });

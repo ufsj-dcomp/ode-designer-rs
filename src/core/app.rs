@@ -1,19 +1,26 @@
+use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::rc::Rc;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
-use strum::VariantNames;
+use strum::{VariantArray, VariantNames};
 
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
+use crate::extensions::{CustomNodeSpecification, Extension};
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::{LinkEvent, Node, NodeVariant, PendingOperation, PendingOperations};
+use crate::nodes::{
+    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations,
+};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -70,12 +77,32 @@ pub struct SimulationState {
     pub colors: Vec<ImVec4>,
     pub flag_simulation: bool,
     pub flag_plot_all: bool,
-    pub close_button_clicked: bool,
+}
+#[derive(PartialEq)]
+pub enum TabAction {
+    Open,
+    Close,
+}
+
+pub struct PythonExecutionResult {
+    pub success: bool,
+    pub output: Option<String>,
+    pub error_message: Option<String>,
+}
+
+impl PythonExecutionResult {
+    pub fn new(success: bool, output: Option<String>, error_message: Option<String>) -> Self {
+        Self {
+            success,
+            output,
+            error_message,
+        }
+    }
 }
 
 impl SimulationState {
-    pub fn from_csv(reader: impl Read) -> Self {
-        let csv_data = CSVData::load_data(reader).unwrap();
+    pub fn from_csv(csv_content: String) -> Self {
+        let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
 
         let pane_count = csv_data.population_count().div_ceil(4);
 
@@ -90,18 +117,17 @@ impl SimulationState {
             colors: COLORS.to_owned(),
             flag_simulation: false,
             flag_plot_all: false,
-            close_button_clicked: false,
         }
     }
 
-    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi) {
+    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
 
         if ui.button("Close Simulation") {
-            self.close_button_clicked = true;
-        }
+            return TabAction::Close;
+        };
 
         imgui::TabItem::new("All").build(ui, || {
             implot::Plot::new("Plot")
@@ -169,20 +195,23 @@ impl SimulationState {
                     });
             });
         }
+        TabAction::Open
     }
 }
 
 #[derive(Default)]
-pub struct App {
+pub struct App<'n> {
+    pub node_types: Vec<NodeTypeRepresentation<'n>>,
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
     links: Vec<Link>,
-    state: Option<AppState>,
+    pub state: Option<AppState>,
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
     pub(crate) simulation_state: Option<SimulationState>,
     sidebar_state: SideBarState,
+    pub extensions: Vec<Extension>,
 }
 
 pub enum AppState {
@@ -195,6 +224,7 @@ pub enum AppState {
         attribute_to: NodeId,
         search_query: String,
     },
+    ManagingExtensions,
 }
 
 enum StateAction {
@@ -225,19 +255,24 @@ impl AppState {
                     ui.text("Node type");
                     ui.same_line();
 
-                    ui.combo("##Node Type", index, Node::VARIANTS, |variant_name| {
-                        (*variant_name).into()
-                    });
+                    ui.combo(
+                        "##Node Type",
+                        index,
+                        &app.node_types,
+                        |NodeTypeRepresentation { name, .. }| Cow::Borrowed(name.borrow()),
+                    );
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
 
                     let enter_pressed = ui.is_key_pressed(Key::Enter);
 
                     if ui.button("Add") || enter_pressed {
-                        let node_variant = NodeVariant::from_repr(*index)
+                        let node_type = app
+                            .node_types
+                            .get(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
-                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_variant));
+                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_type));
                         app.queue.push(Message::SetNodePos {
                             node_id,
                             screen_space_pos: *add_at_screen_space_pos,
@@ -300,11 +335,45 @@ impl AppState {
                     })
                     .expect("If the state is AttributingAssignerOperatesOn, then the modal is open")
             }
+            AppState::ManagingExtensions => {
+                let mut user_kept_open = true;
+                ui.window("Extensions")
+                    .collapsible(false)
+                    .opened(&mut user_kept_open)
+                    .build(|| {
+                        if let Some(_t) = ui.begin_table("Extensions", 2) {
+                            ui.table_setup_column("Origin");
+                            ui.table_setup_column("Implements nodes");
+                            ui.table_headers_row();
+
+                            for ext in &app.extensions {
+                                ui.table_next_row();
+                                ui.table_next_column();
+                                ui.text(&ext.filename);
+
+                                ui.table_next_column();
+                                for node_spec in &ext.nodes {
+                                    ui.text(&node_spec.function.name);
+                                }
+                            }
+                        }
+
+                        if ui.button("Load Extension") {
+                            app.pick_extension_file();
+                        }
+                    });
+
+                if user_kept_open {
+                    StateAction::Keep
+                } else {
+                    StateAction::Clear
+                }
+            }
         }
     }
 }
 
-impl App {
+impl<'n> App<'n> {
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -331,10 +400,7 @@ impl App {
             editor.add_link(link.id, link.input_pin_id, link.output_pin_id);
         }
         // Enters "Create Node Popup" state
-        if editor.is_hovered()
-            && ui.is_mouse_clicked(imgui::MouseButton::Right)
-            && self.state.is_none()
-        {
+        if editor.is_hovered() && ui.is_mouse_clicked(imgui::MouseButton::Right) {
             let mouse_screen_space_pos = ui.io().mouse_pos;
 
             ui.open_popup("Create Node");
@@ -424,20 +490,17 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new("Model");
                     tab_model.build(ui, || {
-                        if let Some(node) = self.sidebar_state.draw(ui) {
+                        if let Some(node) = self.sidebar_state.draw(ui, &self.node_types) {
                             self.add_node(node);
                         }
                         self.draw_main_tab(ui, context, plot_ui);
                     });
 
-                    if let Some(mut simulation_state) = self.simulation_state.take() {
-                        simulation_state.draw_tabs(ui, plot_ui);
+                    if let Some(simulation_state) = &mut self.simulation_state {
+                        let tab_action = simulation_state.draw_tabs(ui, plot_ui);
 
-                        if simulation_state.close_button_clicked {
+                        if tab_action == TabAction::Close {
                             self.simulation_state = None;
-                            simulation_state.close_button_clicked = false;
-                        } else {
-                            self.simulation_state = Some(simulation_state);
                         }
                     }
                 });
@@ -445,7 +508,16 @@ impl App {
     }
 
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            node_types: Node::VARIANTS
+                .iter()
+                .copied()
+                .zip(NodeVariant::VARIANTS)
+                .filter(|(_, variant)| variant != &&NodeVariant::Custom)
+                .map(|(name, variant)| NodeTypeRepresentation::new(name, *variant, None))
+                .collect(),
+            ..Self::default()
+        }
     }
 
     pub fn add_node(&mut self, node: Node) -> NodeId {
@@ -739,6 +811,11 @@ impl App {
                     end_time: 0.0,
                 }),
                 positions,
+                extension_files: self
+                    .extensions
+                    .iter()
+                    .map(|ext| ext.filename.clone())
+                    .collect(),
             },
             arguments,
             equations,
@@ -752,7 +829,61 @@ impl App {
             unreachable!("This program can only produce ODE models for now");
         };
 
-        odeir::transformations::r4k::render_ode(&ode_model)
+        let extension_lookup_paths: Vec<_> =
+            self.extensions.iter().map(|ext| &ext.file_path).collect();
+
+        odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
+    }
+
+    pub fn execute_python_code(command: &mut Command) -> PythonExecutionResult {
+        let mut python_process = match command.stdout(Stdio::piped()).spawn() {
+            Ok(process) => process,
+            Err(e) => {
+                return PythonExecutionResult::new(
+                    false,
+                    None,
+                    Some(format!("Failed to start python process: {}", e)),
+                );
+            }
+        };
+
+        let mut output = Vec::new();
+        match python_process.stdout.take() {
+            Some(mut stdout) => {
+                if let Err(e) = stdout.read_to_end(&mut output) {
+                    return PythonExecutionResult::new(
+                        false,
+                        None,
+                        Some(format!("Failed to read python process output: {}", e)),
+                    );
+                }
+            }
+            None => {
+                return PythonExecutionResult::new(
+                    false,
+                    None,
+                    Some("Python process output is not available.".to_string()),
+                );
+            }
+        }
+
+        let status = python_process.wait().unwrap();
+        if status.success() {
+            PythonExecutionResult::new(
+                true,
+                Some(String::from_utf8_lossy(&output).to_string()),
+                None,
+            )
+        } else {
+            PythonExecutionResult::new(
+                false,
+                None,
+                Some(format!(
+                    "Python process failed with exit code {}",
+                    status.code().unwrap()
+                )),
+            )
+        }
     }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
@@ -774,18 +905,27 @@ impl App {
         serde_json::to_writer_pretty(file, &json).ok()
     }
 
-    fn try_read_model(&mut self, model: OdeModel) -> anyhow::Result<()> {
+    fn try_read_model(&mut self, model: OdeModel, path: PathBuf) -> anyhow::Result<()> {
         let odeir::CoreModel {
             equations,
             arguments,
             positions,
         } = model.core;
 
+        model.extension_files.into_iter().try_for_each(|file| {
+            self.load_extension_from_path(
+                path.parent()
+                    .map(Path::to_path_buf)
+                    .unwrap_or_default()
+                    .join(file),
+            )
+        })?;
+
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
             .map(Into::<ModelFragment>::into)
             .chain(equations.into_iter().map(Into::<ModelFragment>::into))
-            .map(Node::build_from_fragment)
+            .map(|frag| Node::build_from_fragment(frag, &self))
             .collect::<Result<_, _>>()?;
 
         let pending_ops: Vec<PendingOperations> = nodes_and_ops
@@ -890,19 +1030,15 @@ impl App {
                 std::io::Error::new(std::io::ErrorKind::NotFound, "Could not open file")
             })?;
 
-        let file = File::open(file_path)?;
+        let file = File::open(&file_path)?;
 
-        let mut reader = BufReader::new(file);
+        let reader = BufReader::new(file);
 
-        self.load_model_from_reader(&mut reader)
-    }
-
-    pub fn load_model_from_reader(&mut self, reader: &mut dyn Read) -> anyhow::Result<()> {
         let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
             Err(NotCorrectModel::NotODE)?
         };
 
-        self.try_read_model(model)
+        self.try_read_model(model, file_path)
     }
 
     pub fn clear_state(&mut self) {
@@ -919,7 +1055,10 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    };
 
     use imnodes::{InputPinId, NodeId};
 
@@ -928,7 +1067,9 @@ mod tests {
         core::{initialize_id_generator, GeneratesId},
         exprtree::{ExpressionNode, Operation, Sign},
         message::Message,
-        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant},
+        nodes::{
+            Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
+        },
         pins::{OutputPin, Pin},
     };
 
@@ -1023,7 +1164,7 @@ mod tests {
     struct AppBuilder;
 
     impl AppBuilder {
-        fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
+        fn with_nodes<'n, const N: usize>(nodes: [Node; N]) -> App<'n> {
             let mut app = App::default();
             nodes.into_iter().for_each(|node| {
                 app.add_node(node);
@@ -1035,21 +1176,27 @@ mod tests {
 
     const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
 
-    fn app_with_nodes_abk() -> App {
-        let mut a = Node::build_from_ui("A".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut a) = &mut a {
-            a.initial_value = 10.0;
-        }
+    fn app_with_nodes_abk<'n>() -> App<'n> {
+        let mut a = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "A".to_owned());
+            node.initial_value = 10.0;
+            node.into()
+        };
 
-        let mut b = Node::build_from_ui("B".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut b) = &mut b {
-            b.initial_value = 20.0;
-        }
+        let mut b = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "B".to_owned());
+            node.initial_value = 20.0;
+            node.into()
+        };
 
-        let mut k = Node::build_from_ui("K".to_owned(), NodeVariant::Term);
-        if let Node::Term(ref mut k) = &mut k {
-            k.initial_value = 30.0;
-        }
+        let mut k = {
+            let node_id = NodeId::generate();
+            let mut node = Term::new(node_id, "K".to_owned());
+            node.initial_value = 30.0;
+            node.into()
+        };
 
         let mut a_times_k = ExpressionNodeBuilder::new("a*k")
             .linked_to(&mut a, Sign::Positive)
@@ -1166,7 +1313,7 @@ mod tests {
             panic!("Unable to extract ODE Model from ABK JSON");
         };
 
-        let result = app.try_read_model(ode_model);
+        let result = app.try_read_model(ode_model, PathBuf::default());
 
         let expected_positions: HashMap<_, _> = [
             ("A", [-355.0, 469.0]),

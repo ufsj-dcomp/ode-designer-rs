@@ -4,14 +4,16 @@ use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
-    core::app::AppState,
+    core::{app::AppState, App},
     exprtree::{ExpressionNode, Sign},
     message::Message,
     pins::{InputPin, Pin},
     utils::ModelFragment,
 };
 
-use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations};
+use super::{
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder,
+};
 
 #[derive(Debug)]
 pub struct Assigner {
@@ -20,6 +22,18 @@ pub struct Assigner {
     pub input: InputPin,
     pub expr_node: ExprWrapper<Option<ExpressionNode<InputPinId>>>,
     pub operates_on: Option<(NodeId, String)>,
+}
+
+impl SimpleNodeBuilder for Assigner {
+    fn new(node_id: NodeId, name: String) -> Self {
+        Self {
+            id: node_id,
+            name,
+            input: InputPin::new_signed(node_id, Sign::Positive),
+            expr_node: Default::default(),
+            operates_on: None,
+        }
+    }
 }
 
 impl NodeImpl for Assigner {
@@ -132,19 +146,11 @@ impl NodeImpl for Assigner {
             .into(),
         )
     }
-    fn new(node_id: NodeId, name: String) -> Self {
-        Self {
-            id: node_id,
-            name,
-            input: InputPin::new_signed(node_id, Sign::Positive),
-            expr_node: Default::default(),
-            operates_on: None,
-        }
-    }
 
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
+        app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         let ModelFragment::Equation(eq) = frag else {
             return None;

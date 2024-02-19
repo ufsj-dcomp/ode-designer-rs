@@ -1,0 +1,33 @@
+import inspect
+import json
+
+__NODE_FUNCTIONS = []
+
+def __jsonify_func(func, format=None):
+    global __NODE_FUNCTIONS
+
+    argspec = inspect.getfullargspec(func)
+
+    __NODE_FUNCTIONS.append({
+        "name": func.__name__,
+        "required_arguments": [*argspec.args, *argspec.kwonlyargs],
+        "features_variadic": argspec.varargs is not None,
+        "format": format,
+    })
+
+def node(func=None, format=None):
+    if func is None and format is not None:
+        def inner(inners_func):
+            __jsonify_func(inners_func, format)
+        
+        return inner
+
+    else:
+        __jsonify_func(func)
+
+... # Delimits node function
+
+{{ user_code }}
+
+if __name__ == '__main__':
+    print(json.dumps(__NODE_FUNCTIONS))
