@@ -81,11 +81,10 @@ impl System {
                 size_pixels: font_awesome_size,
                 config: Some(FontConfig {
                     // Makes the font act monospaced,
-                    glyph_min_advance_x: font_size,
-                    // Magic values copied from https://github.com/juliettef/IconFontCppHeaders
-                    glyph_ranges: FontGlyphRanges::from_slice(&[0xe005, 0xf8ff, 0]),
+                    // glyph_min_advance_x: font_size,
+                    glyph_ranges: FontGlyphRanges::from_slice(&[0x23fb, 0xf1af0, 0]),
                     // Prevent the default font from looking too ugly.
-                    pixel_snap_h: true,
+                    // pixel_snap_h: true,
                     ..Default::default()
                 }),
             },
