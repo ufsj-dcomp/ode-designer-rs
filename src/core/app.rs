@@ -27,8 +27,8 @@ use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
 use super::plot::CSVData;
-use super::widgets;
 use super::side_bar::SideBarState;
+use super::widgets;
 
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -75,6 +75,11 @@ pub struct SimulationState {
     pub flag_simulation: bool,
     pub flag_plot_all: bool,
 }
+#[derive(PartialEq)]
+pub enum TabAction {
+    Open,
+    Close,
+}
 
 impl SimulationState {
     pub fn from_csv(reader: impl Read) -> Self {
@@ -96,12 +101,14 @@ impl SimulationState {
         }
     }
 
-    pub fn draw_tabs(&self, ui: &Ui, plot_ui: &mut PlotUi) {
+    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
 
-        imgui::TabItem::new("All").build(ui, || {
+        let mut opened = true;
+
+        imgui::TabItem::new("All").opened(&mut opened).build(ui, || {
             implot::Plot::new("Plot")
                 .size([content_width, content_height])
                 .x_label(&self.plot.xlabel)
@@ -137,7 +144,7 @@ impl SimulationState {
         for (tab_idx, tab_populations) in
             self.plot.data.lines.chunks(populations_per_tab).enumerate()
         {
-            imgui::TabItem::new(format!("Tab {tab_idx}")).build(ui, || {
+            imgui::TabItem::new(format!("Tab {tab_idx}")).opened(&mut opened).build(ui, || {
                 tab_populations
                     .iter()
                     .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
@@ -167,6 +174,12 @@ impl SimulationState {
                     });
             });
         }
+
+        if opened {
+            TabAction::Open
+        } else {
+            TabAction::Close
+        }
     }
 }
 
@@ -193,7 +206,7 @@ pub enum AppState {
     },
     AttributingAssignerOperatesOn {
         attribute_to: NodeId,
-        search_query: String
+        search_query: String,
     },
     ManagingExtensions,
 }
@@ -207,7 +220,7 @@ impl AppState {
     fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
         // Cancel action
         if ui.is_key_pressed(imgui::Key::Escape) {
-            return StateAction::Clear
+            return StateAction::Clear;
         }
 
         let _token = ui.push_style_var(StyleVar::PopupRounding(4.0));
@@ -253,18 +266,21 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-            AppState::AttributingAssignerOperatesOn { attribute_to, ref mut search_query } => {
+            AppState::AttributingAssignerOperatesOn {
+                attribute_to,
+                ref mut search_query,
+            } => {
                 ui.open_popup("PopulationChooser");
 
                 let title = "Choose your population";
                 let title_size = ui.calc_text_size(title);
                 let min_width = title_size[0];
-                let min_height = title_size[1]*12.0;
+                let min_height = title_size[1] * 12.0;
 
-                let _win = ui.push_style_var(imgui::StyleVar::WindowMinSize([min_width, min_height]));
+                let _win =
+                    ui.push_style_var(imgui::StyleVar::WindowMinSize([min_width, min_height]));
 
-                ui
-                    .modal_popup_config("PopulationChooser")
+                ui.modal_popup_config("PopulationChooser")
                     .movable(false)
                     .resizable(false)
                     .scrollable(false)
@@ -274,26 +290,30 @@ impl AppState {
                         ui.text(title);
                         widgets::search_bar(ui, search_query);
                         ui.separator();
-                        ui.child_window("##population list").build(|| {
-                            for (node_id, node) in app.nodes.iter().filter(|(_, node)| node.is_assignable() && node.name().contains(search_query.as_str())) {
-                                if ui
-                                    .selectable_config(node.name())
-                                    .disabled(node_id == attribute_to)
-                                    .build()
-                                {
-                                    app.queue.push(Message::AttributeAssignerOperatesOn {
-                                        assigner_id: *attribute_to,
-                                        value: *node_id,
-                                    });
+                        ui.child_window("##population list")
+                            .build(|| {
+                                for (node_id, node) in app.nodes.iter().filter(|(_, node)| {
+                                    node.is_assignable()
+                                        && node.name().contains(search_query.as_str())
+                                }) {
+                                    if ui
+                                        .selectable_config(node.name())
+                                        .disabled(node_id == attribute_to)
+                                        .build()
+                                    {
+                                        app.queue.push(Message::AttributeAssignerOperatesOn {
+                                            assigner_id: *attribute_to,
+                                            value: *node_id,
+                                        });
 
-                                    return StateAction::Clear;
+                                        return StateAction::Clear;
+                                    }
                                 }
-                            }
-                            StateAction::Keep
-                        }).unwrap()
-                    }).expect(
-                        "If the state is AttributingAssignerOperatesOn, then the modal is open"
-                    )
+                                StateAction::Keep
+                            })
+                            .unwrap()
+                    })
+                    .expect("If the state is AttributingAssignerOperatesOn, then the modal is open")
             }
             AppState::ManagingExtensions => {
                 let mut user_kept_open = true;
@@ -458,11 +478,14 @@ impl<'n> App<'n> {
                         self.draw_main_tab(ui, context, plot_ui);
                     });
 
-                    if let Some(simulation_state) = &self.simulation_state {
-                        simulation_state.draw_tabs(ui, plot_ui);
+                    if let Some(simulation_state) = &mut self.simulation_state {
+                        let tab_action = simulation_state.draw_tabs(ui, plot_ui);
+
+                        if tab_action == TabAction::Close {
+                            self.simulation_state = None;
+                        }
                     }
                 });
-
             });
     }
 
