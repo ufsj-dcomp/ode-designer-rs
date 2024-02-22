@@ -74,6 +74,7 @@ pub struct SimulationState {
     pub colors: Vec<ImVec4>,
     pub flag_simulation: bool,
     pub flag_plot_all: bool,
+    pub set_focus_to_tab: bool,
 }
 #[derive(PartialEq)]
 pub enum TabAction {
@@ -98,17 +99,24 @@ impl SimulationState {
             colors: COLORS.to_owned(),
             flag_simulation: false,
             flag_plot_all: false,
+            set_focus_to_tab: true,
         }
     }
 
-    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi) -> TabAction {
+    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi, set_focus: bool) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
 
         let mut opened = true;
 
-        imgui::TabItem::new("All").opened(&mut opened).build(ui, || {
+        let mut flags = imgui::TabItemFlags::empty();
+
+        if set_focus {
+            flags.set(imgui::TabItemFlags::SET_SELECTED, true);
+        }
+
+        imgui::TabItem::new("All").opened(&mut opened).flags(flags).build(ui, || {
             implot::Plot::new("Plot")
                 .size([content_width, content_height])
                 .x_label(&self.plot.xlabel)
@@ -478,12 +486,14 @@ impl<'n> App<'n> {
                         self.draw_main_tab(ui, context, plot_ui);
                     });
 
-                    if let Some(simulation_state) = &mut self.simulation_state {
-                        let tab_action = simulation_state.draw_tabs(ui, plot_ui);
+                    if let Some(ref mut simulation_state) = &mut self.simulation_state {
+                        let tab_action = simulation_state.draw_tabs(ui, plot_ui, simulation_state.set_focus_to_tab);
+                        simulation_state.set_focus_to_tab = false;
 
                         if tab_action == TabAction::Close {
                             self.simulation_state = None;
                         }
+
                     }
                 });
             });
