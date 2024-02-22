@@ -84,20 +84,9 @@ pub enum TabAction {
     Close,
 }
 
-pub struct PythonExecutionResult {
-    pub success: bool,
-    pub output: Option<String>,
-    pub error_message: Option<String>,
-}
-
-impl PythonExecutionResult {
-    pub fn new(success: bool, output: Option<String>, error_message: Option<String>) -> Self {
-        Self {
-            success,
-            output,
-            error_message,
-        }
-    }
+pub enum PythonExecutionResult {
+    Success(String),
+    Error(String),
 }
 
 impl SimulationState {
@@ -839,11 +828,10 @@ impl<'n> App<'n> {
         let mut python_process = match command.stdout(Stdio::piped()).spawn() {
             Ok(process) => process,
             Err(e) => {
-                return PythonExecutionResult::new(
-                    false,
-                    None,
-                    Some(format!("Failed to start python process: {}", e)),
-                );
+                return PythonExecutionResult::Error(format!(
+                    "Failed to start python process: {}",
+                    e
+                ));
             }
         };
 
@@ -851,38 +839,27 @@ impl<'n> App<'n> {
         match python_process.stdout.take() {
             Some(mut stdout) => {
                 if let Err(e) = stdout.read_to_end(&mut output) {
-                    return PythonExecutionResult::new(
-                        false,
-                        None,
-                        Some(format!("Failed to read python process output: {}", e)),
-                    );
+                    return PythonExecutionResult::Error(format!(
+                        "Failed to read python process output: {}",
+                        e
+                    ));
                 }
             }
             None => {
-                return PythonExecutionResult::new(
-                    false,
-                    None,
-                    Some("Python process output is not available.".to_string()),
+                return PythonExecutionResult::Error(
+                    "Python process output is not available.".to_string(),
                 );
             }
         }
 
         let status = python_process.wait().unwrap();
         if status.success() {
-            PythonExecutionResult::new(
-                true,
-                Some(String::from_utf8_lossy(&output).to_string()),
-                None,
-            )
+            PythonExecutionResult::Success(String::from_utf8_lossy(&output).to_string())
         } else {
-            PythonExecutionResult::new(
-                false,
-                None,
-                Some(format!(
-                    "Python process failed with exit code {}",
-                    status.code().unwrap()
-                )),
-            )
+            PythonExecutionResult::Error(format!(
+                "Python process failed with exit code {}",
+                status.code().unwrap_or_default()
+            ))
         }
     }
 

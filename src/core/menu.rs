@@ -8,7 +8,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use super::app::{AppState, SimulationState};
+use super::app::{AppState, PythonExecutionResult, SimulationState};
 
 impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
@@ -66,15 +66,11 @@ impl<'n> App<'n> {
                             .arg("--output")
                             .arg(file_path);
 
-                        let result = App::<'n>::execute_python_code(&mut command);
-
-                        if !result.success {
-                            eprintln!(
-                                "Error: {}",
-                                result
-                                    .error_message
-                                    .unwrap_or_else(|| "Unknown error".to_string())
-                            );
+                        match App::<'n>::execute_python_code(&mut command) {
+                            PythonExecutionResult::Success(_) => {}
+                            PythonExecutionResult::Error(error_message) => {
+                                eprintln!("Error: {}", error_message);
+                            }
                         }
                     }
                 }
@@ -86,20 +82,12 @@ impl<'n> App<'n> {
                 let mut command = Command::new("python3");
                 command.arg("-c").arg(&py_code).arg("--csv");
 
-                let result = App::<'n>::execute_python_code(&mut command);
-
-                if !result.success {
-                    eprintln!(
-                        "Error: {}",
-                        result
-                            .error_message
-                            .unwrap_or_else(|| "Unknown error".to_string())
-                    );
-                } else {
-                    if let Some(output) = result.output {
+                match App::<'n>::execute_python_code(&mut command) {
+                    PythonExecutionResult::Success(output) => {
                         self.simulation_state = Some(SimulationState::from_csv(output));
-                    } else {
-                        eprintln!("Error: Python process output is not available.");
+                    }
+                    PythonExecutionResult::Error(error_message) => {
+                        eprintln!("Error: {}", error_message);
                     }
                 }
             }
