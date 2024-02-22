@@ -106,11 +106,9 @@ impl SimulationState {
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
 
-        if ui.button("Close Simulation") {
-            return TabAction::Close;
-        };
+        let mut opened = true;
 
-        imgui::TabItem::new("All").build(ui, || {
+        imgui::TabItem::new("All").opened(&mut opened).build(ui, || {
             implot::Plot::new("Plot")
                 .size([content_width, content_height])
                 .x_label(&self.plot.xlabel)
@@ -146,7 +144,7 @@ impl SimulationState {
         for (tab_idx, tab_populations) in
             self.plot.data.lines.chunks(populations_per_tab).enumerate()
         {
-            imgui::TabItem::new(format!("Tab {tab_idx}")).build(ui, || {
+            imgui::TabItem::new(format!("Tab {tab_idx}")).opened(&mut opened).build(ui, || {
                 tab_populations
                     .iter()
                     .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
@@ -176,7 +174,12 @@ impl SimulationState {
                     });
             });
         }
-        TabAction::Open
+
+        if opened {
+            TabAction::Open
+        } else {
+            TabAction::Close
+        }
     }
 }
 
