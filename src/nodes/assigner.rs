@@ -154,15 +154,12 @@ impl NodeImpl for Assigner {
             return None;
         };
 
-        let mut tmp = [0; 4];
-        let contribution = eq.contribution.encode_utf8(&mut tmp);
-
         let node = Self {
             id: node_id,
             name: eq.name.clone(),
             input: InputPin::new_signed(
                 node_id,
-                Sign::from_str(contribution).expect("Should be a valid sign"),
+                Sign::try_from(eq.contribution).expect("Should be a valid sign"),
             ),
             expr_node: Default::default(),
             operates_on: None,
