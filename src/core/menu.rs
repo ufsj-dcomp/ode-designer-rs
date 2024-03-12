@@ -8,7 +8,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use super::app::{AppState, PythonExecutionResult, SimulationState};
+use super::app::{AppState, PythonError, SimulationState};
 
 impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
@@ -67,10 +67,21 @@ impl<'n> App<'n> {
                             .arg(file_path);
 
                         match App::<'n>::execute_python_code(&mut command) {
-                            PythonExecutionResult::Success(_) => {}
-                            PythonExecutionResult::Error(error_message) => {
-                                eprintln!("Error: {}", error_message);
-                            }
+                            Ok(_) => {}
+                            Err(error) => match error {
+                                PythonError::FailedToStartProcess(err) => {
+                                    eprintln!("Failed to start Python process: {}", err)
+                                }
+                                PythonError::FailedToReadOutput(err) => {
+                                    eprintln!("Failed to read Python process output: {}", err)
+                                }
+                                PythonError::OutputNotAvailable => {
+                                    eprintln!("Python process output is not available.")
+                                }
+                                PythonError::ProcessFailed(code) => {
+                                    eprintln!("Python process failed with exit code {}", code)
+                                }
+                            },
                         }
                     }
                 }
@@ -83,12 +94,23 @@ impl<'n> App<'n> {
                 command.arg("-c").arg(&py_code).arg("--csv");
 
                 match App::<'n>::execute_python_code(&mut command) {
-                    PythonExecutionResult::Success(output) => {
+                    Ok(output) => {
                         self.simulation_state = Some(SimulationState::from_csv(output));
                     }
-                    PythonExecutionResult::Error(error_message) => {
-                        eprintln!("Error: {}", error_message);
-                    }
+                    Err(error) => match error {
+                        PythonError::FailedToStartProcess(err) => {
+                            eprintln!("Failed to start Python process: {}", err)
+                        }
+                        PythonError::FailedToReadOutput(err) => {
+                            eprintln!("Failed to read Python process output: {}", err)
+                        }
+                        PythonError::OutputNotAvailable => {
+                            eprintln!("Python process output is not available.")
+                        }
+                        PythonError::ProcessFailed(code) => {
+                            eprintln!("Python process failed with exit code {}", code)
+                        }
+                    },
                 }
             }
 

@@ -84,9 +84,11 @@ pub enum TabAction {
     Close,
 }
 
-pub enum PythonExecutionResult {
-    Success(String),
-    Error(String),
+pub enum PythonError {
+    FailedToStartProcess(std::io::Error),
+    FailedToReadOutput(String),
+    OutputNotAvailable,
+    ProcessFailed(i32),
 }
 
 impl SimulationState {
@@ -824,41 +826,27 @@ impl<'n> App<'n> {
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
     }
 
-    pub fn execute_python_code(command: &mut Command) -> PythonExecutionResult {
-        let mut python_process = match command.stdout(Stdio::piped()).spawn() {
-            Ok(process) => process,
-            Err(e) => {
-                return PythonExecutionResult::Error(format!(
-                    "Failed to start python process: {}",
-                    e
-                ));
-            }
-        };
+    pub fn execute_python_code(command: &mut Command) -> Result<String, PythonError> {
+        let mut python_process = command
+            .stdout(Stdio::piped())
+            .spawn()
+            .map_err(|e| PythonError::FailedToStartProcess(e))?;
 
         let mut output = Vec::new();
-        match python_process.stdout.take() {
-            Some(mut stdout) => {
-                if let Err(e) = stdout.read_to_end(&mut output) {
-                    return PythonExecutionResult::Error(format!(
-                        "Failed to read python process output: {}",
-                        e
-                    ));
-                }
-            }
-            None => {
-                return PythonExecutionResult::Error(
-                    "Python process output is not available.".to_string(),
-                );
-            }
-        }
+        let mut stdout = python_process
+            .stdout
+            .take()
+            .ok_or(PythonError::OutputNotAvailable)?;
+        stdout
+            .read_to_end(&mut output)
+            .map_err(|e| PythonError::FailedToReadOutput(format!("{}", e)))?;
 
         let status = python_process.wait().unwrap();
         if status.success() {
-            PythonExecutionResult::Success(String::from_utf8_lossy(&output).to_string())
+            Ok(String::from_utf8_lossy(&output).to_string())
         } else {
-            PythonExecutionResult::Error(format!(
-                "Python process failed with exit code {}",
-                status.code().unwrap_or_default()
+            Err(PythonError::ProcessFailed(
+                status.code().unwrap_or_default(),
             ))
         }
     }
