@@ -125,7 +125,7 @@ impl Pin for InputPin {
         Self {
             id: Self::SelfIdType::generate(),
             node_id,
-            sign: Sign::Positive,
+            sign: _sign,
             linked_to: None,
             draw_sign: true,
             label: None,
