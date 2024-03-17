@@ -29,7 +29,7 @@ impl SideBarState {
         let table_group = ui.begin_group();
         let mut selected_node_type = None;
 
-        const WIDTH: f32 = 13.0 * 7.0;
+        const WIDTH: f32 = 13.0 * 12.0;
 
         ui.set_next_item_width(WIDTH);
 

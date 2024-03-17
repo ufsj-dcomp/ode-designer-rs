@@ -10,7 +10,7 @@ use std::{
 
 use super::{app::{AppState, SimulationState}, python::{execute_python_code, PythonError}};
 
-impl<'n> App<'n> {
+impl App {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
         if ui.menu_item("Plot CSV file") {
             let file = FileDialog::new()
@@ -31,18 +31,18 @@ impl<'n> App<'n> {
     pub fn draw_menu(&mut self, ui: &Ui) {
         ui.menu_bar(|| {
             ui.menu("File", || {
-                if ui.menu_item_config("New").shortcut("Ctrl + N").build() {
+                if ui.menu_item_config(" New").shortcut("Ctrl + N").build() {
                     self.clear_state();
                 }
 
-                if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
+                if ui.menu_item_config(" Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
                     }
                 }
 
-                if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
+                if ui.menu_item_config(" Save").shortcut("Ctrl + S").build() {
                     self.save_state();
                 }
 
