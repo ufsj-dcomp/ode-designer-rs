@@ -84,13 +84,6 @@ pub enum TabAction {
     Close,
 }
 
-pub enum PythonError {
-    FailedToStartProcess(std::io::Error),
-    FailedToReadOutput(String),
-    OutputNotAvailable,
-    ProcessFailed(i32),
-}
-
 impl SimulationState {
     pub fn from_csv(csv_content: String) -> Self {
         let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
@@ -824,31 +817,6 @@ impl<'n> App<'n> {
             self.extensions.iter().map(|ext| &ext.file_path).collect();
 
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
-    }
-
-    pub fn execute_python_code(command: &mut Command) -> Result<String, PythonError> {
-        let mut python_process = command
-            .stdout(Stdio::piped())
-            .spawn()
-            .map_err(|e| PythonError::FailedToStartProcess(e))?;
-
-        let mut output = Vec::new();
-        let mut stdout = python_process
-            .stdout
-            .take()
-            .ok_or(PythonError::OutputNotAvailable)?;
-        stdout
-            .read_to_end(&mut output)
-            .map_err(|e| PythonError::FailedToReadOutput(format!("{}", e)))?;
-
-        let status = python_process.wait().unwrap();
-        if status.success() {
-            Ok(String::from_utf8_lossy(&output).to_string())
-        } else {
-            Err(PythonError::ProcessFailed(
-                status.code().unwrap_or_default(),
-            ))
-        }
     }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {

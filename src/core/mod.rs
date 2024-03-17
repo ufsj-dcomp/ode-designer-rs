@@ -19,6 +19,7 @@ pub mod plot;
 pub mod side_bar;
 pub mod style;
 pub mod widgets;
+pub mod python;
 
 pub struct System {
     pub event_loop: EventLoop<()>,
