@@ -37,7 +37,9 @@ impl<'n> App<'n> {
 
                 if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
-                    self.load_state().unwrap();
+                    if let Err(err) = self.load_state() {
+                        eprintln!("Couldn't load model from file: {err}");
+                    }
                 }
 
                 if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
