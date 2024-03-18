@@ -11,7 +11,10 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{composition_utils::{build_composition, build_from_composition}, ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder};
+use super::{
+    composition_utils::{build_composition, build_from_composition},
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder,
+};
 
 const MINIMUM_PIN_COUNT: usize = 2;
 
@@ -160,7 +163,7 @@ impl NodeImpl for Expression {
         ) {
             self.expr_wrapper.set_join_op(
                 Operation::from_repr(selected as u8)
-                .expect("ImGui returned an out-of-range value in combobox")
+                    .expect("ImGui returned an out-of-range value in combobox"),
             );
 
             changed = true
@@ -196,7 +199,7 @@ impl NodeImpl for Expression {
             &self.inputs,
             Into::<char>::into(self.expr_wrapper.join_op()).into(),
             CompositionStyle::Infixed,
-            app
+            app,
         )
     }
 
@@ -205,21 +208,23 @@ impl NodeImpl for Expression {
         frag: &ModelFragment,
         app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
-        if !matches!(frag, ModelFragment::Argument(odeir::Argument::Composite {
-            style: CompositionStyle::Infixed,
-            ..
-        })) {
+        if !matches!(
+            frag,
+            ModelFragment::Argument(odeir::Argument::Composite {
+                style: CompositionStyle::Infixed,
+                ..
+            })
+        ) {
             return None;
         };
 
-        build_from_composition(
-            node_id,
-            frag,
-            |name, composition, expr_wrapper| Self::new(
+        build_from_composition(node_id, frag, |name, composition, expr_wrapper| {
+            Self::new(
                 node_id,
                 name.to_owned(),
                 composition.len().max(MINIMUM_PIN_COUNT),
-            ).with_expr_wapper(expr_wrapper)
-        )
+            )
+            .with_expr_wapper(expr_wrapper)
+        })
     }
 }

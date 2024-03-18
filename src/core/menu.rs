@@ -3,9 +3,12 @@ use imgui::Ui;
 use crate::App;
 use rfd::FileDialog;
 
-use std::process::{Command, Stdio};
+use std::{
+    fs::read_to_string,
+    process::{Command, Stdio},
+};
 
-use super::app::{AppState, SimulationState};
+use super::{app::{AppState, SimulationState}, python::{execute_python_code, PythonError}};
 
 impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
@@ -16,8 +19,11 @@ impl<'n> App<'n> {
                 .pick_file();
 
             if let Some(file_path) = file {
-                let fp = std::fs::File::open(file_path).unwrap();
-                self.simulation_state = Some(SimulationState::from_csv(fp));
+                if let Ok(file_content) = read_to_string(&file_path) {
+                    self.simulation_state = Some(SimulationState::from_csv(file_content));
+                } else {
+                    eprintln!("Error: Failed to read file content.");
+                }
             }
         }
     }
@@ -52,29 +58,34 @@ impl<'n> App<'n> {
                         FileDialog::new().add_filter("pdf", &["pdf"]).save_file()
                     {
                         let py_code = self.generate_code();
-                        Command::new("python3")
+
+                        let mut command = Command::new("python3");
+                        command
                             .arg("-c")
-                            .arg(py_code)
+                            .arg(&py_code)
                             .arg("--output")
-                            .arg(file_path)
-                            .spawn()
-                            .unwrap();
+                            .arg(file_path);
+
+                        match execute_python_code(&mut command) {
+                            Ok(_) => {}
+                            Err(err) => eprintln!("{err}"),
+                        }
                     }
                 }
             });
 
             if ui.menu_item("Run") {
                 let py_code = self.generate_code();
-                println!("{}", py_code);
-                let python_out = Command::new("python3")
-                    .arg("-c")
-                    .arg(py_code)
-                    .arg("--csv")
-                    .stdout(Stdio::piped())
-                    .spawn()
-                    .unwrap();
 
-                self.simulation_state = Some(SimulationState::from_csv(python_out.stdout.unwrap()));
+                let mut command = Command::new("python3");
+                command.arg("-c").arg(&py_code).arg("--csv");
+
+                match execute_python_code(&mut command) {
+                    Ok(output) => {
+                        self.simulation_state = Some(SimulationState::from_csv(output));
+                    }
+                    Err(err) => eprintln!("{err}"),
+                }
             }
 
             if ui.menu_item("Manage Extensions") {

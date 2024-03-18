@@ -1,9 +1,14 @@
-use std::{io::Read, process::{Command, Stdio}};
+use std::{
+    io::Read,
+    process::{Command, Stdio},
+};
 
+use minijinja::{context, Environment, Error as JinjaError};
 use serde::Deserialize;
 use serde_json::Error as SerdeJsonError;
-use minijinja::{Environment, context, Error as JinjaError};
 use thiserror::Error;
+
+use crate::core::python::{execute_python_code, PythonError};
 
 const INSPECTOR_TEMPLATE: &str = include_str!("templates/inspect_node_functions.py.jinja");
 
@@ -19,8 +24,7 @@ pub struct NodeFunction {
 #[error("{0}")]
 pub enum InspectionError {
     Template(JinjaError),
-    PythonInvocation(std::io::Error),
-    PythonExecution(String),
+    Python(PythonError),
     Deserialization(SerdeJsonError),
 }
 
@@ -32,37 +36,24 @@ pub fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, Inspectio
         user_code,
     };
 
-    let py_code = env.render_str(INSPECTOR_TEMPLATE, &mut ctx)
+    let py_code = env
+        .render_str(INSPECTOR_TEMPLATE, &mut ctx)
         .map_err(Template)?;
 
-    let python_out = Command::new("python3")
+    let inspection_res = execute_python_code(
+        Command::new("python3")
         .arg("-c")
         .arg(py_code)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(PythonInvocation)?;
+    )
+    .map_err(Python)?;
 
-    let mut inspection_res = String::new();
-
-    python_out.stderr.unwrap().read_to_string(&mut inspection_res).unwrap();
-
-    if !inspection_res.is_empty() {
-        return Err(PythonExecution(inspection_res));
-    }
-        
-    inspection_res.clear();
-    python_out.stdout.unwrap().read_to_string(&mut inspection_res).unwrap();
-
-    serde_json::from_str(&inspection_res)
-        .map_err(Deserialization)
-
+    serde_json::from_str(&inspection_res).map_err(Deserialization)
 }
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
     use super::*;
+    use rstest::rstest;
 
     #[rstest]
     #[case(r"
@@ -91,7 +82,10 @@ def pow(x, y):
             format: Some("$x ^ $y".to_string())
         }
     ])]
-    fn test_node_functions(#[case] user_code_input: &str, #[case] expected_node_funcs: &[NodeFunction]) {
+    fn test_node_functions(
+        #[case] user_code_input: &str,
+        #[case] expected_node_funcs: &[NodeFunction],
+    ) {
         let node_funcs = inspect_user_code(user_code_input).unwrap();
         assert_eq!(&node_funcs, expected_node_funcs)
     }

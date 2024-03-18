@@ -3,7 +3,12 @@ use std::str::FromStr;
 use imnodes::{InputPinId, NodeId};
 use odeir::{models::CompositionStyle, Component};
 
-use crate::{core::App, exprtree::{ExpressionTree, Operation}, pins::{InputPin, Pin}, utils::ModelFragment};
+use crate::{
+    core::App,
+    exprtree::{ExpressionTree, Operation},
+    pins::{InputPin, Pin},
+    utils::ModelFragment,
+};
 
 use super::{ExprWrapper, NodeImpl, PendingOperation, PendingOperations};
 
@@ -67,8 +72,7 @@ where
     };
 
     let mut expr_wrapper: ExprWrapper<ExpressionTree<InputPinId>> = Default::default();
-    expr_wrapper
-        .set_join_op(Operation::from_str(operation).unwrap_or_default());
+    expr_wrapper.set_join_op(Operation::from_str(operation).unwrap_or_default());
 
     let node = constructor(name, composition, expr_wrapper);
 

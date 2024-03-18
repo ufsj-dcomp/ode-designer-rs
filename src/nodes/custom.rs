@@ -4,9 +4,18 @@ use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 use odeir::models::CompositionStyle;
 
-use crate::{core::App, exprtree::{ExpressionNode, ExpressionTree, Leaf}, extensions::CustomNodeSpecification, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment};
+use crate::{
+    core::App,
+    exprtree::{ExpressionNode, ExpressionTree, Leaf},
+    extensions::CustomNodeSpecification,
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
+};
 
-use super::{composition_utils::{build_composition, build_from_composition}, ExprWrapper, LinkEvent, NodeImpl, ResolutionStatus, Resolvable};
+use super::{
+    composition_utils::{build_composition, build_from_composition},
+    ExprWrapper, LinkEvent, NodeImpl, ResolutionStatus, Resolvable,
+};
 
 #[derive(Debug)]
 pub struct CustomFunctionNode {
@@ -93,7 +102,10 @@ impl NodeImpl for CustomFunctionNode {
 
     fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
         match link_event {
-            LinkEvent::Push { from_pin_id, payload } => {
+            LinkEvent::Push {
+                from_pin_id,
+                payload,
+            } => {
                 let pin = self
                     .inputs
                     .iter()
@@ -127,7 +139,7 @@ impl NodeImpl for CustomFunctionNode {
         app: &App,
     ) -> Option<(Self, Option<super::PendingOperations>)>
     where
-        Self: Sized
+        Self: Sized,
     {
         let ModelFragment::Argument(odeir::Argument::Composite {
             operation,
@@ -147,15 +159,9 @@ impl NodeImpl for CustomFunctionNode {
             return None;
         };
 
-        build_from_composition(
-            node_id,
-            frag,
-            |name, composition, expr_wrapper| Self::from_spec(
-                node_id,
-                name.to_owned(),
-                Rc::clone(spec),
-            )
-        )
+        build_from_composition(node_id, frag, |name, composition, expr_wrapper| {
+            Self::from_spec(node_id, name.to_owned(), Rc::clone(spec))
+        })
     }
 
     fn to_model_fragment(&self, app: &crate::core::App) -> Option<crate::utils::ModelFragment> {
@@ -164,7 +170,7 @@ impl NodeImpl for CustomFunctionNode {
             &self.inputs,
             self.spec.function.name.clone(),
             CompositionStyle::Prefixed,
-            app
+            app,
         )
     }
 }

@@ -88,11 +88,10 @@ impl TryFrom<char> for Sign {
 impl<OriginType: Hash> ExpressionTree<OriginType> {
     pub fn resolve_into_equation(&self) -> String {
         let mut result = self.format.format_args(
-            self
-                .members
+            self.members
                 .values()
                 .map(ExpressionNode::resolve_into_equation_part)
-                .collect()
+                .collect(),
         );
 
         if let Sign::Negative = self.unary_op {
@@ -208,8 +207,6 @@ impl std::fmt::Display for Operation {
 
 impl From<Operation> for Format {
     fn from(value: Operation) -> Self {
-        format!("$@{value}")
-            .parse()
-            .unwrap()
+        format!("$@{value}").parse().unwrap()
     }
 }

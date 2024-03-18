@@ -3,8 +3,8 @@ use std::{fmt::Display, str::FromStr};
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
-    character::complete::{alpha1, alphanumeric1, anychar, space0},
     character::complete::digit1,
+    character::complete::{alpha1, alphanumeric1, anychar, space0},
     combinator::map,
     combinator::recognize,
     multi::{many0, many0_count, many1},
@@ -17,38 +17,34 @@ pub struct Format(Vec<FormatPart>);
 
 impl Format {
     pub fn default_with_name(fn_name: &str) -> Self {
-        Self(
-            vec![
-                FormatPart::Static(fn_name.to_owned()),
-                FormatPart::Static("(".to_owned()),
-                FormatPart::Dynamic(ArgumentSpecifier::All { separator: ',' }),
-                FormatPart::Static(")".to_owned()),
-            ]
-        )
+        Self(vec![
+            FormatPart::Static(fn_name.to_owned()),
+            FormatPart::Static("(".to_owned()),
+            FormatPart::Dynamic(ArgumentSpecifier::All { separator: ',' }),
+            FormatPart::Static(")".to_owned()),
+        ])
     }
 
     pub fn format_args<T: Display>(&self, args: Vec<T>) -> String {
         let mut str_buf = [0; 4];
         let display_args: Vec<_> = args.into_iter().map(|arg| arg.to_string()).collect();
 
-        self
-            .0
+        self.0
             .iter()
-            .map(|part| {
-                match part {
-                    FormatPart::Static(s) => s.clone(),
-                    FormatPart::Dynamic(arg_spec) => match arg_spec {
-                        ArgumentSpecifier::Indexed(idx) =>
-                            display_args
-                                .get(*idx - 1)
-                                .map(Clone::clone)
-                                .unwrap_or_else(|| "_".to_string()),
-                        ArgumentSpecifier::Named(_) => todo!("Named parameters are still not supported"),
-                        ArgumentSpecifier::All { separator } => {
-                            display_args.join(separator.encode_utf8(&mut str_buf))
-                        },
+            .map(|part| match part {
+                FormatPart::Static(s) => s.clone(),
+                FormatPart::Dynamic(arg_spec) => match arg_spec {
+                    ArgumentSpecifier::Indexed(idx) => display_args
+                        .get(*idx - 1)
+                        .map(Clone::clone)
+                        .unwrap_or_else(|| "_".to_string()),
+                    ArgumentSpecifier::Named(_) => {
+                        todo!("Named parameters are still not supported")
                     }
-                }
+                    ArgumentSpecifier::All { separator } => {
+                        display_args.join(separator.encode_utf8(&mut str_buf))
+                    }
+                },
             })
             .collect::<Vec<_>>()
             .join(" ")
@@ -122,19 +118,12 @@ fn parse_format(input: &str) -> IResult<&str, Vec<FormatPart>> {
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
     use super::*;
+    use rstest::rstest;
 
-    use FormatPart::{
-        Static as S,
-        Dynamic as D,
-    };
+    use FormatPart::{Dynamic as D, Static as S};
 
-    use ArgumentSpecifier::{
-        Indexed as I,
-        Named as N,
-        All,
-    };
+    use ArgumentSpecifier::{All, Indexed as I, Named as N};
 
     #[rstest]
     #[case(
@@ -177,12 +166,9 @@ mod tests {
             S("²".to_string()),
         ]
     )]
-    fn test_format_parsing(
-        #[case] input: &str,
-        #[case] expected_format: &[FormatPart]
-    ) {
+    fn test_format_parsing(#[case] input: &str, #[case] expected_format: &[FormatPart]) {
         let (rest, parsed) = parse_format(input).expect("Parsing failed!");
-        
+
         assert!(rest.is_empty(), "There was a string remainder: '{rest}'");
 
         assert_eq!(parsed, expected_format);

@@ -11,7 +11,9 @@ use crate::{
     utils::ModelFragment,
 };
 
-use super::{ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder};
+use super::{
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder,
+};
 
 #[derive(Debug)]
 pub struct Assigner {

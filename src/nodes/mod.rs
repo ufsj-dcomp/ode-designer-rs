@@ -1,23 +1,32 @@
 mod assigner;
+pub mod composition_utils;
+pub mod custom;
 pub mod errors;
 pub mod expression;
 pub mod term;
-pub mod custom;
-pub mod composition_utils;
 
-use std::{borrow::Cow, ops::{Deref, DerefMut}, rc::Rc};
+use std::{
+    borrow::Cow,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
 pub use assigner::Assigner;
 use enutil::EnumDeref;
 pub use expression::Expression;
-use strum::{EnumDiscriminants, VariantNames, FromRepr, VariantArray};
+use strum::{EnumDiscriminants, FromRepr, VariantArray, VariantNames};
 pub use term::Term;
 
 use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
-    core::{app::AppState, App, GeneratesId}, exprtree::{ExpressionNode, ExpressionTree, Sign}, extensions::CustomNodeSpecification, message::{Message, SendData}, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
+    core::{app::AppState, App, GeneratesId},
+    exprtree::{ExpressionNode, ExpressionTree, Sign},
+    extensions::CustomNodeSpecification,
+    message::{Message, SendData},
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use derive_more::From;
@@ -45,7 +54,11 @@ pub struct NodeTypeRepresentation<'n> {
 }
 
 impl<'n> NodeTypeRepresentation<'n> {
-    pub fn new(name: &'n str, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
+    pub fn new(
+        name: &'n str,
+        variant: NodeVariant,
+        custom_node_spec: Option<Rc<CustomNodeSpecification>>,
+    ) -> Self {
         Self {
             name: Cow::from(name),
             variant,
@@ -73,13 +86,16 @@ impl Node {
             (NodeVariant::Term, None) => Term::new(node_id, name).into(),
             (NodeVariant::Expression, None) => Expression::new(node_id, name).into(),
             (NodeVariant::Assigner, None) => Assigner::new(node_id, name).into(),
-            (NodeVariant::Custom, Some(node_spec)) => CustomFunctionNode::from_spec(node_id, name, Rc::clone(node_spec)).into(),
-            _ => todo!("Custom node without spec? Default node with spec?")
+            (NodeVariant::Custom, Some(node_spec)) => {
+                CustomFunctionNode::from_spec(node_id, name, Rc::clone(node_spec)).into()
+            }
+            _ => todo!("Custom node without spec? Default node with spec?"),
         }
     }
 
     pub fn build_from_fragment(
-        frag: ModelFragment, app: &App,
+        frag: ModelFragment,
+        app: &App,
     ) -> Result<(Self, Option<PendingOperations>), NotANode> {
         let node_id = NodeId::generate();
 
@@ -93,12 +109,11 @@ impl Node {
                             .map(|(node_impl, ops)| (node_impl.into(), ops))
                             .or_else(|| {
                                 CustomFunctionNode::try_from_model_fragment(node_id, &frag, app)
-                                .map(|(node_impl, ops)| (node_impl.into(), ops))
+                                    .map(|(node_impl, ops)| (node_impl.into(), ops))
                             })
                     })
             })
             .ok_or(NotANode(frag))
-
     }
 }
 
@@ -109,7 +124,6 @@ pub trait SimpleNodeBuilder: NodeImpl {
 }
 
 pub trait NodeImpl {
-
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,

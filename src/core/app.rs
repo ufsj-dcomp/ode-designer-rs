@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::rc::Rc;
 
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -17,7 +18,9 @@ use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
 use crate::extensions::{CustomNodeSpecification, Extension};
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
-use crate::nodes::{LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations};
+use crate::nodes::{
+    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations,
+};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -83,8 +86,8 @@ pub enum TabAction {
 }
 
 impl SimulationState {
-    pub fn from_csv(reader: impl Read) -> Self {
-        let csv_data = CSVData::load_data(reader).unwrap();
+    pub fn from_csv(csv_content: String) -> Self {
+        let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
 
         let pane_count = csv_data.population_count().div_ceil(4);
 
@@ -247,16 +250,20 @@ impl AppState {
                     ui.text("Node type");
                     ui.same_line();
 
-                    ui.combo("##Node Type", index, &app.node_types, |NodeTypeRepresentation { name, .. }| {
-                        Cow::Borrowed(name.borrow())
-                    });
+                    ui.combo(
+                        "##Node Type",
+                        index,
+                        &app.node_types,
+                        |NodeTypeRepresentation { name, .. }| Cow::Borrowed(name.borrow()),
+                    );
 
                     let _token = ui.push_style_var(StyleVar::FramePadding([4.0; 2]));
 
                     let enter_pressed = ui.is_key_pressed(Key::Enter);
 
                     if ui.button("Add") || enter_pressed {
-                        let node_type = app.node_types
+                        let node_type = app
+                            .node_types
                             .get(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
@@ -347,7 +354,9 @@ impl AppState {
                         }
 
                         if ui.button("Load Extension") {
-                            app.pick_extension_file();
+                            if let Err(err) = app.pick_extension_file() {
+                                eprintln!("Error opening/inspecting user extension file: {err}");
+                            }
                         }
                     });
 
@@ -388,9 +397,7 @@ impl<'n> App<'n> {
             editor.add_link(link.id, link.input_pin_id, link.output_pin_id);
         }
         // Enters "Create Node Popup" state
-        if editor.is_hovered()
-            && ui.is_mouse_clicked(imgui::MouseButton::Right)
-        {
+        if editor.is_hovered() && ui.is_mouse_clicked(imgui::MouseButton::Right) {
             let mouse_screen_space_pos = ui.io().mouse_pos;
 
             ui.open_popup("Create Node");
@@ -500,15 +507,13 @@ impl<'n> App<'n> {
     }
 
     pub fn new() -> Self {
-        Self { 
+        Self {
             node_types: Node::VARIANTS
                 .iter()
                 .copied()
                 .zip(NodeVariant::VARIANTS)
                 .filter(|(_, variant)| variant != &&NodeVariant::Custom)
-                .map(|(name, variant)| {
-                    NodeTypeRepresentation::new(name, *variant, None)
-                })
+                .map(|(name, variant)| NodeTypeRepresentation::new(name, *variant, None))
                 .collect(),
             ..Self::default()
         }
@@ -823,15 +828,10 @@ impl<'n> App<'n> {
             unreachable!("This program can only produce ODE models for now");
         };
 
-        let extension_lookup_paths: Vec<_> = self.extensions
-            .iter()
-            .map(|ext| &ext.file_path)
-            .collect();
+        let extension_lookup_paths: Vec<_> =
+            self.extensions.iter().map(|ext| &ext.file_path).collect();
 
-        odeir::transformations::r4k::render_ode(
-            &ode_model,
-            &extension_lookup_paths,
-        )
+        odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
     }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
@@ -860,14 +860,14 @@ impl<'n> App<'n> {
             positions,
         } = model.core;
 
-        model.extension_files
-            .into_iter()
-            .try_for_each(|file| self.load_extension_from_path(
+        model.extension_files.into_iter().try_for_each(|file| {
+            self.load_extension_from_path(
                 path.parent()
                     .map(Path::to_path_buf)
                     .unwrap_or_default()
-                    .join(file)
-            ))?;
+                    .join(file),
+            )
+        })?;
 
         let nodes_and_ops: Vec<(Node, Option<PendingOperations>)> = arguments
             .into_values()
@@ -1003,7 +1003,10 @@ impl<'n> App<'n> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::{HashMap, HashSet}, path::PathBuf};
+    use std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    };
 
     use imnodes::{InputPinId, NodeId};
 
@@ -1012,7 +1015,9 @@ mod tests {
         core::{initialize_id_generator, GeneratesId},
         exprtree::{ExpressionNode, Operation, Sign},
         message::Message,
-        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term},
+        nodes::{
+            Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
+        },
         pins::{OutputPin, Pin},
     };
 
