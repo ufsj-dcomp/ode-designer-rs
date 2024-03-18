@@ -6,7 +6,7 @@ Abaixo estão a descrição do software, como instalá-lo e uma breve introduç�
 
 ## Sobre o Software
 
-Este software foi desenvolvido na Universidade Federal de São João Del-Rei ([UFSJ](https://ufsj.edu.br)) em parceria com a Fundação de Amparo à Pesquisa do Estado de Minas Gerais ([FAPEMIG](http://www.fapemig.br/pt/)).
+Este software foi desenvolvido na Universidade Federal de São João Del-Rei ([UFSJ](https://ufsj.edu.br)).
 
 O software tem como o objetivo facilitar o desenvolvimento de Equações Diferenciais Ordinárias (EDOs), tendo como o alvo não somente o auxílio de pesquisadores na área, mas também o ensino-aprendizagem de modelagem computacional.
 
