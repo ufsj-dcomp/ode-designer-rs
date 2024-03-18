@@ -76,3 +76,54 @@ Ao importá-lo no menu de gerenciamento extensões (em inglês, *Manage Extensio
 O código pode ser usado para simular assim como nós nativos.
 
 ![Plotagem das EDOs utilizando nós customizados](readme/demo-with-extensions-simulation.png)
+
+## Como Instalar
+
+Recomenda-se utilizar os executáveis disponíveis nas *Releases* do GitHub. [Este link](https://github.com/Syndelis/ode-designer-rs/releases/latest) pode ser usado para redirecionar sempre à versão mais recente.
+
+### Linux
+
+A distribuição em Linux utiliza [AppImages](https://appimage.org/), que necessita de um runtime (`fuse2`) instalável em todas as distribuições baseadas em Linux. Comumente é inclusa por padrão por algumas distribuições, ou já está instalada por outro programa.
+
+<details>
+<summary><b>🐧 Para Debian/Ubuntu/Pop_OS!/ElementaryOS</b></summary>
+
+```sh
+$ sudo apt install libfuse2
+```
+
+</details>
+
+<details>
+<summary><b>🐧 Para ArchLinux</b></summary>
+
+```sh
+$ sudo pacman -S fuse2
+```
+
+</details>
+
+### Windows
+
+A distribuição de Windows consiste num ZIP que pode ser extraído e ter seu conteúdo executado.
+
+## Compilando
+
+### Usando Docker
+
+Para compilar e utilizar o software e todo seu potencial, pode-se usar a imagem de Docker provida. As dependências são somente o próprio `docker` e o plugin `dokcer-buildx`.
+
+```sh
+$ docker buildx build -t ode-designer-appimage-builder .
+$ docker run -v ./container-target:/ode-designer/target/ ode-designer-appimage-builder
+```
+
+Após esta execução, a AppImage deverá estar disponível em `.container-target/appimage/ode-designer-rs.AppImage`. Esta AppImage, assim como as encontradas em *Releases*, possuem Python e as dependências `scipy` e `matplotlib` para geração de código, simulação interativa e exportação de PDF.
+
+### Manualmente
+
+Para compilar e rodar o software fora da AppImage, é necessária a toolchain de Rust, bem como Python >= 3.11, e as dependências listadas em `requirements.txt`. Cumprindo estes requisitos, basta compilar como qualquer projeto em Rust, rodando
+
+```sh
+$ cargo run
+```
