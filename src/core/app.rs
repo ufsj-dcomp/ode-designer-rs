@@ -343,7 +343,9 @@ impl AppState {
                         }
 
                         if ui.button("Load Extension") {
-                            app.pick_extension_file();
+                            if let Err(err) = app.pick_extension_file() {
+                                eprintln!("Error opening/inspecting user extension file: {err}");
+                            }
                         }
                     });
 
