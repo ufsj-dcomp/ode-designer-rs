@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.0,
+    "end_time": 0.0,
+    "positions": {
+      "dx/dt": {
+        "x": 647.0,
+        "y": 304.0
+      },
+      "dy/dt": {
+        "x": 695.0,
+        "y": 505.0
+      },
+      "sine of x": {
+        "x": 466.0,
+        "y": 283.0
+      },
+      "x": {
+        "x": 205.0,
+        "y": 274.0
+      },
+      "y": {
+        "x": 157.0,
+        "y": 451.0
+      },
+      "y to the power of z": {
+        "x": 437.0,
+        "y": 473.0
+      },
+      "z": {
+        "x": 151.0,
+        "y": 540.0
+      }
+    },
+    "extension_files": [
+      "demo-extension.py"
+    ]
+  },
+  "arguments": [
+    {
+      "name": "sine of x",
+      "operation": "sine",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "x",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "z",
+      "value": 1.0000001
+    },
+    {
+      "name": "y to the power of z",
+      "operation": "power",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "y",
+          "contribution": "+"
+        },
+        {
+          "name": "z",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "y",
+      "value": 2.0
+    },
+    {
+      "name": "x",
+      "value": 1.0
+    }
+  ],
+  "equations": [
+    {
+      "name": "dx/dt",
+      "operates_on": "x",
+      "argument": "sine of x",
+      "contribution": "+"
+    },
+    {
+      "name": "dy/dt",
+      "operates_on": "y",
+      "argument": "y to the power of z",
+      "contribution": "+"
+    }
+  ]
+}
