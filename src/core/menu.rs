@@ -66,7 +66,8 @@ impl<'n> App<'n> {
                             .arg("-c")
                             .arg(&py_code)
                             .arg("--output")
-                            .arg(file_path);
+                            .arg(file_path)
+                            .args(self.sidebar_state.time_flags());
 
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
@@ -80,7 +81,11 @@ impl<'n> App<'n> {
                 let py_code = self.generate_code();
 
                 let mut command = Command::new("python3");
-                command.arg("-c").arg(&py_code).arg("--csv");
+                command
+                    .arg("-c")
+                    .arg(&py_code)
+                    .arg("--csv")
+                    .args(self.sidebar_state.time_flags());
 
                 match execute_python_code(&mut command) {
                     Ok(output) => {

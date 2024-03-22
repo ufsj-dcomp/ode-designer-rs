@@ -205,7 +205,7 @@ pub struct App<'n> {
     queue: MessageQueue,
     received_messages: HashMap<NodeId, HashSet<usize>>,
     pub(crate) simulation_state: Option<SimulationState>,
-    sidebar_state: SideBarState,
+    pub sidebar_state: SideBarState,
     pub extensions: Vec<Extension>,
 }
 
@@ -804,11 +804,7 @@ impl<'n> App<'n> {
         odeir::Json {
             metadata: odeir::Metadata {
                 name: "TODO".to_string(),
-                model_metadata: odeir::ModelMetadata::ODE(odeir::models::ode::Metadata {
-                    start_time: 0.0,
-                    delta_time: 0.0,
-                    end_time: 0.0,
-                }),
+                model_metadata: odeir::ModelMetadata::ODE(self.sidebar_state.get_metadata()),
                 positions,
                 extension_files: self
                     .extensions
@@ -859,6 +855,8 @@ impl<'n> App<'n> {
             arguments,
             positions,
         } = model.core;
+
+        self.sidebar_state.set_metadata(model.metadata);
 
         model.extension_files.into_iter().try_for_each(|file| {
             self.load_extension_from_path(
@@ -998,6 +996,7 @@ impl<'n> App<'n> {
         self.queue = Default::default();
         self.received_messages.clear();
         self.simulation_state = None;
+        self.sidebar_state.clear_state();
     }
 }
 
