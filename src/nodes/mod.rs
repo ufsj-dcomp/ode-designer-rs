@@ -275,7 +275,9 @@ pub trait NodeImpl {
         None
     }
 
+    #[must_use]
     fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
+        let _ = link_event;
         None
     }
 

@@ -560,10 +560,14 @@ impl<'n> App<'n> {
                     return None;
                 }
                 received_msgs.insert(tagged.tag);
-                node.notify(LinkEvent::Push {
+                let mut response = node.notify(LinkEvent::Push {
                     from_pin_id: to_input,
                     payload: data,
-                })
+                });
+                if let Some(messages) = response.as_mut() {
+                    messages.extend(node.broadcast_data());
+                }
+                response
             }
             Message::AddLink(link) => {
                 if self.get_link(&link.input_pin_id).is_some() {

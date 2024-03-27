@@ -87,7 +87,7 @@ impl NodeImpl for Expression {
     }
 
     fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
-        let mut message = None;
+        let mut messages = vec![];
         match link_event {
             LinkEvent::Push {
                 from_pin_id,
@@ -95,7 +95,7 @@ impl NodeImpl for Expression {
             } => {
                 if self.all_pins_linked(from_pin_id) {
                     let input_pin = InputPin::new_signed(self.id, Sign::Positive);
-                    message = Some(vec![Message::RegisterPin(self.id, input_pin.id)]);
+                    messages.push(Message::RegisterPin(self.id, input_pin.id));
                     self.inputs.push(input_pin);
                 }
 
@@ -114,15 +114,15 @@ impl NodeImpl for Expression {
                     let idx = self.inputs.iter().position(|pin| pin.id == from_pin_id);
                     if let Some(idx) = idx {
                         let removed_pin = self.inputs.remove(idx);
-                        message = Some(vec!(Message::UnregisterPin(removed_pin.id)));
+                        messages.push(Message::UnregisterPin(removed_pin.id));
                     }
                 }
                 self.expr_wrapper.members.remove(&from_pin_id)
             }
         };
-
+         
         self.expr_wrapper.resolution.reset();
-        message
+        Some(messages)
     }
 
     fn state_changed(&mut self) -> bool {
