@@ -50,7 +50,7 @@ impl From<NodeFunction> for CustomNodeSpecification {
     }
 }
 
-impl<'n> App<'n> {
+impl App {
     pub fn pick_extension_file(&mut self) -> color_eyre::Result<()> {
         let file_path = FileDialog::new()
             .add_filter("Python", &["py"])

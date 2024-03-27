@@ -5,14 +5,14 @@ use rfd::FileDialog;
 
 use std::{
     fs::read_to_string,
-    process::{Command, Stdio},
+    process::Command,
 };
 
 use super::{app::{AppState, SimulationState}, python::{execute_python_code, PythonError}};
 
 impl App {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
-        if ui.menu_item("Plot CSV file") {
+        if ui.menu_item(" Plot CSV file") {
             let file = FileDialog::new()
                 .add_filter("csv", &["csv"])
                 .set_directory(".")
@@ -50,12 +50,12 @@ impl App {
             });
 
             ui.menu("Export", || {
-                if ui.menu_item("Generate Code") {
+                if ui.menu_item("󰯂 Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
                 }
 
-                if ui.menu_item("Plot to PDF") {
+                if ui.menu_item(" Plot to PDF") {
                     if let Some(file_path) =
                         FileDialog::new().add_filter("pdf", &["pdf"]).save_file()
                     {
@@ -77,7 +77,7 @@ impl App {
                 }
             });
 
-            if ui.menu_item("Run") {
+            if ui.menu_item(" Run") {
                 let py_code = self.generate_code();
 
                 let mut command = Command::new("python3");
