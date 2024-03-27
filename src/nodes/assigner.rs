@@ -162,7 +162,7 @@ impl NodeImpl for Assigner {
             expr_node: Default::default(),
             operates_on: None,
         };
-    
+
         let mut pending_ops = PendingOperations {
             node_id,
             operations: vec![PendingOperation::LinkWith {

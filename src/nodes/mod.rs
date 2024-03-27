@@ -120,7 +120,7 @@ impl Node {
     pub fn broadcast_data(&self) -> Vec<Message> {
         let Some(outputs) = self.outputs() else {
             log::warn!("Tried broadcasting data to node without any output pins");
-            return vec![]
+            return vec![];
         };
         let data = self.send_data();
         outputs
@@ -135,7 +135,6 @@ impl Node {
             .map(Message::SendData)
             .collect()
     }
-
 
     /// Displays the node, but also handles the surrounding functionality like: implementing a
     /// "close" button, relays messages and app state, and node renaming.
@@ -215,7 +214,6 @@ impl Node {
 
         (messages, app_state_change)
     }
-
 }
 
 pub trait SimpleNodeBuilder: NodeImpl {

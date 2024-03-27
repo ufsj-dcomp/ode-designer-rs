@@ -120,7 +120,7 @@ impl NodeImpl for Expression {
                 self.expr_wrapper.members.remove(&from_pin_id)
             }
         };
-         
+
         self.expr_wrapper.resolution.reset();
         Some(messages)
     }

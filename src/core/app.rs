@@ -119,32 +119,35 @@ impl SimulationState {
             flags.set(imgui::TabItemFlags::SET_SELECTED, true);
         }
 
-        imgui::TabItem::new("All").opened(&mut opened).flags(flags).build(ui, || {
-            implot::Plot::new("Plot")
-                .size([content_width, content_height])
-                .x_label(&self.plot.xlabel)
-                .y_label(&self.plot.ylabel)
-                .build(plot_ui, || {
-                    self.plot
-                        .data
-                        .lines
-                        .iter()
-                        .zip(&self.plot.data.labels)
-                        .zip(self.colors.iter().cycle())
-                        .for_each(|((line, label), color)| {
-                            let ImVec4 { x, y, z, w } = *color;
-                            let color_token = implot::push_style_color(
-                                &implot::PlotColorElement::Line,
-                                x,
-                                y,
-                                z,
-                                w,
-                            );
-                            implot::PlotLine::new(label).plot(&self.plot.data.time, line);
-                            color_token.pop();
-                        })
-                });
-        });
+        imgui::TabItem::new("All")
+            .opened(&mut opened)
+            .flags(flags)
+            .build(ui, || {
+                implot::Plot::new("Plot")
+                    .size([content_width, content_height])
+                    .x_label(&self.plot.xlabel)
+                    .y_label(&self.plot.ylabel)
+                    .build(plot_ui, || {
+                        self.plot
+                            .data
+                            .lines
+                            .iter()
+                            .zip(&self.plot.data.labels)
+                            .zip(self.colors.iter().cycle())
+                            .for_each(|((line, label), color)| {
+                                let ImVec4 { x, y, z, w } = *color;
+                                let color_token = implot::push_style_color(
+                                    &implot::PlotColorElement::Line,
+                                    x,
+                                    y,
+                                    z,
+                                    w,
+                                );
+                                implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                                color_token.pop();
+                            })
+                    });
+            });
 
         let populations_per_tab = (self.plot_layout.cols * self.plot_layout.rows) as usize;
         let individual_plot_size = [
@@ -155,35 +158,37 @@ impl SimulationState {
         for (tab_idx, tab_populations) in
             self.plot.data.lines.chunks(populations_per_tab).enumerate()
         {
-            imgui::TabItem::new(format!("Tab {tab_idx}")).opened(&mut opened).build(ui, || {
-                tab_populations
-                    .iter()
-                    .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
-                    .enumerate()
-                    .for_each(|(idx, (line, label))| {
-                        implot::Plot::new(label)
-                            .size(individual_plot_size)
-                            .x_label(&self.plot.xlabel)
-                            .y_label(&self.plot.ylabel)
-                            .build(plot_ui, || {
-                                let ImVec4 { x, y, z, w } = self.colors
-                                    [(tab_idx * populations_per_tab + idx) % self.colors.len()];
-                                let color_token = implot::push_style_color(
-                                    &implot::PlotColorElement::Line,
-                                    x,
-                                    y,
-                                    z,
-                                    w,
-                                );
-                                implot::PlotLine::new(label).plot(&self.plot.data.time, line);
-                                color_token.pop();
-                            });
+            imgui::TabItem::new(format!("Tab {tab_idx}"))
+                .opened(&mut opened)
+                .build(ui, || {
+                    tab_populations
+                        .iter()
+                        .zip(&self.plot.data.labels[tab_idx * populations_per_tab..])
+                        .enumerate()
+                        .for_each(|(idx, (line, label))| {
+                            implot::Plot::new(label)
+                                .size(individual_plot_size)
+                                .x_label(&self.plot.xlabel)
+                                .y_label(&self.plot.ylabel)
+                                .build(plot_ui, || {
+                                    let ImVec4 { x, y, z, w } = self.colors
+                                        [(tab_idx * populations_per_tab + idx) % self.colors.len()];
+                                    let color_token = implot::push_style_color(
+                                        &implot::PlotColorElement::Line,
+                                        x,
+                                        y,
+                                        z,
+                                        w,
+                                    );
+                                    implot::PlotLine::new(label).plot(&self.plot.data.time, line);
+                                    color_token.pop();
+                                });
 
-                        if idx & 1 == 0 {
-                            ui.same_line();
-                        }
-                    });
-            });
+                            if idx & 1 == 0 {
+                                ui.same_line();
+                            }
+                        });
+                });
         }
 
         if opened {
@@ -495,13 +500,16 @@ impl<'n> App<'n> {
                     });
 
                     if let Some(ref mut simulation_state) = &mut self.simulation_state {
-                        let tab_action = simulation_state.draw_tabs(ui, plot_ui, simulation_state.set_focus_to_tab);
+                        let tab_action = simulation_state.draw_tabs(
+                            ui,
+                            plot_ui,
+                            simulation_state.set_focus_to_tab,
+                        );
                         simulation_state.set_focus_to_tab = false;
 
                         if tab_action == TabAction::Close {
                             self.simulation_state = None;
                         }
-
                     }
                 });
             });

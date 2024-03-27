@@ -40,12 +40,8 @@ pub fn inspect_user_code(user_code: &str) -> Result<Vec<NodeFunction>, Inspectio
         .render_str(INSPECTOR_TEMPLATE, &mut ctx)
         .map_err(Template)?;
 
-    let inspection_res = execute_python_code(
-        Command::new("python3")
-        .arg("-c")
-        .arg(py_code)
-    )
-    .map_err(Python)?;
+    let inspection_res =
+        execute_python_code(Command::new("python3").arg("-c").arg(py_code)).map_err(Python)?;
 
     serde_json::from_str(&inspection_res).map_err(Deserialization)
 }

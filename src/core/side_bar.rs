@@ -51,11 +51,14 @@ impl SideBarState {
         {
             let _width = ui.push_item_width(WIDTH);
             ui.text("Start Time");
-            ui.input_scalar("##StartTime", &mut self.sim_times.start).build();
+            ui.input_scalar("##StartTime", &mut self.sim_times.start)
+                .build();
             ui.text("Delta Time");
-            ui.input_scalar("##DeltaTime", &mut self.sim_times.delta).build();
+            ui.input_scalar("##DeltaTime", &mut self.sim_times.delta)
+                .build();
             ui.text("End Time");
-            ui.input_scalar("##EndTime", &mut self.sim_times.end).build();
+            ui.input_scalar("##EndTime", &mut self.sim_times.end)
+                .build();
         }
 
         table_group.end();
@@ -72,7 +75,7 @@ impl SideBarState {
     }
 
     pub fn set_metadata(&mut self, metadata: ode::Metadata) {
-        self.sim_times = metadata.into();        
+        self.sim_times = metadata.into();
     }
 
     pub fn time_flags(&self) -> [String; 6] {
@@ -82,7 +85,7 @@ impl SideBarState {
             "--tf".to_owned(),
             self.sim_times.end.to_string(),
             "--dt".to_owned(),
-            self.sim_times.delta.to_string()
+            self.sim_times.delta.to_string(),
         ]
     }
 

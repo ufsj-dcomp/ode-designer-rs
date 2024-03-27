@@ -8,7 +8,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-use super::{app::{AppState, SimulationState}, python::{execute_python_code, PythonError}};
+use super::{
+    app::{AppState, SimulationState},
+    python::{execute_python_code, PythonError},
+};
 
 impl<'n> App<'n> {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {

@@ -1,4 +1,7 @@
-use std::{io::Read, process::{Command, Stdio}};
+use std::{
+    io::Read,
+    process::{Command, Stdio},
+};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

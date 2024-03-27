@@ -8,8 +8,9 @@ use crate::{
     core::App,
     exprtree::{ExpressionNode, ExpressionTree},
     extensions::CustomNodeSpecification,
+    message::Message,
     pins::{InputPin, OutputPin, Pin},
-    utils::ModelFragment, message::Message,
+    utils::ModelFragment,
 };
 
 use super::{
