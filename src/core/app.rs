@@ -371,6 +371,7 @@ impl AppState {
 }
 
 impl<'n> App<'n> {
+    /// Draws the nodes and other elements
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -849,7 +850,7 @@ impl<'n> App<'n> {
         serde_json::to_writer_pretty(file, &json).ok()
     }
 
-    fn try_read_model(&mut self, model: OdeModel, path: PathBuf) -> anyhow::Result<()> {
+    fn try_read_model(&mut self, model: OdeModel, path: PathBuf) -> color_eyre::Result<()> {
         let odeir::CoreModel {
             equations,
             arguments,
@@ -968,7 +969,7 @@ impl<'n> App<'n> {
         Ok(())
     }
 
-    pub fn load_state(&mut self) -> anyhow::Result<()> {
+    pub fn load_state(&mut self) -> color_eyre::Result<()> {
         let file_path = FileDialog::new()
             .add_filter("json", &["json"])
             .pick_file()
@@ -1071,7 +1072,7 @@ mod tests {
 
                 output_pin.link_to(input_pin_id);
 
-                expr.on_link_event(link_event);
+                expr.notify(link_event);
             }
 
             expr.into()
@@ -1099,7 +1100,7 @@ mod tests {
 
             assigner.input.link_to(output_pin.id);
 
-            assigner.on_link_event(LinkEvent::Push {
+            assigner.notify(LinkEvent::Push {
                 from_pin_id: assigner.input.id,
                 payload: argument.send_data(),
             });

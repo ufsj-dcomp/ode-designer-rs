@@ -6,15 +6,15 @@ use odeir::models::CompositionStyle;
 
 use crate::{
     core::App,
-    exprtree::{ExpressionNode, ExpressionTree, Leaf},
+    exprtree::{ExpressionNode, ExpressionTree},
     extensions::CustomNodeSpecification,
     pins::{InputPin, OutputPin, Pin},
-    utils::ModelFragment,
+    utils::ModelFragment, message::Message,
 };
 
 use super::{
     composition_utils::{build_composition, build_from_composition},
-    ExprWrapper, LinkEvent, NodeImpl, ResolutionStatus, Resolvable,
+    ExprWrapper, LinkEvent, NodeImpl,
 };
 
 #[derive(Debug)]
@@ -100,7 +100,7 @@ impl NodeImpl for CustomFunctionNode {
         true
     }
 
-    fn on_link_event(&mut self, link_event: LinkEvent) -> bool {
+    fn notify(&mut self, link_event: LinkEvent) -> Option<Vec<Message>> {
         match link_event {
             LinkEvent::Push {
                 from_pin_id,
@@ -122,7 +122,7 @@ impl NodeImpl for CustomFunctionNode {
         }
 
         self.expr_wrapper.resolution.reset();
-        true
+        None
     }
 
     fn draw(&mut self, ui: &imgui::Ui) -> bool {
