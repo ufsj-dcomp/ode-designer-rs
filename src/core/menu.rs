@@ -31,6 +31,15 @@ impl<'n> App<'n> {
         }
     }
 
+    pub fn draw_input_label(&mut self, ui: &Ui) {
+        ui.input_text("X Label", &mut self.text_fields.x_label)
+            .hint("time (days)")
+            .build();
+        ui.input_text("Y Label", &mut self.text_fields.y_label)
+            .hint("conc/ml")
+            .build();
+    }
+
     pub fn draw_menu(&mut self, ui: &Ui) {
         ui.menu_bar(|| {
             ui.menu("File", || {
@@ -53,6 +62,8 @@ impl<'n> App<'n> {
             });
 
             ui.menu("Export", || {
+                self.draw_input_label(ui);
+
                 if ui.menu_item("Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
@@ -70,7 +81,11 @@ impl<'n> App<'n> {
                             .arg(&py_code)
                             .arg("--output")
                             .arg(file_path)
-                            .args(self.sidebar_state.time_flags());
+                            .args(self.sidebar_state.time_flags())
+                            .arg("--xlabel")
+                            .arg(self.text_fields.x_label.to_string())
+                            .arg("--ylabel")
+                            .arg(self.text_fields.y_label.to_string());
 
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
@@ -80,23 +95,36 @@ impl<'n> App<'n> {
                 }
             });
 
-            if ui.menu_item("Run") {
-                let py_code = self.generate_code();
+            ui.menu("Run", || {
+                self.draw_input_label(ui);
 
-                let mut command = Command::new("python3");
-                command
-                    .arg("-c")
-                    .arg(&py_code)
-                    .arg("--csv")
-                    .args(self.sidebar_state.time_flags());
+                if ui.menu_item("Run") {
+                    let py_code = self.generate_code();
 
-                match execute_python_code(&mut command) {
-                    Ok(output) => {
-                        self.simulation_state = Some(SimulationState::from_csv(output));
+                    let mut command = Command::new("python3");
+                    command
+                        .arg("-c")
+                        .arg(&py_code)
+                        .arg("--csv")
+                        .args(self.sidebar_state.time_flags());
+
+                    match execute_python_code(&mut command) {
+                        Ok(output) => {
+                            self.simulation_state = Some(SimulationState::from_csv(output));
+                            if let Some(mut simulation_state) = self.simulation_state.clone() {
+                                if !self.text_fields.x_label.is_empty() {
+                                    simulation_state.plot.xlabel =
+                                        self.text_fields.x_label.to_string();
+                                    simulation_state.plot.ylabel =
+                                        self.text_fields.y_label.to_string();
+                                }
+                                self.simulation_state = Some(simulation_state);
+                            }
+                        }
+                        Err(err) => eprintln!("{err}"),
                     }
-                    Err(err) => eprintln!("{err}"),
                 }
-            }
+            });
 
             if ui.menu_item("Manage Extensions") {
                 self.state = if let Some(AppState::ManagingExtensions) = self.state {

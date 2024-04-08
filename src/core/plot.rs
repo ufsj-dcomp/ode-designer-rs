@@ -1,13 +1,13 @@
 use std::io::Read;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct CSVData {
     pub labels: Vec<String>,
     pub lines: Vec<Vec<f64>>,
     pub time: Vec<f64>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PlotInfo {
     pub title: String,
     pub xlabel: String,
@@ -15,7 +15,7 @@ pub struct PlotInfo {
     pub data: CSVData,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PlotLayout {
     pub rows: u32,
     pub cols: u32,

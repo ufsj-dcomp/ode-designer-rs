@@ -70,7 +70,7 @@ const COLORS: &[ImVec4] = &[
     ImVec4::new(0.1, 0.4, 0.1, 1.0), //verde escuro
 ];
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SimulationState {
     pub plot: PlotInfo,
     pub plot_layout: PlotLayout,
@@ -83,6 +83,11 @@ pub struct SimulationState {
 pub enum TabAction {
     Open,
     Close,
+}
+#[derive(Default)]
+pub struct TextFields {
+    pub x_label: String,
+    pub y_label: String,
 }
 
 impl SimulationState {
@@ -212,6 +217,7 @@ pub struct App<'n> {
     pub(crate) simulation_state: Option<SimulationState>,
     pub sidebar_state: SideBarState,
     pub extensions: Vec<Extension>,
+    pub text_fields: TextFields,
 }
 
 pub enum AppState {
