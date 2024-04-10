@@ -47,22 +47,30 @@ pub enum LinkEvent {
     Pop(InputPinId),
 }
 
-pub struct NodeTypeRepresentation<'n> {
-    pub name: Cow<'n, str>,
+pub struct NodeTypeRepresentation {
+    pub name: String,
     pub variant: NodeVariant,
     pub custom_node_spec: Option<Rc<CustomNodeSpecification>>,
 }
 
-impl<'n> NodeTypeRepresentation<'n> {
-    pub fn new(
-        name: &'n str,
-        variant: NodeVariant,
-        custom_node_spec: Option<Rc<CustomNodeSpecification>>,
-    ) -> Self {
+impl NodeTypeRepresentation {
+    pub fn new(name: &str, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
         Self {
-            name: Cow::from(name),
+            name: format!("{} {}", variant.icon(), name),
             variant,
             custom_node_spec,
+        }
+    }
+}
+
+impl NodeVariant {
+    /// Returns the icon for this node variant.
+    pub fn icon(&self) -> &str {
+        match self {
+            NodeVariant::Term => "󰫧",
+            NodeVariant::Expression => "",
+            NodeVariant::Assigner => "󰉲",
+            NodeVariant::Custom => "󰯂"
         }
     }
 }

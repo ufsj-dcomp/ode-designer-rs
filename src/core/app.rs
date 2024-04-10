@@ -200,8 +200,8 @@ impl SimulationState {
 }
 
 #[derive(Default)]
-pub struct App<'n> {
-    pub node_types: Vec<NodeTypeRepresentation<'n>>,
+pub struct App {
+    pub node_types: Vec<NodeTypeRepresentation>,
     nodes: HashMap<NodeId, Node>,
     input_pins: HashMap<InputPinId, NodeId>,
     pub output_pins: HashMap<OutputPinId, NodeId>,
@@ -375,8 +375,8 @@ impl AppState {
     }
 }
 
-impl<'n> App<'n> {
-    /// Draws the nodes and other elements
+/// Draws the nodes and other elements
+impl App {
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -1124,7 +1124,7 @@ mod tests {
     struct AppBuilder;
 
     impl AppBuilder {
-        fn with_nodes<'n, const N: usize>(nodes: [Node; N]) -> App<'n> {
+        fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
             let mut app = App::default();
             nodes.into_iter().for_each(|node| {
                 app.add_node(node);
@@ -1136,7 +1136,7 @@ mod tests {
 
     const ABK_JSON: &str = include_str!("../tests/fixtures/abk.json");
 
-    fn app_with_nodes_abk<'n>() -> App<'n> {
+    fn app_with_nodes_abk() -> App {
         let mut a = {
             let node_id = NodeId::generate();
             let mut node = Term::new(node_id, "A".to_owned());

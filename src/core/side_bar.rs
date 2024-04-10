@@ -29,7 +29,7 @@ impl SideBarState {
         let table_group = ui.begin_group();
         let mut selected_node_type = None;
 
-        const WIDTH: f32 = 13.0 * 7.0;
+        const WIDTH: f32 = 13.0 * 10.0;
 
         ui.set_next_item_width(WIDTH);
 
@@ -37,6 +37,7 @@ impl SideBarState {
             .hint("Node name")
             .build();
 
+        // let _tk = ui.push_style_var(imgui::StyleVar::ButtonTextAlign([0.0; 2]));
         for node_type in node_types {
             if ui.button_with_size(&node_type.name, [WIDTH, 0.0]) {
                 selected_node_type = Some(node_type)

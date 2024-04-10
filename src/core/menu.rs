@@ -5,7 +5,7 @@ use rfd::FileDialog;
 
 use std::{
     fs::read_to_string,
-    process::{Command, Stdio},
+    process::Command,
 };
 
 use super::{
@@ -13,9 +13,9 @@ use super::{
     python::{execute_python_code, PythonError},
 };
 
-impl<'n> App<'n> {
+impl App {
     fn draw_menu_load_csv(&mut self, ui: &Ui) {
-        if ui.menu_item("Plot CSV file") {
+        if ui.menu_item(" Plot CSV file") {
             let file = FileDialog::new()
                 .add_filter("csv", &["csv"])
                 .set_directory(".")
@@ -34,18 +34,18 @@ impl<'n> App<'n> {
     pub fn draw_menu(&mut self, ui: &Ui) {
         ui.menu_bar(|| {
             ui.menu("File", || {
-                if ui.menu_item_config("New").shortcut("Ctrl + N").build() {
+                if ui.menu_item_config(" New").shortcut("Ctrl + N").build() {
                     self.clear_state();
                 }
 
-                if ui.menu_item_config("Load").shortcut("Ctrl + O").build() {
+                if ui.menu_item_config(" Load").shortcut("Ctrl + O").build() {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
                     }
                 }
 
-                if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
+                if ui.menu_item_config(" Save").shortcut("Ctrl + S").build() {
                     self.save_state();
                 }
 
@@ -53,12 +53,12 @@ impl<'n> App<'n> {
             });
 
             ui.menu("Export", || {
-                if ui.menu_item("Generate Code") {
+                if ui.menu_item("󰯂 Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
                 }
 
-                if ui.menu_item("Plot to PDF") {
+                if ui.menu_item(" Plot to PDF") {
                     if let Some(file_path) =
                         FileDialog::new().add_filter("pdf", &["pdf"]).save_file()
                     {
@@ -80,7 +80,7 @@ impl<'n> App<'n> {
                 }
             });
 
-            if ui.menu_item("Run") {
+            if ui.menu_item(" Run") {
                 let py_code = self.generate_code();
 
                 let mut command = Command::new("python3");
