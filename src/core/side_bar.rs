@@ -44,10 +44,11 @@ impl SideBarState {
             }
         }
 
-        const MAGIC_SPACING: f32 = 380.0;
+        const MAGIC_BUTTON_HEIGHT: f32 = 31.0;
+        const MAGIC_SPACING: f32 = 300.0;
 
         let [_, height] = ui.window_size();
-        ui.dummy([0.0, height - MAGIC_SPACING]);
+        ui.dummy([0.0, height - MAGIC_SPACING - node_types.len() as f32 * MAGIC_BUTTON_HEIGHT]);
 
         {
             let _width = ui.push_item_width(WIDTH);
