@@ -81,11 +81,18 @@ impl<'n> App<'n> {
                             .arg(&py_code)
                             .arg("--output")
                             .arg(file_path)
-                            .args(self.sidebar_state.time_flags())
-                            .arg("--xlabel")
-                            .arg(self.text_fields.x_label.to_string())
-                            .arg("--ylabel")
-                            .arg(self.text_fields.y_label.to_string());
+                            .args(self.sidebar_state.time_flags());
+
+                        if !self.text_fields.x_label.is_empty() {
+                            command
+                                .arg("--xlabel")
+                                .arg(self.text_fields.x_label.to_string());
+                        }
+                        if !self.text_fields.y_label.is_empty() {
+                            command
+                                .arg("--ylabel")
+                                .arg(self.text_fields.y_label.to_string());
+                        }
 
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
@@ -115,6 +122,8 @@ impl<'n> App<'n> {
                                 if !self.text_fields.x_label.is_empty() {
                                     simulation_state.plot.xlabel =
                                         self.text_fields.x_label.to_string();
+                                }
+                                if !self.text_fields.y_label.is_empty() {
                                     simulation_state.plot.ylabel =
                                         self.text_fields.y_label.to_string();
                                 }
