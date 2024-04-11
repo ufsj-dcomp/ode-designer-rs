@@ -1,6 +1,7 @@
 use imgui::Ui;
+use odeir::models::{OdeEquation, OdeSystem};
 
-use crate::App;
+use crate::{nodes::expression, App};
 use rfd::FileDialog;
 
 use std::{
@@ -51,7 +52,7 @@ impl<'n> App<'n> {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
-                    }
+                    }                    
                 }
 
                 if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
@@ -67,6 +68,10 @@ impl<'n> App<'n> {
                 if ui.menu_item("Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
+
+                    let ode_system = self.generate_equations();
+                    println!("ODEs: {:#?}", ode_system);
+
                 }
 
                 if ui.menu_item("Plot to PDF") {
