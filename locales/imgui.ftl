@@ -14,3 +14,17 @@
 -run-btn = { $label }###run
 
 -extensions-btn = { $label }###extensions
+
+-create-node-popup = { $label }###create-node
+-create-node-add-btn = { $label }###create-node-add
+
+-extensions-window = { $label }###extensions-window
+-extensions-origin-column = { $label }###origin-column
+-extensions-nodes-column = { $label }###nodes-column
+-extensions-load-btn = { $label }###extensions-load
+
+-model-tab = { $label }###model-tab
+-all-plots-tab = { $label }###all-plots-tab
+
+-assigner-change-btn = { $label }###assigner-change
+-assigner-choose-btn = { $label }###assigner-choose

@@ -44,8 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _link_detach = nodeseditor.push(AttributeFlag::EnableLinkDetachWithDragClick);
     // let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
 
-    let mut app = App::new();
     let mut locale = Locale::default();
+    let mut app = App::new(&locale);
 
     let plot_ctx = implot::Context::create();
 

@@ -128,7 +128,7 @@ impl SimulationState {
             .opened(&mut opened)
             .flags(flags)
             .build(ui, || {
-                implot::Plot::new("Plot")
+                implot::Plot::new(&self.plot.title)
                     .size([content_width, content_height])
                     .x_label(&self.plot.xlabel)
                     .y_label(&self.plot.ylabel)
@@ -163,6 +163,9 @@ impl SimulationState {
         for (tab_idx, tab_populations) in
             self.plot.data.lines.chunks(populations_per_tab).enumerate()
         {
+            // Safety: this variable is local to this function, which is not run
+            // in parallel or anything of the sort (since self is mutable).
+            // Therefore, it's safe to access this static variable and mutate it
             unsafe { ARGS.insert("idx", tab_idx.into()); }
             imgui::TabItem::new(locale.fmt("tab-idx", unsafe { &ARGS }))
                 .opened(&mut opened)
@@ -239,7 +242,7 @@ enum StateAction {
 }
 
 impl AppState {
-    fn draw(&mut self, ui: &Ui, app: &mut App) -> StateAction {
+    fn draw(&mut self, ui: &Ui, app: &mut App, locale: &Locale) -> StateAction {
         // Cancel action
         if ui.is_key_pressed(imgui::Key::Escape) {
             return StateAction::Clear;
@@ -254,11 +257,11 @@ impl AppState {
                 index,
                 add_at_screen_space_pos,
             } => {
-                if let Some(_popup) = ui.begin_popup("Create Node") {
-                    ui.text("Name");
+                if let Some(_popup) = ui.begin_popup(locale.get("create-node")) {
+                    ui.text(locale.get("create-node-name"));
                     ui.same_line();
                     ui.input_text("##Name", name).build();
-                    ui.text("Node type");
+                    ui.text(locale.get("create-node-type"));
                     ui.same_line();
 
                     ui.combo(
@@ -272,7 +275,7 @@ impl AppState {
 
                     let enter_pressed = ui.is_key_pressed(Key::Enter);
 
-                    if ui.button("Add") || enter_pressed {
+                    if ui.button(locale.get("create-node-add")) || enter_pressed {
                         let node_type = app
                             .node_types
                             .get(*index)
@@ -298,7 +301,7 @@ impl AppState {
             } => {
                 ui.open_popup("PopulationChooser");
 
-                let title = "Choose your population";
+                let title = locale.get("choose-pop-title");
                 let title_size = ui.calc_text_size(title);
                 let min_width = title_size[0];
                 let min_height = title_size[1] * 12.0;
@@ -343,13 +346,13 @@ impl AppState {
             }
             AppState::ManagingExtensions => {
                 let mut user_kept_open = true;
-                ui.window("Extensions")
+                ui.window(locale.get("extensions-title"))
                     .collapsible(false)
                     .opened(&mut user_kept_open)
                     .build(|| {
-                        if let Some(_t) = ui.begin_table("Extensions", 2) {
-                            ui.table_setup_column("Origin");
-                            ui.table_setup_column("Implements nodes");
+                        if let Some(_t) = ui.begin_table("##Extensions Table", 2) {
+                            ui.table_setup_column(locale.get("extensions-origin"));
+                            ui.table_setup_column(locale.get("extensions-nodes"));
                             ui.table_headers_row();
 
                             for ext in &app.extensions {
@@ -364,7 +367,7 @@ impl AppState {
                             }
                         }
 
-                        if ui.button("Load Extension") {
+                        if ui.button(locale.get("extensions-load")) {
                             if let Err(err) = app.pick_extension_file() {
                                 eprintln!("Error opening/inspecting user extension file: {err}");
                             }
@@ -383,7 +386,7 @@ impl AppState {
 
 /// Draws the nodes and other elements
 impl App {
-    pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
+    pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope, locale: &Locale) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
 
@@ -393,7 +396,7 @@ impl App {
             let _col2 = imnodes::ColorStyle::TitleBarSelected.push_color(node.selected_color());
             let _col3 = imnodes::ColorStyle::TitleBarHovered.push_color(node.hovered_color());
             editor.add_node(*id, |mut ui_node| {
-                let (msgs, app_state_change) = node.process_node(ui, &mut ui_node);
+                let (msgs, app_state_change) = node.process_node(ui, &mut ui_node, locale);
                 if let Some(msgs) = msgs {
                     for msg in msgs {
                         self.queue.push(msg)
@@ -412,7 +415,7 @@ impl App {
         if editor.is_hovered() && ui.is_mouse_clicked(imgui::MouseButton::Right) {
             let mouse_screen_space_pos = ui.io().mouse_pos;
 
-            ui.open_popup("Create Node");
+            ui.open_popup(locale.get("create-node"));
             self.state = Some(AppState::AddingNode {
                 name: String::new(),
                 index: 0,
@@ -421,7 +424,7 @@ impl App {
         }
         // Extra State handling
         if let Some(mut state) = self.state.take() {
-            match state.draw(ui, self) {
+            match state.draw(ui, self, locale) {
                 StateAction::Clear => self.state = None,
                 StateAction::Keep => self.state = Some(state),
             }
@@ -433,6 +436,7 @@ impl App {
         ui: &Ui,
         context: &mut imnodes::EditorContext,
         _plot_ui: &mut PlotUi,
+        locale: &Locale,
     ) {
         let _flags =
         // No borders etc for top-level window
@@ -449,7 +453,7 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
 
-        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor));
+        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor, locale));
 
         if let Some(link) = scope.links_created() {
             self.add_link(link.start_pin, link.end_pin);
@@ -495,14 +499,14 @@ impl App {
                 self.shortcut(ui);
                 self.draw_menu(ui, locale);
 
-                let tab_bar = imgui::TabBar::new("Tabs");
+                let tab_bar = imgui::TabBar::new("##Tabs");
                 tab_bar.build(ui, || {
-                    let tab_model = TabItem::new("Model");
+                    let tab_model = TabItem::new(locale.get("tab-model"));
                     tab_model.build(ui, || {
-                        if let Some(node) = self.sidebar_state.draw(ui, &self.node_types) {
+                        if let Some(node) = self.sidebar_state.draw(ui, &self.node_types, locale) {
                             self.add_node(node);
                         }
-                        self.draw_main_tab(ui, context, plot_ui);
+                        self.draw_main_tab(ui, context, plot_ui, locale);
                     });
 
                     if let Some(ref mut simulation_state) = &mut self.simulation_state {
@@ -522,14 +526,14 @@ impl App {
             });
     }
 
-    pub fn new() -> Self {
+    pub fn new(locale: &Locale) -> Self {
         Self {
             node_types: Node::VARIANTS
                 .iter()
                 .copied()
                 .zip(NodeVariant::VARIANTS)
                 .filter(|(_, variant)| variant != &&NodeVariant::Custom)
-                .map(|(name, variant)| NodeTypeRepresentation::new(name, *variant, None))
+                .map(|(name, variant)| NodeTypeRepresentation::new(locale.get(name), *variant, None))
                 .collect(),
             ..Self::default()
         }
@@ -1031,13 +1035,9 @@ mod tests {
 
     use super::App;
     use crate::{
-        core::{initialize_id_generator, GeneratesId},
-        exprtree::{ExpressionNode, Operation, Sign},
-        message::Message,
-        nodes::{
+        core::{initialize_id_generator, GeneratesId}, exprtree::{ExpressionNode, Operation, Sign}, locale::Locale, message::Message, nodes::{
             Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
-        },
-        pins::{OutputPin, Pin},
+        }, pins::{OutputPin, Pin}
     };
 
     struct ExpressionNodeBuilder<'pin> {
@@ -1272,7 +1272,8 @@ mod tests {
 
         init_id_gen();
 
-        let mut app = App::new();
+        let locale = Locale::default();
+        let mut app = App::new(&locale);
 
         // When - The user requests to load a JSON file
 
