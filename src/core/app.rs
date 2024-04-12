@@ -6,10 +6,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 
+use fluent_bundle::FluentValue;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
+use once_cell::sync::Lazy;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
 
@@ -17,6 +19,7 @@ use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
 use crate::extensions::{CustomNodeSpecification, Extension};
+use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
     LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations,
@@ -86,7 +89,7 @@ pub enum TabAction {
 }
 
 impl SimulationState {
-    pub fn from_csv(csv_content: String) -> Self {
+    pub fn from_csv(csv_content: String, locale: &Locale) -> Self {
         let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
 
         let pane_count = csv_data.population_count().div_ceil(4);
@@ -95,8 +98,8 @@ impl SimulationState {
             plot: PlotInfo {
                 data: csv_data,
                 title: String::from("TODO!"),
-                xlabel: String::from("time (days)"),
-                ylabel: String::from("conc/ml"),
+                xlabel: locale.get("default-x-label").to_owned(),
+                ylabel: locale.get("default-y-label").to_owned(),
             },
             plot_layout: PlotLayout::new(2, 2, pane_count as u32),
             colors: COLORS.to_owned(),
@@ -106,7 +109,7 @@ impl SimulationState {
         }
     }
 
-    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi, set_focus: bool) -> TabAction {
+    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi, set_focus: bool, locale: &mut Locale) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
@@ -119,7 +122,9 @@ impl SimulationState {
             flags.set(imgui::TabItemFlags::SET_SELECTED, true);
         }
 
-        imgui::TabItem::new("All")
+        static mut ARGS: Lazy<HashMap<&'static str, FluentValue>> = Lazy::new(HashMap::new);
+
+        imgui::TabItem::new(locale.get("tab-all-plots"))
             .opened(&mut opened)
             .flags(flags)
             .build(ui, || {
@@ -158,7 +163,8 @@ impl SimulationState {
         for (tab_idx, tab_populations) in
             self.plot.data.lines.chunks(populations_per_tab).enumerate()
         {
-            imgui::TabItem::new(format!("Tab {tab_idx}"))
+            unsafe { ARGS.insert("idx", tab_idx.into()); }
+            imgui::TabItem::new(locale.fmt("tab-idx", unsafe { &ARGS }))
                 .opened(&mut opened)
                 .build(ui, || {
                     tab_populations
@@ -469,7 +475,7 @@ impl App {
         }
     }
 
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi) {
+    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi, locale: &mut Locale) {
         let flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
@@ -487,7 +493,7 @@ impl App {
             .flags(flags)
             .build(|| {
                 self.shortcut(ui);
-                self.draw_menu(ui);
+                self.draw_menu(ui, locale);
 
                 let tab_bar = imgui::TabBar::new("Tabs");
                 tab_bar.build(ui, || {
@@ -504,6 +510,7 @@ impl App {
                             ui,
                             plot_ui,
                             simulation_state.set_focus_to_tab,
+                            locale,
                         );
                         simulation_state.set_focus_to_tab = false;
 
