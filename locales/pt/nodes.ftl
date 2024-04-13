@@ -1,6 +1,7 @@
-Term = Termo
-Expression = Expressão
-Assigner = Equação
+Term = { -term-icon } Termo
+Expression = { -expression-icon } Expressão
+Assigner = { -assigner-icon } Equação
+Custom = { -custom-icon } { $name }
 
 nothing-yet = Ainda nada!
 term-initial-value = Valor Inicial: 

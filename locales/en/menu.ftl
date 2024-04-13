@@ -10,3 +10,5 @@ file-plot = { -file-plot-btn(label: "Plot CSV") }
 
 export-code = { -export-code-btn(label: "Generate Code") }
 export-pdf = { -export-pdf-btn(label: "Plot to PDF") }
+
+language = { -language-btn(label: "Language") }

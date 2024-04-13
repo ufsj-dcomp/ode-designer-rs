@@ -49,23 +49,11 @@ pub struct NodeTypeRepresentation {
 }
 
 impl NodeTypeRepresentation {
-    pub fn new(name: &str, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
+    pub fn new<S: ToString>(name: S, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
         Self {
-            name: format!("{} {}", variant.icon(), name),
+            name: name.to_string(),
             variant,
             custom_node_spec,
-        }
-    }
-}
-
-impl NodeVariant {
-    /// Returns the icon for this node variant.
-    pub fn icon(&self) -> &str {
-        match self {
-            NodeVariant::Term => "󰫧",
-            NodeVariant::Expression => "",
-            NodeVariant::Assigner => "󰉲",
-            NodeVariant::Custom => "󰯂"
         }
     }
 }

@@ -14,6 +14,7 @@ use odeir::models::ode::OdeModel;
 use once_cell::sync::Lazy;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
+use unic_langid::LanguageIdentifier;
 
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
@@ -95,12 +96,7 @@ impl SimulationState {
         let pane_count = csv_data.population_count().div_ceil(4);
 
         Self {
-            plot: PlotInfo {
-                data: csv_data,
-                title: String::from("TODO!"),
-                xlabel: locale.get("default-x-label").to_owned(),
-                ylabel: locale.get("default-y-label").to_owned(),
-            },
+            plot: PlotInfo::new(csv_data, locale),
             plot_layout: PlotLayout::new(2, 2, pane_count as u32),
             colors: COLORS.to_owned(),
             flag_simulation: false,
@@ -1021,6 +1017,25 @@ impl App {
         self.received_messages.clear();
         self.simulation_state = None;
         self.sidebar_state.clear_state();
+    }
+
+    pub fn update_locale(&mut self, locale: &mut Locale, lang: LanguageIdentifier) {
+        locale.set_lang(lang);
+        
+        // The non-custom nodes must have their names updated. They're not
+        // translated on the fly, but rather are stored in the Vec already
+        // translated.
+        Node::VARIANTS
+            .iter()
+            .zip(self.node_types.iter_mut())
+            .filter(|(_, node_type)| node_type.custom_node_spec.is_none())
+            .for_each(|(node_name, node_type)| {
+                node_type.name = locale.get(node_name).to_owned();
+            });
+
+        if let Some(ref mut sim_state) = self.simulation_state {
+            sim_state.plot.update_locale(&locale);
+        }
     }
 }
 

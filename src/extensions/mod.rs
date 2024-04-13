@@ -94,7 +94,7 @@ impl App {
             .inspect(|node_spec| {
                 self.node_types.push(
                     NodeTypeRepresentation::new(
-                        &node_spec.function.name,
+                        format!("󰯂 {}", node_spec.function.name),
                         NodeVariant::Custom,
                         Some(Rc::clone(node_spec)),
                     )

@@ -1,6 +1,6 @@
 use imgui::Ui;
 
-use crate::{locale::Locale, App};
+use crate::{locale::{Locale, LANGUAGES}, App};
 use rfd::FileDialog;
 
 use std::{
@@ -104,6 +104,19 @@ impl App {
                 } else {
                     Some(AppState::ManagingExtensions)
                 }
+            }
+
+            let current_loc = locale.current();
+            let mut selected_loc = current_loc;
+
+            ui.menu(locale.get("language"), || {
+                for (loc, name) in LANGUAGES {
+                    ui.radio_button(name, &mut selected_loc, loc);
+                }
+            });
+
+            if selected_loc != current_loc {
+                self.update_locale(locale, selected_loc.clone());
             }
         });
     }

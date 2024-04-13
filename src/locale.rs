@@ -36,6 +36,11 @@ const WORDS: &[&str] = &konst::iter::collect_const!(&str =>
         map(|(name, _)| konst::string::trim(name)),
 );
 
+pub const LANGUAGES: &[(LanguageIdentifier, &str)] = &[
+    (langid!("en"), "English"),
+    (langid!("pt"), "Português"),
+];
+
 pub struct Locale {
     lang: LanguageIdentifier,
     translations: BTreeMap<&'static str, String>,
@@ -113,6 +118,10 @@ impl Locale {
         }
 
         self.formatted.get(&key).unwrap()
+    }
+
+    pub fn current(&self) -> &LanguageIdentifier {
+        &self.lang
     }
 }
 

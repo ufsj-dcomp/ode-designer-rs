@@ -28,3 +28,10 @@
 
 -assigner-change-btn = { $label }###assigner-change
 -assigner-choose-btn = { $label }###assigner-choose
+
+-language-btn = { $label }##language
+
+-term-icon = 󰫧
+-expression-icon = 
+-assigner-icon = 󰉲
+-custom-icon = 󰯂

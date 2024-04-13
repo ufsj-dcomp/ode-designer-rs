@@ -1,6 +1,7 @@
-Term = Term
-Expression = Expression
-Assigner = Assigner
+Term = { -term-icon } Term
+Expression = { -expression-icon } Expression
+Assigner = { -assigner-icon } Assigner
+Custom = { -custom-icon } { $name }
 
 nothing-yet = Nothing yet!
 term-initial-value = Initial Value: 
