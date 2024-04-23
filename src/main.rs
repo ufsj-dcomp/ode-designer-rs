@@ -26,7 +26,7 @@ pub mod locale;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
 
-    let mut system = System::make_window("ODE Editor", (1024.0, 768.0));
+    let mut system = System::make_window("ODE-Designer", (1024.0, 768.0));
 
     style::set_eel_style(system.imgui.style_mut());
 
