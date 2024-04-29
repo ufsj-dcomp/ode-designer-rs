@@ -1,5 +1,4 @@
 use imgui::Ui;
-use odeir::models::{OdeEquation, OdeSystem};
 
 use crate::{nodes::expression, App};
 use rfd::FileDialog;
@@ -68,10 +67,6 @@ impl<'n> App<'n> {
                 if ui.menu_item("Generate Code") {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
-
-                    let ode_system = self.generate_equations();
-                    println!("ODEs: {:#?}", ode_system);
-
                 }
 
                 if ui.menu_item("Plot to PDF") {
@@ -137,8 +132,19 @@ impl<'n> App<'n> {
                         }
                         Err(err) => eprintln!("{err}"),
                     }
-                }
+                }                
             });
+
+            if ui.menu_item("Parameter estimation"){
+                self.state = if let Some(AppState::ManagingExtensions) = self.state {
+                    None
+                } else {
+                    Some(AppState::ManagingExtensions)
+                }
+            }
+
+            /*/*let ode_system = self.generate_equations();
+                    println!("ODEs: {:#?}", ode_system); */ */
 
             if ui.menu_item("Manage Extensions") {
                 self.state = if let Some(AppState::ManagingExtensions) = self.state {

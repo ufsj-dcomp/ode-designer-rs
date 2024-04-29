@@ -10,7 +10,6 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
-use odeir::models::OdeSystem;
 use odeir::Argument;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
@@ -851,7 +850,7 @@ impl<'n> App<'n> {
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)        
     }
 
-    pub fn generate_equations(&self) -> OdeSystem {
+    /*pub fn generate_equations(&self) -> OdeSystem {
         let model: odeir::Model = self.create_json().into();
 
         let odeir::Model::ODE(ode_model) = model else {
@@ -873,7 +872,7 @@ impl<'n> App<'n> {
             }
         }
         ode_system
-    }
+    }*/
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
         let file_path = FileDialog::new().add_filter(ext, &[ext]).save_file()?;
