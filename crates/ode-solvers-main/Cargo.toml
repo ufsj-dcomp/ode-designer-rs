@@ -1,0 +1,22 @@
+[package]
+name = "ode_solvers"
+version = "0.4.0"
+authors = ["Sylvain Renevey <syl.renevey@gmail.com>"]
+description = "Numerical methods to solve ordinary differential equations (ODEs) in Rust."
+edition = "2021"
+
+documentation = "https://docs.rs/ode_solvers/"
+homepage = "https://srenevey.github.io/ode-solvers/"
+repository = "https://github.com/srenevey/ode-solvers"
+readme = "README.md"
+
+keywords = ["ode", "math", "solver", "equations"]
+categories = ["science"]
+
+license = "BSD-3-Clause"
+
+[dependencies]
+nalgebra = "0.32.3"
+num-traits = "0.2.17"
+simba = "0.8.1"
+thiserror = "1.0.56"

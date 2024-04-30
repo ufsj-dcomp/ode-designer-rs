@@ -36,6 +36,13 @@ minijinja = "1.0.12"
 serde = { version = "1.0.196", features = ["derive"] }
 crc32fast = "1.4.0"
 
+quicksort = "1.1.0"
+rand = "0.8.5"
+vecshard = "0.2.1"
+ode_solvers = { path = "./crates/ode-solvers-main" }
+mexprp = "0.3.1"
+rayon = "1.10.0"
+
 [target.'cfg(target_os = "linux")'.dependencies.winit]
 version = "0.27.5"
 features = ["wayland", "x11"]

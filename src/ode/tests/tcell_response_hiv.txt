@@ -1,0 +1,17 @@
+    V = pi_v * (Thi + Thmi) - k_v1 * V * IgM - k_v2 * V * IgG 
+    Ap = (alpha_ap) * (Ap0 - Ap) - Ap * (c_ap1 * (V) / (c_ap2 + V))
+    Apm = Ap * (c_ap1 * (V) / (c_ap2 + V)) - delta_Apm * Apm
+    Thn = alpha_th * (Thn0 - Thn) - lambda_th * Apm * Thn - beta_thn * Thn * V
+    The = lambda_th * Apm * Thn + pi_th * Apm * The - delta_the * The - lambda_the * The - beta_the * The * V + react_thm * V * Thm    
+    Thi = beta_thn * Thn * V + beta_the * The * V - k_i_tke * Thi * Tke
+    Tkn = (alpha_tk) * (Tkn0 - Tkn) - beta_tk * Apm * Tkn
+    Tke = beta_tk * Apm * Tkn + pi_tk * Apm * Tke - delta_tk * Tke
+    B = alpha_B * (B0 - B) + pi_B1 * V * B + pi_B2 * The * B - beta_ps * Apm * B - beta_pl * The * B - beta_Bm * The * B
+    Ps = beta_ps * Apm * B - delta_ps * Ps
+    Pl = beta_pl * The * B - delta_pl * Pl + gamma_bm * Bm
+    Bm = beta_Bm * The * B + k_bm1 * Bm * (1 - Bm / (k_bm2)) - gamma_bm * Bm
+    IgM = p_igm * Ps - delta_igm * IgM
+    IgG = p_igg * Pl - delta_igg * IgG
+    Thm = lambda_the * The - delta_thm * Thm - ((beta_thm + react_thm) * Thm * V)
+    Thmi = beta_thm * Thm * V - k_thmi * Thmi * Tke
+    
