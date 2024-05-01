@@ -48,7 +48,7 @@ impl ParameterEstimation {
         return create_ode_system(input_buffer.to_string(), &self.config_data);
     }
                 
-    pub fn estimate_parameters(&mut self, global_ode_system: &mut OdeSystem){
+    pub fn estimate_parameters(&mut self, ode_system: &mut OdeSystem){
         
         match CSVData::load_data(File::open(self.data_file.clone()).unwrap()){
             Ok(csv_data) => {
@@ -74,7 +74,7 @@ impl ParameterEstimation {
                 let mut indexes: Vec<usize> = vec![];
                 for label in csv_data.labels.iter() {
                     let mut pop_index: usize = 0;
-                    for key in global_ode_system.equations.keys() {
+                    for key in ode_system.equations.keys() {
                         if label.trim() == key.trim() {
                             indexes.push(pop_index);
                         }
@@ -82,23 +82,18 @@ impl ParameterEstimation {
                     }
                 }
 
-                let y: State = State::from_vec(global_ode_system.equations.keys()
-                        .map(|k: &String| global_ode_system.get_argument_value(k.to_string())).collect());
-
-                global_ode_system.update_context_with_state(&y);                
+                let initial_condition: State = State::from_vec(ode_system.equations.keys()
+                        .map(|k: &String| ode_system.get_argument_value(k.to_string())).collect());              
             
-                match self.ga.optimize( |values: &Vec<f64>| {  
-               
+                match self.ga.optimize( |values: &Vec<f64>| {                      
 
-                    let mut errors: Vec<f64> = vec![0.0; csv_data.labels.len()];   
-
-                    let mut ode_system = global_ode_system.clone();
+                    //let mut ode_system = global_ode_system.clone();
                     ode_system.update_context(values);
 
                     //println!("context: {:#?}", ode_system.context);
                     
-                    let ode_result: Vec<DVector<f64>> = solve(&ode_system, &y);
-                    if ode_result.len() == 0 {
+                    let ode_result: Vec<DVector<f64>> = solve(&ode_system, &initial_condition);
+                    if ode_result.len() == 0 { //error 
                         return 1000.0;
                     }
 
@@ -107,6 +102,7 @@ impl ParameterEstimation {
                     let mut t: f64 = self.config_data.metadata.start_time; 
                     let dt: f64 = self.config_data.metadata.delta_time;
                     let t_end = self.config_data.metadata.end_time;
+                    let mut errors: Vec<f64> = vec![0.0; csv_data.labels.len()];   
 
                     while t <= t_end {
                                                 
@@ -119,10 +115,8 @@ impl ParameterEstimation {
                             for i in 0..csv_data.labels.len() {                                
 
                                 let data: f64 = csv_data.lines[i][index];
-
                                 let dif = ode_result[ode_index][indexes[i]] - data;
                                 errors[i] += dif*dif;
-
                             }
 
                             index += 1;
