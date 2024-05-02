@@ -53,19 +53,16 @@ impl Chromosome {
       
             p = rng.gen_range(0.0..=1.0);
 
-            let mut temp_value = self.mutation_percentage*self.values[c_index];
-            if temp_value > 1. {
-                temp_value = 1.;
-            }
+            let value = self.mutation_percentage*self.values[c_index];
       
             if p < 0.5 {
-                self.values[c_index] += temp_value;
+                self.values[c_index] += value;
                 if self.values[c_index] > bounds[c_index].max {
                     self.values[c_index] = bounds[c_index].max;
                 }
             }
             else {
-                self.values[c_index] -= temp_value;
+                self.values[c_index] -= value;
                 if self.values[c_index] < bounds[c_index].min {
                     self.values[c_index] = bounds[c_index].min;
                 }
