@@ -20,7 +20,8 @@ use crate::exprtree::Sign;
 use crate::extensions::{CustomNodeSpecification, Extension};
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations,
+    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
+    PendingOperations,
 };
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
@@ -30,6 +31,7 @@ use imgui::{Key, StyleVar, TabItem, Ui};
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
+use super::adjust_params;
 use super::plot::CSVData;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -232,6 +234,7 @@ pub enum AppState {
         search_query: String,
     },
     ManagingExtensions,
+    EstimatingParameters,
 }
 
 enum StateAction {
@@ -368,6 +371,49 @@ impl AppState {
                         if ui.button("Load Extension") {
                             if let Err(err) = app.pick_extension_file() {
                                 eprintln!("Error opening/inspecting user extension file: {err}");
+                            }
+                        }
+                    });
+
+                if user_kept_open {
+                    StateAction::Keep
+                } else {
+                    StateAction::Clear
+                }
+            }
+
+            AppState::EstimatingParameters => {
+                let mut user_kept_open = true;
+                ui.window("Estimating Parameters")
+                    .collapsible(false)
+                    .opened(&mut user_kept_open)
+                    .build(|| {
+                        let mut variables = Vec::new();
+
+                        for node in app.nodes.values() {
+                            if let Node::Term(_) = node {
+                                if node.is_assignable(){
+                                variables.push(node);
+                                }
+                            }
+                        }
+
+                        let model = adjust_params::Model::new(variables);
+
+                        if let Some(_t) = ui.begin_table("Parameters", 2) {
+                            ui.table_setup_column("Variable Name");
+                            ui.table_setup_column("Initial Value");
+                            ui.table_headers_row();
+
+                            for parameter in &model.parameters {
+                                ui.table_next_row();
+                                ui.table_next_column();
+                                ui.text(&imgui::ImString::new(parameter.term.name()));
+
+                                ui.table_next_column();
+                                let mut value = parameter.term.initial_value as f32;
+                                ui.input_float(imgui::ImString::new("##value"), &mut value)
+                                    .build();
                             }
                         }
                     });
@@ -847,7 +893,7 @@ impl<'n> App<'n> {
         let extension_lookup_paths: Vec<_> =
             self.extensions.iter().map(|ext| &ext.file_path).collect();
 
-        odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)        
+        odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
     }
 
     /*pub fn generate_equations(&self) -> OdeSystem {
@@ -862,7 +908,7 @@ impl<'n> App<'n> {
 
         let equations_text = odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths);
 
-        let mut ode_system = OdeSystem::create_ode_system(equations_text); 
+        let mut ode_system = OdeSystem::create_ode_system(equations_text);
         for (arg_name, arg_value) in ode_model.core.arguments {
             match arg_value {
                 Argument::Composite {..}=> (),

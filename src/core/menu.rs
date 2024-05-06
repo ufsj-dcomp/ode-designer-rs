@@ -51,7 +51,7 @@ impl<'n> App<'n> {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
-                    }                    
+                    }
                 }
 
                 if ui.menu_item_config("Save").shortcut("Ctrl + S").build() {
@@ -132,19 +132,19 @@ impl<'n> App<'n> {
                         }
                         Err(err) => eprintln!("{err}"),
                     }
-                }                
+                }
             });
 
-            if ui.menu_item("Parameter estimation"){
-                self.state = if let Some(AppState::ManagingExtensions) = self.state {
+            if ui.menu_item("Parameter estimation") {
+                self.state = if let Some(AppState::EstimatingParameters) = self.state {
                     None
                 } else {
-                    Some(AppState::ManagingExtensions)
+                    Some(AppState::EstimatingParameters)
                 }
             }
 
             /*/*let ode_system = self.generate_equations();
-                    println!("ODEs: {:#?}", ode_system); */ */
+            println!("ODEs: {:#?}", ode_system); */ */
 
             if ui.menu_item("Manage Extensions") {
                 self.state = if let Some(AppState::ManagingExtensions) = self.state {

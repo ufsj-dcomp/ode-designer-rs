@@ -11,7 +11,7 @@ use crate::{
 
 use super::{NodeImpl, PendingOperations, SimpleNodeBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Term {
     pub id: NodeId,
     pub leaf: Leaf,
