@@ -21,12 +21,12 @@ use crate::extensions::{CustomNodeSpecification, Extension};
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
     LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
-    PendingOperations,
+    PendingOperations, Term,
 };
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{Key, StyleVar, TabItem, Ui};
+use imgui::{DragDropFlags, Key, StyleVar, TabItem, Ui};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
@@ -388,34 +388,73 @@ impl AppState {
                     .collapsible(false)
                     .opened(&mut user_kept_open)
                     .build(|| {
-                        let mut variables = Vec::new();
-
-                        for node in app.nodes.values() {
-                            if let Node::Term(_) = node {
-                                if node.is_assignable(){
-                                    variables.push(node);
+                        let all_population_ids: HashSet<_> = app
+                            .nodes
+                            .iter()
+                            .filter_map(|(_id, node)| match node {
+                                Node::Assigner(assigner) => {
+                                    assigner.operates_on.as_ref().map(|(id, _)| id)
                                 }
-                            }
-                        }
+                                _ => None,
+                            })
+                            .collect();
 
-                        let model = adjust_params::Model::new(variables);
+                        let all_constants: Vec<Term> = app
+                            .nodes
+                            .iter()
+                            .filter_map(|(id, node)| match node {
+                                Node::Term(term) if !all_population_ids.contains(id) => Some(term),
+                                _ => None,
+                            })
+                            .cloned()
+                            .collect();
 
-                        if let Some(_t) = ui.begin_table("Parameters", 2) {
+                        let model = adjust_params::Model::new(all_constants);
+
+                        if let Some(_t) = ui.begin_table("Parameters", 3) {
                             ui.table_setup_column("Variable Name");
                             ui.table_setup_column("Initial Value");
+                            ui.table_setup_column("Estimate");
                             ui.table_headers_row();
-
-                            for parameter in &model.parameters {
+                        
+                            for (index, parameter) in model.parameters.iter().enumerate() {
                                 ui.table_next_row();
+                        
                                 ui.table_next_column();
-                                ui.text(&imgui::ImString::new(parameter.term.name()));
-
+                                ui.button_with_size(&imgui::ImString::new(parameter.term.name()),[60.0, 20.0]);
+                        
+                                let drag_drop_name = "parameter_drag";
+                                if let Some(tooltip) = ui
+                                    .drag_drop_source_config(drag_drop_name)
+                                    .flags(DragDropFlags::empty())
+                                    .begin_payload(index)
+                                {
+                                    ui.text(parameter.term.name());
+                                    tooltip.end();
+                                }
+                        
                                 ui.table_next_column();
-                                let mut value = parameter.term.initial_value as f32;
-                                ui.input_float(imgui::ImString::new("##value"), &mut value)
-                                    .build();
+                                let value = parameter.term.initial_value as f32;
+                                ui.text(imgui::ImString::new(value.to_string()));
+                        
+                                ui.table_next_column();
+                        
+                                let mut selected_index= 0;
+                                if ui.invisible_button(&imgui::ImString::new(format!("estimation_drop_target_{}", index)), [100.0, 20.0]) {
+                                }
+                                if let Some(target) = ui.drag_drop_target() {
+                                    if let Some(Ok(payload_data)) = target
+                                    .accept_payload::<usize, _>(
+                                        drag_drop_name,
+                                        DragDropFlags::empty(),
+                                    )
+                                    {
+                                        selected_index = payload_data.data;
+                                    }
+                                    target.pop();
+                                }
                             }
-                        }
+                        }                        
                     });
 
                 if user_kept_open {

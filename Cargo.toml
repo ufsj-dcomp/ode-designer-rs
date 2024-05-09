@@ -7,6 +7,7 @@ edition = "2021"
 imgui = ["dep:imgui-glium-renderer", "dep:imgui-winit-support", "dep:winit", "dep:glium", "dep:imgui"]
 
 [dependencies]
+anyhow = "1.0"
 color-eyre = "0.6.2"
 derive_more = "0.99.17"
 log = "0.4.17"

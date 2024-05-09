@@ -8,7 +8,6 @@ pub struct CSVData {
 }
 
 impl CSVData {
-
     pub fn load_data(reader: impl Read) -> std::io::Result<Self> {
         let mut rdr = csv::Reader::from_reader(reader);
 

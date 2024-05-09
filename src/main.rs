@@ -18,6 +18,7 @@ pub mod errors;
 pub mod exprtree;
 pub mod extensions;
 pub mod nodes;
+pub mod ode;
 pub mod pins;
 pub mod utils;
 
