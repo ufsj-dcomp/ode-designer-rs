@@ -393,7 +393,7 @@ impl AppState {
                         for node in app.nodes.values() {
                             if let Node::Term(_) = node {
                                 if node.is_assignable(){
-                                variables.push(node);
+                                    variables.push(node);
                                 }
                             }
                         }
