@@ -1,3 +1,4 @@
+use std::cell::{Ref, RefCell};
 use std::collections::HashSet;
 
 use imgui::{DragDropFlags, Ui};
@@ -13,7 +14,7 @@ pub struct Parameter {
 #[derive(Default)]
 pub struct Model {
     pub parameters: Vec<Parameter>,
-    pub adjusted_parameters: Vec<Parameter>,
+    pub adjusted_parameters: RefCell<Vec<usize>>,
 }
 
 impl Model {
@@ -28,7 +29,7 @@ impl Model {
 
         Self {
             parameters,
-            adjusted_parameters: Vec::new(),
+            adjusted_parameters: RefCell::new(Vec::new()),
         }
     }
 }

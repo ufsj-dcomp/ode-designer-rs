@@ -1,4 +1,5 @@
 use std::borrow::{Borrow, Cow};
+use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
@@ -234,7 +235,9 @@ pub enum AppState {
         search_query: String,
     },
     ManagingExtensions,
-    EstimatingParameters,
+    EstimatingParameters{
+        selected: RefCell<Vec<usize>>,
+    },
 }
 
 enum StateAction {
@@ -382,7 +385,11 @@ impl AppState {
                 }
             }
 
-            AppState::EstimatingParameters => {
+            AppState::EstimatingParameters {
+                selected
+            } => {
+
+                //TO DO: mover código para a draw_tab_parameter_estimation 
                 let mut user_kept_open = true;
                 ui.window("Estimating Parameters")
                     .collapsible(false)
@@ -409,18 +416,22 @@ impl AppState {
                             .cloned()
                             .collect();
 
-                        let model = adjust_params::Model::new(all_constants);
+                        let model = adjust_params::Model::new(all_constants);                        
 
                         if let Some(_t) = ui.begin_table("Parameters", 3) {
                             ui.table_setup_column("Variable Name");
                             ui.table_setup_column("Initial Value");
                             ui.table_setup_column("Estimate");
-                            ui.table_headers_row();
-                        
-                            for (index, parameter) in model.parameters.iter().enumerate() {
-                                ui.table_next_row();
-                        
-                                ui.table_next_column();
+                            ui.table_headers_row();                            
+
+                            for (index, parameter) in model.parameters                                    
+                                    .iter()
+                                    .enumerate()
+                                    .filter(|(id, _)| {! RefCell::borrow(selected).contains(id)} ) {
+
+                                ui.table_next_row();                        
+                                ui.table_next_column();    
+                                                        
                                 ui.button_with_size(&imgui::ImString::new(parameter.term.name()),[60.0, 20.0]);
                         
                                 let drag_drop_name = "parameter_drag";
@@ -439,9 +450,9 @@ impl AppState {
                         
                                 ui.table_next_column();
                         
-                                let mut selected_index= 0;
-                                if ui.invisible_button(&imgui::ImString::new(format!("estimation_drop_target_{}", index)), [100.0, 20.0]) {
-                                }
+                                let mut selected_index= 0;                                
+                                ui.invisible_button(&imgui::ImString::new(format!("estimation_drop_target_{}", index)), [100.0, 20.0]);                                 
+
                                 if let Some(target) = ui.drag_drop_target() {
                                     if let Some(Ok(payload_data)) = target
                                     .accept_payload::<usize, _>(
@@ -449,12 +460,27 @@ impl AppState {
                                         DragDropFlags::empty(),
                                     )
                                     {
-                                        selected_index = payload_data.data;
+                                        selected_index = payload_data.data;                                        
+                                        selected.borrow_mut().push(selected_index);
+
+                                        println!("index: {}", selected_index);
                                     }
                                     target.pop();
                                 }
-                            }
-                        }                        
+                            }                            
+                        } //fim tabela esquerda 
+
+                        ui.same_line();
+                        
+                        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
+                            ui.table_setup_column("Name");
+                            ui.table_setup_column("Min");
+                            ui.table_setup_column("Max");
+                            ui.table_headers_row();    
+
+                            //percorrer o vetor de selecionados e criar um texto para cada parâmetro selecionado  
+                        }
+
                     });
 
                 if user_kept_open {
@@ -468,6 +494,11 @@ impl AppState {
 }
 
 impl<'n> App<'n> {
+
+    pub fn draw_tab_parameter_estimation(&mut self, ui: &Ui,){
+
+    }
+
     /// Draws the nodes and other elements
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
         // Minimap
@@ -603,6 +634,21 @@ impl<'n> App<'n> {
                             self.simulation_state = None;
                         }
                     }
+
+                    //TO DO: Desenha a tab Parameter Estimation caso o estado seja valido 
+                    //testa o estado e chama draw_tab_parameter_estimation 
+                    //Usar SimulationState?
+                    //match self.state {
+                    //    Some(AppState::EstimatingParameters { selected }) => {
+                            //draw_tab_parameter_estimation(...)
+                            //simulation_state.set_focus_to_tab = false;
+
+                            //if tab_action == TabAction::Close {
+                                //self.state = None;
+                            //}
+                    //    }
+                    //    None => todo!(),                                               
+                   // }
                 });
             });
     }
