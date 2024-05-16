@@ -4,6 +4,7 @@
 #![feature(int_roundings)]
 #![feature(let_chains)]
 #![feature(iter_collect_into)]
+#![feature(once_cell_try_insert)]
 
 use core::{initialize_id_generator, style, System};
 
@@ -22,6 +23,9 @@ pub mod nodes;
 pub mod pins;
 pub mod utils;
 pub mod locale;
+
+#[cfg(debug_assertions)]
+pub mod debug;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
@@ -47,10 +51,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut locale = Locale::default();
     let mut app = App::new(&locale);
 
+    core::notification::NotificationLogger::new().with_max_log_level(log::Level::Trace.into()).init();
+
     let plot_ctx = implot::Context::create();
 
     system.main_loop(move |_, ui| {
         app.draw(ui, &mut nodeseditor, &mut plot_ctx.get_plot_ui(), &mut locale);
+        #[cfg(debug_assertions)]
+        debug::draw(ui);
     });
     Ok(())
 }

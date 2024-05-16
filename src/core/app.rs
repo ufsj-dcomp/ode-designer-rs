@@ -518,6 +518,8 @@ impl App {
                             self.simulation_state = None;
                         }
                     }
+
+                    super::notification::render_messages(ui);
                 });
             });
     }

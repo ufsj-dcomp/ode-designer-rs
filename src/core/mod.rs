@@ -20,6 +20,7 @@ pub mod python;
 pub mod side_bar;
 pub mod style;
 pub mod widgets;
+pub mod notification;
 
 pub struct System {
     pub event_loop: EventLoop<()>,
