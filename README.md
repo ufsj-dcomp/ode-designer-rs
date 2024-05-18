@@ -1,28 +1,30 @@
-# ODE Designer
+# ODE-Designer
 
-## Introdução
+## Introduction
 
-Abaixo estão a descrição do software, como instalá-lo e uma breve introdução de como usá-lo.
+Below are the description of the software, how to install it, and a brief introduction on how to use it.
 
-## Sobre o Software
+## About the software
 
-Este software foi desenvolvido na Universidade Federal de São João Del-Rei ([UFSJ](https://ufsj.edu.br)).
+The names of the software developers are in the CONTRIBUTORS file.
 
-O software tem como o objetivo facilitar o desenvolvimento de Equações Diferenciais Ordinárias (EDOs), tendo como o alvo não somente o auxílio de pesquisadores na área, mas também o ensino-aprendizagem de modelagem computacional.
+ODE-Designer was developed in the context of a FAPEMIG research project by postgraduate students and undergraduate students in Computer Science at the Federal University of São João Del-Rei ([UFSJ](https: //ufsj.edu.br)).
 
-Para isso, o software provê uma interface gráfica com um editor baseados em nós, no qual o usuário pode desenhar o sistema de EDOs por meio dos componentes representados pelos nós.
+The main objective of ODE-Designer is to facilitate the creation, implementation and simulation of Ordinary Differential Equation (ODE) models. The software can be applied to research and teaching-learning of Computational Modeling.
 
-## Funcionalidades
+Through a visually intuitive graphical user interface (GUI), ODE-Designer allows users to conceptualize and ``draw'' mathematical models, while the software automatically generates the requisite implementation, simulation, and result visualization code. A distinguished feature of the software is the model's visual representation. It is designed to be intuitive and easy to use.
 
-### Editor baseado em nós
+## Current functionalities
+
+### Node-based editor
 
 ![Imagem do editor de nós no software, contendo os nós 'Var', 'Const', 'grow' e 'dVar/dt', que constroem a EDO dVar/dt = Var*Const](readme/demo-nodes.png)
 
-### Plotagem diretamente no software
+### Plotting
 
 ![Plotagem da EDO dVar/dt = Var*Const nos tempos 41 até 50, para os valores iniciais Var = 1 e Const = 2](readme/demo-simulation.png)
 
-### Exportação do Código da Simulação em Python e PDF
+### Python code export and pdf export
 
 ```py
 # imports of scipy and numpy omitted
@@ -52,9 +54,9 @@ def system(t: np.float64, y: np.ndarray, *constants) -> np.ndarray:
 # Rest of the code used to simulate and plot to PDF omitted
 ```
 
-### Extensibilidade via código em Python
+### Extensibility via Python code
 
-Dado o seguinte código de Python:
+Given the following Python code:
 
 ```py
 import math
@@ -69,21 +71,21 @@ def power(x, y):
     return x ** y
 ```
 
-Ao importá-lo no menu de gerenciamento extensões (em inglês, *Manage Extensions*), pode-se usar os nós definidos como se fossem nativos, como na imagem abaixo.
+By importing it in the *Manage Extensions* menu, you can use the defined nodes as if they were native, as in the image below.
 
 ![O editor de nós incluindo os nós customizados de seno e potência](readme/demo-with-extensions-nodes.png)
 
-O código pode ser usado para simular assim como nós nativos.
+The code can be used to simulate just like native nodes.
 
 ![Plotagem das EDOs utilizando nós customizados](readme/demo-with-extensions-simulation.png)
 
-## Como Instalar
+## How to install
 
-Recomenda-se utilizar os executáveis disponíveis nas *Releases* do GitHub. [Este link](https://github.com/Syndelis/ode-designer-rs/releases/latest) pode ser usado para redirecionar sempre à versão mais recente.
+It is recommended to use the executables available in *Releases* on GitHub. [This link](https://github.com/Syndelis/ode-designer-rs/releases/latest) can be used to always redirect to the latest version.
 
 ### Linux
 
-A distribuição em Linux utiliza [AppImages](https://appimage.org/), que necessita de um runtime (`fuse2`) instalável em todas as distribuições baseadas em Linux. Comumente é inclusa por padrão por algumas distribuições, ou já está instalada por outro programa.
+The Linux distribution uses [AppImages](https://appimage.org/), which requires a runtime (`fuse2`) installable on all Linux-based distributions. It is commonly included by default by some distributions, or is already installed by another program.
 
 <details>
 <summary><b>🐧 Para Debian/Ubuntu/Pop_OS!/ElementaryOS</b></summary>
@@ -105,24 +107,24 @@ $ sudo pacman -S fuse2
 
 ### Windows
 
-A distribuição de Windows consiste num ZIP que pode ser extraído e ter seu conteúdo executado.
+The Windows distribution consists of a ZIP that can be extracted and its contents executed.
 
-## Compilando
+## Compilation
 
-### Usando Docker
+### Using Docker
 
-Para compilar e utilizar o software e todo seu potencial, pode-se usar a imagem de Docker provida. As dependências são somente o próprio `docker` e o plugin `docker-buildx`.
+To compile and use the software and its full potential, you can use the provided Docker image. The dependencies are only `docker` itself and the `docker-buildx` plugin.
 
 ```sh
 $ docker buildx build -t ode-designer-appimage-builder .
 $ docker run -v ./container-target:/ode-designer/target/ ode-designer-appimage-builder
 ```
 
-Após esta execução, a AppImage deverá estar disponível em `.container-target/appimage/ode-designer-rs.AppImage`. Esta AppImage, assim como as encontradas em *Releases*, possuem Python e as dependências `scipy` e `matplotlib` para geração de código, simulação interativa e exportação de PDF.
+After this execution, the AppImage should be available in `.container-target/appimage/ode-designer-rs.AppImage`. This AppImage, as well as those found in *Releases*, have Python and the `scipy` and `matplotlib` dependencies for code generation, interactive simulation and PDF export.
 
-### Manualmente
+### Manually
 
-Para compilar e rodar o software fora da AppImage, é necessária a toolchain de Rust, bem como Python >= 3.11, e as dependências listadas em `requirements.txt`. Cumprindo estes requisitos, basta compilar como qualquer projeto em Rust, rodando
+To compile and run the software outside of the AppImage, the Rust toolchain is required, as well as Python >= 3.11, and the dependencies listed in `requirements.txt`. Fulfilling these requirements, simply compile like any Rust project, running
 
 ```sh
 $ cargo run
