@@ -390,37 +390,36 @@ impl AppState {
 }
 
 impl<'n> App<'n> {
-    pub fn draw_tab_parameter_estimation(
-        &self,
-        ui: &imgui::Ui,
-        selected: &RefCell<Vec<usize>>,
-        app: &App,
-    ) {
+    fn get_all_population_ids(&self) -> HashSet<&NodeId> {
+        self.nodes
+            .iter()
+            .filter_map(|(_id, node)| match node {
+                Node::Assigner(assigner) => assigner.operates_on.as_ref().map(|(id, _)| id),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn get_all_constants(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
+        self.nodes
+            .iter()
+            .filter_map(|(id, node)| match node {
+                Node::Term(term) if !all_population_ids.contains(id) => Some(term),
+                _ => None,
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn draw_tab_parameter_estimation(&self, ui: &imgui::Ui, selected: &RefCell<Vec<usize>>) {
         if let Some(_t) = ui.begin_table("Parameters", 3) {
             ui.table_setup_column("Variable Name");
             ui.table_setup_column("Initial Value");
             ui.table_setup_column("Estimate");
             ui.table_headers_row();
 
-            let all_population_ids: HashSet<_> = app
-                .nodes
-                .iter()
-                .filter_map(|(_id, node)| match node {
-                    Node::Assigner(assigner) => assigner.operates_on.as_ref().map(|(id, _)| id),
-                    _ => None,
-                })
-                .collect();
-
-            let all_constants: Vec<Term> = app
-                .nodes
-                .iter()
-                .filter_map(|(id, node)| match node {
-                    Node::Term(term) if !all_population_ids.contains(id) => Some(term),
-                    _ => None,
-                })
-                .cloned()
-                .collect();
-
+            let all_population_ids = self.get_all_population_ids();
+            let all_constants = self.get_all_constants(&all_population_ids);
             let model = adjust_params::Model::new(all_constants);
 
             for (index, parameter) in model
@@ -622,7 +621,7 @@ impl<'n> App<'n> {
                         let mut user_kept_open = true;
                         let tab_item = TabItem::new("Estimating Parameters");
                         tab_item.opened(&mut user_kept_open).build(ui, || {
-                            self.draw_tab_parameter_estimation(ui, selected, self);
+                            self.draw_tab_parameter_estimation(ui, selected);
                         });
                         if !user_kept_open {
                             self.state = None;
