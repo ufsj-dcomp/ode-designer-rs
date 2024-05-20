@@ -39,7 +39,7 @@ impl ParameterEstimation {
         }
     }
 
-    //Remover 
+    //Remover
     pub fn ode_system(&mut self, config_file_path: &str, model_file_path: &str) -> OdeSystem {
         self.config_data = match load_json(config_file_path) {
             Ok(config_model) => {

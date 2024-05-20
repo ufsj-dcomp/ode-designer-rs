@@ -4,7 +4,9 @@ use crate::{nodes::expression, App};
 use rfd::FileDialog;
 
 use std::{
-    cell::RefCell, fs::read_to_string, process::{Command, Stdio}
+    cell::RefCell,
+    fs::read_to_string,
+    process::{Command, Stdio},
 };
 
 use super::{
@@ -138,7 +140,9 @@ impl<'n> App<'n> {
                 self.state = if let Some(AppState::EstimatingParameters { .. }) = self.state {
                     None
                 } else {
-                    Some(AppState::EstimatingParameters { selected: Default::default() })
+                    Some(AppState::EstimatingParameters {
+                        selected: Default::default(),
+                    })
                 }
             }
 

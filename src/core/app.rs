@@ -235,7 +235,7 @@ pub enum AppState {
         search_query: String,
     },
     ManagingExtensions,
-    EstimatingParameters{
+    EstimatingParameters {
         selected: RefCell<Vec<usize>>,
     },
 }
@@ -384,119 +384,102 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-
-            AppState::EstimatingParameters {
-                selected
-            } => {
-
-                //TO DO: mover código para a draw_tab_parameter_estimation 
-                let mut user_kept_open = true;
-                ui.window("Estimating Parameters")
-                    .collapsible(false)
-                    .opened(&mut user_kept_open)
-                    .build(|| {
-                        let all_population_ids: HashSet<_> = app
-                            .nodes
-                            .iter()
-                            .filter_map(|(_id, node)| match node {
-                                Node::Assigner(assigner) => {
-                                    assigner.operates_on.as_ref().map(|(id, _)| id)
-                                }
-                                _ => None,
-                            })
-                            .collect();
-
-                        let all_constants: Vec<Term> = app
-                            .nodes
-                            .iter()
-                            .filter_map(|(id, node)| match node {
-                                Node::Term(term) if !all_population_ids.contains(id) => Some(term),
-                                _ => None,
-                            })
-                            .cloned()
-                            .collect();
-
-                        let model = adjust_params::Model::new(all_constants);                        
-
-                        if let Some(_t) = ui.begin_table("Parameters", 3) {
-                            ui.table_setup_column("Variable Name");
-                            ui.table_setup_column("Initial Value");
-                            ui.table_setup_column("Estimate");
-                            ui.table_headers_row();                            
-
-                            for (index, parameter) in model.parameters                                    
-                                    .iter()
-                                    .enumerate()
-                                    .filter(|(id, _)| {! RefCell::borrow(selected).contains(id)} ) {
-
-                                ui.table_next_row();                        
-                                ui.table_next_column();    
-                                                        
-                                ui.button_with_size(&imgui::ImString::new(parameter.term.name()),[60.0, 20.0]);
-                        
-                                let drag_drop_name = "parameter_drag";
-                                if let Some(tooltip) = ui
-                                    .drag_drop_source_config(drag_drop_name)
-                                    .flags(DragDropFlags::empty())
-                                    .begin_payload(index)
-                                {
-                                    ui.text(parameter.term.name());
-                                    tooltip.end();
-                                }
-                        
-                                ui.table_next_column();
-                                let value = parameter.term.initial_value as f32;
-                                ui.text(imgui::ImString::new(value.to_string()));
-                        
-                                ui.table_next_column();
-                        
-                                let mut selected_index= 0;                                
-                                ui.invisible_button(&imgui::ImString::new(format!("estimation_drop_target_{}", index)), [100.0, 20.0]);                                 
-
-                                if let Some(target) = ui.drag_drop_target() {
-                                    if let Some(Ok(payload_data)) = target
-                                    .accept_payload::<usize, _>(
-                                        drag_drop_name,
-                                        DragDropFlags::empty(),
-                                    )
-                                    {
-                                        selected_index = payload_data.data;                                        
-                                        selected.borrow_mut().push(selected_index);
-
-                                        println!("index: {}", selected_index);
-                                    }
-                                    target.pop();
-                                }
-                            }                            
-                        } //fim tabela esquerda 
-
-                        ui.same_line();
-                        
-                        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
-                            ui.table_setup_column("Name");
-                            ui.table_setup_column("Min");
-                            ui.table_setup_column("Max");
-                            ui.table_headers_row();    
-
-                            //percorrer o vetor de selecionados e criar um texto para cada parâmetro selecionado  
-                        }
-
-                    });
-
-                if user_kept_open {
-                    StateAction::Keep
-                } else {
-                    StateAction::Clear
-                }
-            }
+            AppState::EstimatingParameters { .. } => StateAction::Keep,
         }
     }
 }
 
 impl<'n> App<'n> {
+    pub fn draw_tab_parameter_estimation(
+        &self,
+        ui: &imgui::Ui,
+        selected: &RefCell<Vec<usize>>,
+        app: &App,
+    ) {
+        if let Some(_t) = ui.begin_table("Parameters", 3) {
+            ui.table_setup_column("Variable Name");
+            ui.table_setup_column("Initial Value");
+            ui.table_setup_column("Estimate");
+            ui.table_headers_row();
 
-    pub fn draw_tab_parameter_estimation(&mut self, ui: &Ui,){
+            let all_population_ids: HashSet<_> = app
+                .nodes
+                .iter()
+                .filter_map(|(_id, node)| match node {
+                    Node::Assigner(assigner) => assigner.operates_on.as_ref().map(|(id, _)| id),
+                    _ => None,
+                })
+                .collect();
 
+            let all_constants: Vec<Term> = app
+                .nodes
+                .iter()
+                .filter_map(|(id, node)| match node {
+                    Node::Term(term) if !all_population_ids.contains(id) => Some(term),
+                    _ => None,
+                })
+                .cloned()
+                .collect();
+
+            let model = adjust_params::Model::new(all_constants);
+
+            for (index, parameter) in model
+                .parameters
+                .iter()
+                .enumerate()
+                .filter(|(id, _)| !RefCell::borrow(selected).contains(id))
+            {
+                ui.table_next_row();
+                ui.table_next_column();
+
+                ui.button_with_size(&imgui::ImString::new(parameter.term.name()), [60.0, 20.0]);
+
+                let drag_drop_name = "parameter_drag";
+                if let Some(tooltip) = ui
+                    .drag_drop_source_config(drag_drop_name)
+                    .flags(DragDropFlags::empty())
+                    .begin_payload(index)
+                {
+                    ui.text(parameter.term.name());
+                    tooltip.end();
+                }
+
+                ui.table_next_column();
+                let value = parameter.term.initial_value as f32;
+                ui.text(imgui::ImString::new(value.to_string()));
+
+                ui.table_next_column();
+
+                let mut selected_index = 0;
+                ui.invisible_button(
+                    &imgui::ImString::new(format!("estimation_drop_target_{}", index)),
+                    [100.0, 20.0],
+                );
+
+                if let Some(target) = ui.drag_drop_target() {
+                    if let Some(Ok(payload_data)) =
+                        target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
+                    {
+                        selected_index = payload_data.data;
+                        selected.borrow_mut().push(selected_index);
+
+                        println!("index: {}", selected_index);
+                    }
+                    target.pop();
+                }
+            }
+        }
+
+        ui.same_line();
+
+        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
+            ui.table_setup_column("Name");
+            ui.table_setup_column("Min");
+            ui.table_setup_column("Max");
+            ui.table_headers_row();
+
+            // Percorrer o vetor de selecionados e criar um texto para cada parâmetro selecionado
+        }
     }
 
     /// Draws the nodes and other elements
@@ -635,20 +618,16 @@ impl<'n> App<'n> {
                         }
                     }
 
-                    //TO DO: Desenha a tab Parameter Estimation caso o estado seja valido 
-                    //testa o estado e chama draw_tab_parameter_estimation 
-                    //Usar SimulationState?
-                    //match self.state {
-                    //    Some(AppState::EstimatingParameters { selected }) => {
-                            //draw_tab_parameter_estimation(...)
-                            //simulation_state.set_focus_to_tab = false;
-
-                            //if tab_action == TabAction::Close {
-                                //self.state = None;
-                            //}
-                    //    }
-                    //    None => todo!(),                                               
-                   // }
+                    if let Some(AppState::EstimatingParameters { ref selected }) = self.state {
+                        let mut user_kept_open = true;
+                        let tab_item = TabItem::new("Estimating Parameters");
+                        tab_item.opened(&mut user_kept_open).build(ui, || {
+                            self.draw_tab_parameter_estimation(ui, selected, self);
+                        });
+                        if !user_kept_open {
+                            self.state = None;
+                        }
+                    }
                 });
             });
     }
