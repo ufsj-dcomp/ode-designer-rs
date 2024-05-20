@@ -390,6 +390,22 @@ impl AppState {
 }
 
 impl<'n> App<'n> {
+    fn is_model_valid(&self) -> bool {
+        let population_ids: HashSet<_> = self.get_all_population_ids();
+
+        let has_terms = self.nodes.iter().any(|(_, node)| matches!(node, Node::Term(_)));
+
+        let has_assigner_operating_on_term = self.nodes.iter().any(|(_, node)| {
+            if let Node::Term(term) = node {
+                population_ids.contains(&term.id)
+            } else {
+                false
+            }
+        });
+
+        has_terms && has_assigner_operating_on_term
+    }
+    
     fn get_all_population_ids(&self) -> HashSet<&NodeId> {
         self.nodes
             .iter()
@@ -618,6 +634,7 @@ impl<'n> App<'n> {
                     }
 
                     if let Some(AppState::EstimatingParameters { ref selected }) = self.state {
+                        if self.is_model_valid(){
                         let mut user_kept_open = true;
                         let tab_item = TabItem::new("Estimating Parameters");
                         tab_item.opened(&mut user_kept_open).build(ui, || {
@@ -626,6 +643,7 @@ impl<'n> App<'n> {
                         if !user_kept_open {
                             self.state = None;
                         }
+                    }
                     }
                 });
             });
