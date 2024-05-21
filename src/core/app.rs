@@ -428,6 +428,9 @@ impl<'n> App<'n> {
     }
 
     pub fn draw_tab_parameter_estimation(&self, ui: &imgui::Ui, selected: &RefCell<Vec<usize>>) {
+        
+        ui.columns(2, "Parameters tables", true);
+        
         if let Some(_t) = ui.begin_table("Parameters", 3) {
             ui.table_setup_column("Variable Name");
             ui.table_setup_column("Initial Value");
@@ -484,8 +487,8 @@ impl<'n> App<'n> {
                 }
             }
         }
-
-        ui.same_line();
+        
+        ui.next_column();
 
         if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
             ui.table_setup_column("Name");
@@ -495,6 +498,7 @@ impl<'n> App<'n> {
 
             // Percorrer o vetor de selecionados e criar um texto para cada parâmetro selecionado
         }
+        
     }
 
     /// Draws the nodes and other elements
