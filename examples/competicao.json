@@ -1,0 +1,202 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.05,
+    "end_time": 80.0,
+    "positions": {
+      "Limited_Growth_N1": {
+        "x": 702.0,
+        "y": 278.0
+      },
+      "Limited_growth_N2": {
+        "x": 678.0,
+        "y": 624.0
+      },
+      "N1": {
+        "x": 187.0,
+        "y": 245.0
+      },
+      "N1_eq": {
+        "x": 1022.0,
+        "y": 168.0
+      },
+      "N2": {
+        "x": 180.0,
+        "y": 481.0
+      },
+      "N2_eq": {
+        "x": 1040.0,
+        "y": 530.0
+      },
+      "dN1dt": {
+        "x": 1418.0,
+        "y": 221.0
+      },
+      "dN2dt": {
+        "x": 1428.0,
+        "y": 607.0
+      },
+      "r1": {
+        "x": 224.0,
+        "y": 137.0
+      },
+      "r2": {
+        "x": 179.0,
+        "y": 373.0
+      },
+      "w11": {
+        "x": 190.0,
+        "y": 599.0
+      },
+      "w12": {
+        "x": 228.0,
+        "y": 886.0
+      },
+      "w21": {
+        "x": 201.0,
+        "y": 708.0
+      },
+      "w22": {
+        "x": 213.0,
+        "y": 801.0
+      }
+    },
+    "extension_files": [
+      "extensao_competicao.py"
+    ]
+  },
+  "arguments": [
+    {
+      "name": "N2_eq",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "r2",
+          "contribution": "+"
+        },
+        {
+          "name": "N2",
+          "contribution": "+"
+        },
+        {
+          "name": "Limited_growth_N2",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "r1",
+      "value": 0.3
+    },
+    {
+      "name": "N1_eq",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "r1",
+          "contribution": "+"
+        },
+        {
+          "name": "N1",
+          "contribution": "+"
+        },
+        {
+          "name": "Limited_Growth_N1",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N1",
+      "value": 0.1
+    },
+    {
+      "name": "w11",
+      "value": 1.0
+    },
+    {
+      "name": "w22",
+      "value": 1.0
+    },
+    {
+      "name": "w12",
+      "value": 1.0
+    },
+    {
+      "name": "r2",
+      "value": 0.2
+    },
+    {
+      "name": "N2",
+      "value": 0.1
+    },
+    {
+      "name": "Limited_growth_N2",
+      "operation": "limited_growth",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "N2",
+          "contribution": "+"
+        },
+        {
+          "name": "N1",
+          "contribution": "+"
+        },
+        {
+          "name": "w22",
+          "contribution": "+"
+        },
+        {
+          "name": "w12",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "Limited_Growth_N1",
+      "operation": "limited_growth",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "N1",
+          "contribution": "+"
+        },
+        {
+          "name": "N2",
+          "contribution": "+"
+        },
+        {
+          "name": "w11",
+          "contribution": "+"
+        },
+        {
+          "name": "w21",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "w21",
+      "value": 1.0
+    }
+  ],
+  "equations": [
+    {
+      "name": "dN2dt",
+      "operates_on": "N2",
+      "argument": "N2_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dN1dt",
+      "operates_on": "N1",
+      "argument": "N1_eq",
+      "contribution": "+"
+    }
+  ]
+}

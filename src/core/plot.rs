@@ -1,6 +1,8 @@
 use std::io::Read;
 
-#[derive(Default, Debug, Clone)]
+use crate::locale::Locale;
+
+#[derive(Default, Debug)]
 pub struct CSVData {
     pub labels: Vec<String>,
     pub lines: Vec<Vec<f64>>,
@@ -74,5 +76,21 @@ impl PlotLayout {
             number_of_tabs: n_tabs,
             active_tabs: vec![],
         }
+    }
+}
+
+impl PlotInfo {
+    pub fn new(data: CSVData, locale: &Locale) -> Self {
+        Self {
+            data,
+            title: String::from("TODO!"),
+            xlabel: locale.get("default-x-label").to_owned(),
+            ylabel: locale.get("default-y-label").to_owned(),
+        }
+    }
+
+    pub fn update_locale(&mut self, locale: &Locale) {
+        self.xlabel = locale.get("default-x-label").to_owned();
+        self.ylabel = locale.get("default-y-label").to_owned();
     }
 }
