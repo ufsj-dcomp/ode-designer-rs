@@ -105,8 +105,8 @@ impl App {
             ui.menu(locale.get("run"), || {
                 self.draw_input_label(ui);
 
-                ui.menu_item(locale.get("run")) {
-                let py_code = self.generate_code();
+                if ui.menu_item(locale.get("run")) {
+                    let py_code = self.generate_code();
 
                     let mut command = Command::new("python3");
                     command
@@ -117,7 +117,7 @@ impl App {
 
                     match execute_python_code(&mut command) {
                         Ok(output) => {
-                            self.simulation_state = Some(SimulationState::from_csv(output));
+                            self.simulation_state = Some(SimulationState::from_csv(output, locale));
                             if let Some(mut simulation_state) = self.simulation_state.clone() {
                                 if !self.text_fields.x_label.is_empty() {
                                     simulation_state.plot.xlabel =

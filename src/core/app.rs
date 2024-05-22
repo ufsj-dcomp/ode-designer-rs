@@ -395,7 +395,7 @@ impl AppState {
     }
 }
 
-impl<'n> App<'n> {
+impl App {
     fn is_model_valid(&self) -> bool {
         let population_ids: HashSet<_> = self.get_all_population_ids();
 
@@ -533,7 +533,7 @@ impl<'n> App<'n> {
     }
 
     /// Draws the nodes and other elements
-    pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope) {
+    pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope, locale: &Locale) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
 

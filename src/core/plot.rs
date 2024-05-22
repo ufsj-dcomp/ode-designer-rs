@@ -2,7 +2,7 @@ use std::io::Read;
 
 use crate::locale::Locale;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct CSVData {
     pub labels: Vec<String>,
     pub lines: Vec<Vec<f64>>,
