@@ -24,6 +24,7 @@ use crate::nodes::{
     LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
     PendingOperations, Term,
 };
+use crate::ode::ga_json::ConfigData;
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -429,17 +430,17 @@ impl<'n> App<'n> {
 
     pub fn draw_tab_parameter_estimation(&self, ui: &imgui::Ui, selected: &RefCell<Vec<usize>>) {
         
-        ui.columns(2, "Parameters tables", true);
+        ui.columns(3, "Parameters", true);
         
+        let all_population_ids = self.get_all_population_ids();
+        let all_constants = self.get_all_constants(&all_population_ids);
+        let mut model = adjust_params::Model::new(all_constants);
+
         if let Some(_t) = ui.begin_table("Parameters", 3) {
             ui.table_setup_column("Variable Name");
             ui.table_setup_column("Initial Value");
             ui.table_setup_column("Estimate");
-            ui.table_headers_row();
-
-            let all_population_ids = self.get_all_population_ids();
-            let all_constants = self.get_all_constants(&all_population_ids);
-            let model = adjust_params::Model::new(all_constants);
+            ui.table_headers_row();            
 
             for (index, parameter) in model
                 .parameters
@@ -466,39 +467,64 @@ impl<'n> App<'n> {
                 let value = parameter.term.initial_value as f32;
                 ui.text(imgui::ImString::new(value.to_string()));
 
-                ui.table_next_column();
-
-                let mut selected_index = 0;
-                ui.invisible_button(
-                    &imgui::ImString::new(format!("estimation_drop_target_{}", index)),
-                    [100.0, 20.0],
-                );
-
-                if let Some(target) = ui.drag_drop_target() {
-                    if let Some(Ok(payload_data)) =
-                        target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
-                    {
-                        selected_index = payload_data.data;
-                        selected.borrow_mut().push(selected_index);
-
-                        println!("index: {}", selected_index);
-                    }
-                    target.pop();
-                }
+                ui.table_next_column();                
             }
         }
         
-        ui.next_column();
+        ui.next_column();        
 
-        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
+        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {            
             ui.table_setup_column("Name");
             ui.table_setup_column("Min");
             ui.table_setup_column("Max");
             ui.table_headers_row();
 
-            // Percorrer o vetor de selecionados e criar um texto para cada parâmetro selecionado
-        }
-        
+            for id in selected.borrow().iter() {
+                ui.table_next_row();
+                ui.table_next_column();                
+                ui.text(imgui::ImString::new(model.parameters[*id].term.name()));
+                ui.table_next_column(); 
+                let _ = ui.input_float("min", &mut model.parameters[*id].bounds.0);
+                ui.table_next_column(); 
+                let _ = ui.input_float("max", &mut model.parameters[*id].bounds.1);
+            }
+            
+            ui.table_next_row();
+            ui.table_next_column();  
+            //ui.push_style_color(style_color, color)
+            ui.invisible_button(
+                &imgui::ImString::new(format!("estimation_drop_target_{}", 0)),
+                [100.0, 20.0],
+            );
+            //ui.color_button("color_button", [1.0, 0.0, 0.0, 1.0]);
+
+            let drag_drop_name = "parameter_drag";
+                
+            if let Some(target) = ui.drag_drop_target() {
+                if let Some(Ok(payload_data)) =
+                    target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
+                {                    
+                    selected.borrow_mut().push(payload_data.data);
+    
+                    println!("index: {}", payload_data.data);
+                }
+                target.pop();
+            }
+        }   
+
+        ui.next_column();
+        let run_button = ui.button("Run"); 
+
+        if run_button {
+            //GA_Metadata
+            //Arguments: //model.parameters[*id].term.initial_value
+            //Bounds:
+            for id in selected.borrow().iter() {
+                //model.parameters[*id].term.name()
+            }
+            //let config_data =  ConfigData {};            
+        }        
+
     }
 
     /// Draws the nodes and other elements
