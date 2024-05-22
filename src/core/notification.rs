@@ -12,7 +12,10 @@ use log::Level;
 enum State {
     #[default]
     Normal,
-    Fading{ num: f32, out: bool },
+    Fading {
+        num: f32,
+        out: bool,
+    },
     Dismissed,
 }
 
@@ -39,11 +42,17 @@ impl Message {
             | WindowFlags::NO_SAVED_SETTINGS
             | WindowFlags::NO_COLLAPSE;
         let tk = ui.push_style_color(imgui::StyleColor::Text, level_color(self.level));
-        let alpha = if let State::Fading{ num, .. } = self.state {
-            Some(ui.push_style_var(imgui::StyleVar::Alpha(num)))
-        } else { None };
-        let (pressed, y) = ui
-            .window(format!("{} {}##{}", level_icon(self.level), self.level, self.id))
+        let (pressed, y) = {
+            let _alpha_token = match self.state {
+                State::Fading { num, .. } => Some(ui.push_style_var(imgui::StyleVar::Alpha(num))),
+                _ => None,
+            };
+            ui.window(format!(
+                "{} {}##{}",
+                level_icon(self.level),
+                self.level,
+                self.id
+            ))
             .flags(winflags)
             .position([x, y], imgui::Condition::Always)
             .size(WIN_SIZE, imgui::Condition::Always)
@@ -52,18 +61,21 @@ impl Message {
                 ui.text(self.body.as_str());
                 // Start dismissing the notification
                 let pressed = ui.button("Ok");
-                return (pressed, ui.window_size()[1] + Y_PADDING);
+                (pressed, ui.window_size()[1] + Y_PADDING)
             })
-            .expect("Notifications aren't able to be hidden");
-        std::mem::drop(alpha);
+            .expect("Notifications aren't able to be hidden")
+        };
         match self.state {
             State::Normal => {
                 if self.created_at.elapsed() >= TIMEOUT || pressed {
-                    self.state = State::Fading{ num: 1.0, out: true };
+                    self.state = State::Fading {
+                        num: 1.0,
+                        out: true,
+                    };
                 }
-            },
+            }
             State::Dismissed => return None,
-            State::Fading{ ref mut num, out } => {
+            State::Fading { ref mut num, out } => {
                 let delta = ui.io().delta_time;
                 if out {
                     *num -= delta;
@@ -76,7 +88,7 @@ impl Message {
                         self.state = State::Normal;
                     }
                 }
-            },
+            }
         }
         Some(y)
     }
@@ -121,8 +133,8 @@ pub fn render_messages(ui: &Ui) {
 fn level_color(level: Level) -> [f32; 4] {
     let col = match level {
         Level::Error => [1.0, 0.1, 0.1], // Red
-        Level::Warn =>  [0.7, 0.7, 0.2], // Yellow
-        Level::Info =>  [0.2, 0.2, 1.0], // Blue
+        Level::Warn => [0.7, 0.7, 0.2],  // Yellow
+        Level::Info => [0.2, 0.2, 1.0],  // Blue
         Level::Debug => [0.2, 1.0, 0.2], // Green
         Level::Trace => [1.0; 3],        // White
     };
@@ -177,7 +189,10 @@ impl log::Log for NotificationLogger {
             body: record.args().to_string(),
             level: record.level(),
             created_at: Instant::now(),
-            state: State::Fading { num: 0.0, out: false },
+            state: State::Fading {
+                num: 0.0,
+                out: false,
+            },
             id: self
                 .next_id
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed),
