@@ -83,7 +83,7 @@ impl PlotInfo {
     pub fn new(data: CSVData, locale: &Locale) -> Self {
         Self {
             data,
-            title: String::from("TODO!"),
+            title: String::from(""),
             xlabel: locale.get("default-x-label").to_owned(),
             ylabel: locale.get("default-y-label").to_owned(),
         }
