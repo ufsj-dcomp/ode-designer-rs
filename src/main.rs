@@ -18,11 +18,11 @@ mod core;
 pub mod errors;
 pub mod exprtree;
 pub mod extensions;
+pub mod locale;
 pub mod nodes;
 pub mod ode;
 pub mod pins;
 pub mod utils;
-pub mod locale;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
@@ -51,7 +51,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let plot_ctx = implot::Context::create();
 
     system.main_loop(move |_, ui| {
-        app.draw(ui, &mut nodeseditor, &mut plot_ctx.get_plot_ui(), &mut locale);
+        app.draw(
+            ui,
+            &mut nodeseditor,
+            &mut plot_ctx.get_plot_ui(),
+            &mut locale,
+        );
     });
     Ok(())
 }

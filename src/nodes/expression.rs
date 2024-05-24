@@ -4,7 +4,12 @@ use odeir::models::CompositionStyle;
 use strum::VariantArray;
 
 use crate::{
-    core::App, exprtree::{ExpressionNode, ExpressionTree, Operation, Sign}, locale::Locale, message::Message, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
+    core::App,
+    exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
+    locale::Locale,
+    message::Message,
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use super::{

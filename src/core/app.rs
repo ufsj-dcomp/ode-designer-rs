@@ -12,8 +12,8 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
-use once_cell::sync::Lazy;
 use odeir::Argument;
+use once_cell::sync::Lazy;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
 use unic_langid::LanguageIdentifier;
@@ -28,7 +28,7 @@ use crate::nodes::{
     LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
     PendingOperations, Term,
 };
-use crate::ode::ga_json::ConfigData;
+use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -115,7 +115,13 @@ impl SimulationState {
         }
     }
 
-    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi, set_focus: bool, locale: &mut Locale) -> TabAction {
+    pub fn draw_tabs(
+        &mut self,
+        ui: &Ui,
+        plot_ui: &mut PlotUi,
+        set_focus: bool,
+        locale: &mut Locale,
+    ) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
@@ -172,7 +178,9 @@ impl SimulationState {
             // Safety: this variable is local to this function, which is not run
             // in parallel or anything of the sort (since self is mutable).
             // Therefore, it's safe to access this static variable and mutate it
-            unsafe { ARGS.insert("idx", tab_idx.into()); }
+            unsafe {
+                ARGS.insert("idx", tab_idx.into());
+            }
             imgui::TabItem::new(locale.fmt("tab-idx", unsafe { &ARGS }))
                 .opened(&mut opened)
                 .build(ui, || {
@@ -399,7 +407,10 @@ impl App {
     fn is_model_valid(&self) -> bool {
         let population_ids: HashSet<_> = self.get_all_population_ids();
 
-        let has_terms = self.nodes.iter().any(|(_, node)| matches!(node, Node::Term(_)));
+        let has_terms = self
+            .nodes
+            .iter()
+            .any(|(_, node)| matches!(node, Node::Term(_)));
 
         let has_assigner_operating_on_term = self.nodes.iter().any(|(_, node)| {
             if let Node::Term(term) = node {
@@ -411,7 +422,7 @@ impl App {
 
         has_terms && has_assigner_operating_on_term
     }
-    
+
     fn get_all_population_ids(&self) -> HashSet<&NodeId> {
         self.nodes
             .iter()
@@ -434,9 +445,8 @@ impl App {
     }
 
     pub fn draw_tab_parameter_estimation(&self, ui: &imgui::Ui, selected: &RefCell<Vec<usize>>) {
-        
-        ui.columns(3, "Parameters", true);
-        
+        ui.columns(4, "Parameters", true);
+
         let all_population_ids = self.get_all_population_ids();
         let all_constants = self.get_all_constants(&all_population_ids);
         let mut model = adjust_params::Model::new(all_constants);
@@ -445,7 +455,7 @@ impl App {
             ui.table_setup_column("Variable Name");
             ui.table_setup_column("Initial Value");
             ui.table_setup_column("Estimate");
-            ui.table_headers_row();            
+            ui.table_headers_row();
 
             for (index, parameter) in model
                 .parameters
@@ -469,67 +479,63 @@ impl App {
                 }
 
                 ui.table_next_column();
-                let value = parameter.term.initial_value as f32;
+
+                let value = parameter.term.initial_value;
                 ui.text(imgui::ImString::new(value.to_string()));
 
-                ui.table_next_column();                
+                ui.table_next_column();
             }
         }
-        
-        ui.next_column();        
 
-        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {            
+        ui.next_column();
+
+        ui.button_with_size("Drag and Drop", [100.0, 75.0]);
+
+        let drag_drop_name = "parameter_drag";
+
+        if let Some(target) = ui.drag_drop_target() {
+            if let Some(Ok(payload_data)) =
+                target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
+            {
+                selected.borrow_mut().push(payload_data.data);
+
+                println!("index: {}", payload_data.data);
+            }
+            target.pop();
+        }
+
+        ui.next_column();
+
+        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
             ui.table_setup_column("Name");
             ui.table_setup_column("Min");
             ui.table_setup_column("Max");
             ui.table_headers_row();
 
             for id in selected.borrow().iter() {
-                ui.table_next_row();
-                ui.table_next_column();                
-                ui.text(imgui::ImString::new(model.parameters[*id].term.name()));
-                ui.table_next_column(); 
-                let _ = ui.input_float("min", &mut model.parameters[*id].bounds.0);
-                ui.table_next_column(); 
-                let _ = ui.input_float("max", &mut model.parameters[*id].bounds.1);
-            }
-            
-            ui.table_next_row();
-            ui.table_next_column();  
-            //ui.push_style_color(style_color, color)
-            ui.invisible_button(
-                &imgui::ImString::new(format!("estimation_drop_target_{}", 0)),
-                [100.0, 20.0],
-            );
-            //ui.color_button("color_button", [1.0, 0.0, 0.0, 1.0]);
+                let parameter = &mut model.parameters[*id];
 
-            let drag_drop_name = "parameter_drag";
-                
-            if let Some(target) = ui.drag_drop_target() {
-                if let Some(Ok(payload_data)) =
-                    target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
-                {                    
-                    selected.borrow_mut().push(payload_data.data);
-    
-                    println!("index: {}", payload_data.data);
-                }
-                target.pop();
+                ui.table_next_row();
+                ui.table_next_column();
+                ui.text(imgui::ImString::new(parameter.term.name()));
+
+                ui.table_next_column();
+                ui.input_float("", &mut parameter.bounds.0).build();
+                ui.table_next_column();
+                ui.input_float("", &mut parameter.bounds.1).build();
             }
-        }   
+
+            //ui.push_style_color(style_color, color)
+
+            //ui.color_button("color_button", [1.0, 0.0, 0.0, 1.0]);
+        }
 
         ui.next_column();
-        let run_button = ui.button("Run"); 
+        let run_button = ui.button("Run");
 
         if run_button {
-            //GA_Metadata
-            //Arguments: //model.parameters[*id].term.initial_value
-            //Bounds:
-            for id in selected.borrow().iter() {
-                //model.parameters[*id].term.name()
-            }
-            //let config_data =  ConfigData {};            
-        }        
-
+            model.populate_config_data(selected);
+        }
     }
 
     /// Draws the nodes and other elements
@@ -600,7 +606,9 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
 
-        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor, locale));
+        let scope = imnodes::editor(context, |mut editor| {
+            self.draw_editor(ui, &mut editor, locale)
+        });
 
         if let Some(link) = scope.links_created() {
             self.add_link(link.start_pin, link.end_pin);
@@ -626,7 +634,13 @@ impl App {
         }
     }
 
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi, locale: &mut Locale) {
+    pub fn draw(
+        &mut self,
+        ui: &Ui,
+        context: &mut imnodes::EditorContext,
+        plot_ui: &mut PlotUi,
+        locale: &mut Locale,
+    ) {
         let flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
@@ -671,16 +685,16 @@ impl App {
                     }
 
                     if let Some(AppState::EstimatingParameters { ref selected }) = self.state {
-                        if self.is_model_valid(){
-                        let mut user_kept_open = true;
-                        let tab_item = TabItem::new("Estimating Parameters");
-                        tab_item.opened(&mut user_kept_open).build(ui, || {
-                            self.draw_tab_parameter_estimation(ui, selected);
-                        });
-                        if !user_kept_open {
-                            self.state = None;
+                        if self.is_model_valid() {
+                            let mut user_kept_open = true;
+                            let tab_item = TabItem::new("Estimating Parameters");
+                            tab_item.opened(&mut user_kept_open).build(ui, || {
+                                self.draw_tab_parameter_estimation(ui, selected);
+                            });
+                            if !user_kept_open {
+                                self.state = None;
+                            }
                         }
-                    }
                     }
                 });
             });
@@ -693,7 +707,9 @@ impl App {
                 .copied()
                 .zip(NodeVariant::VARIANTS)
                 .filter(|(_, variant)| variant != &&NodeVariant::Custom)
-                .map(|(name, variant)| NodeTypeRepresentation::new(locale.get(name), *variant, None))
+                .map(|(name, variant)| {
+                    NodeTypeRepresentation::new(locale.get(name), *variant, None)
+                })
                 .collect(),
             ..Self::default()
         }
@@ -1209,7 +1225,7 @@ impl App {
 
     pub fn update_locale(&mut self, locale: &mut Locale, lang: LanguageIdentifier) {
         locale.set_lang(lang);
-        
+
         // The non-custom nodes must have their names updated. They're not
         // translated on the fly, but rather are stored in the Vec already
         // translated.
@@ -1238,9 +1254,14 @@ mod tests {
 
     use super::App;
     use crate::{
-        core::{initialize_id_generator, GeneratesId}, exprtree::{ExpressionNode, Operation, Sign}, locale::Locale, message::Message, nodes::{
+        core::{initialize_id_generator, GeneratesId},
+        exprtree::{ExpressionNode, Operation, Sign},
+        locale::Locale,
+        message::Message,
+        nodes::{
             Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
-        }, pins::{OutputPin, Pin}
+        },
+        pins::{OutputPin, Pin},
     };
 
     struct ExpressionNodeBuilder<'pin> {

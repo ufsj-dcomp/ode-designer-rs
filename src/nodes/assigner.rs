@@ -4,7 +4,12 @@ use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
-    core::{app::AppState, App}, exprtree::{ExpressionNode, Sign}, locale::Locale, message::Message, pins::{InputPin, Pin}, utils::ModelFragment
+    core::{app::AppState, App},
+    exprtree::{ExpressionNode, Sign},
+    locale::Locale,
+    message::Message,
+    pins::{InputPin, Pin},
+    utils::ModelFragment,
 };
 
 use super::{

@@ -3,7 +3,9 @@ use std::{borrow::Cow, default, io::Empty};
 use imgui::Ui;
 
 use crate::{
-    locale::Locale, message::Message, nodes::{Expression, Node, NodeImpl, NodeTypeRepresentation, NodeVariant}
+    locale::Locale,
+    message::Message,
+    nodes::{Expression, Node, NodeImpl, NodeTypeRepresentation, NodeVariant},
 };
 
 use super::App;
@@ -24,7 +26,12 @@ pub struct Times {
 }
 
 impl SideBarState {
-    pub fn draw(&mut self, ui: &Ui, node_types: &[NodeTypeRepresentation], locale: &Locale) -> Option<Node> {
+    pub fn draw(
+        &mut self,
+        ui: &Ui,
+        node_types: &[NodeTypeRepresentation],
+        locale: &Locale,
+    ) -> Option<Node> {
         let table_group = ui.begin_group();
         let mut selected_node_type = None;
 
@@ -47,7 +54,10 @@ impl SideBarState {
         const MAGIC_SPACING: f32 = 300.0;
 
         let [_, height] = ui.window_size();
-        ui.dummy([0.0, height - MAGIC_SPACING - node_types.len() as f32 * MAGIC_BUTTON_HEIGHT]);
+        ui.dummy([
+            0.0,
+            height - MAGIC_SPACING - node_types.len() as f32 * MAGIC_BUTTON_HEIGHT,
+        ]);
 
         {
             let _width = ui.push_item_width(WIDTH);

@@ -92,13 +92,11 @@ impl App {
             .map(CustomNodeSpecification::from)
             .map(Rc::from)
             .inspect(|node_spec| {
-                self.node_types.push(
-                    NodeTypeRepresentation::new(
-                        format!("󰯂 {}", node_spec.function.name),
-                        NodeVariant::Custom,
-                        Some(Rc::clone(node_spec)),
-                    )
-                );
+                self.node_types.push(NodeTypeRepresentation::new(
+                    format!("󰯂 {}", node_spec.function.name),
+                    NodeVariant::Custom,
+                    Some(Rc::clone(node_spec)),
+                ));
             })
             .collect();
 

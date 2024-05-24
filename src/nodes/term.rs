@@ -2,7 +2,11 @@ use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId};
 
 use crate::{
-    core::{widgets::input_num, App}, exprtree::{ExpressionNode, Leaf, Sign}, locale::Locale, pins::{OutputPin, Pin}, utils::ModelFragment
+    core::{widgets::input_num, App},
+    exprtree::{ExpressionNode, Leaf, Sign},
+    locale::Locale,
+    pins::{OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use super::{NodeImpl, PendingOperations, SimpleNodeBuilder};

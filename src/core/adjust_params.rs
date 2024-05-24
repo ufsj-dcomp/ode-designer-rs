@@ -32,4 +32,45 @@ impl Model {
             adjusted_parameters: RefCell::new(Vec::new()),
         }
     }
+
+    pub fn populate_config_data(&self, selected: &RefCell<Vec<usize>>) {
+        let metadata = GA_Metadata {
+            name: String::from("TODO!"),
+            start_time: 0.0,
+            delta_time: 0.1,
+            end_time: 10.0,
+            population_size: 100,
+            crossover_rate: 0.7,
+            mutation_rate: 0.01,
+            max_iterations: 1000,
+        };
+
+        let mut arguments: Vec<GA_Argument> = vec![];
+        let mut bounds: Vec<Bound> = vec![];
+
+        for id in selected.borrow().iter() {
+            let parameter = &self.parameters[*id];
+
+            arguments.push(GA_Argument::new(
+                parameter.term.name().to_string(),
+                parameter.term.initial_value,
+            ));
+
+            bounds.push(Bound::new(
+                parameter.term.name().to_string(),
+                parameter.bounds.0 as f64,
+                parameter.bounds.1 as f64,
+            ));
+        }
+
+        arguments.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let config_data = ConfigData {
+            metadata,
+            arguments,
+            bounds,
+        };
+
+        println!("{:?}", config_data);
+    }
 }

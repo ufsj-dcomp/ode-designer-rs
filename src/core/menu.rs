@@ -1,13 +1,12 @@
 use imgui::Ui;
 
-use crate::{locale::{Locale, LANGUAGES}, {nodes::expression, App}};
+use crate::{
+    locale::{Locale, LANGUAGES},
+    {nodes::expression, App},
+};
 use rfd::FileDialog;
 
-use std::{
-    cell::RefCell,
-    fs::read_to_string,
-    process::Command,
-};
+use std::{cell::RefCell, fs::read_to_string, process::Command};
 
 use super::{
     app::{AppState, SimulationState},
@@ -44,18 +43,30 @@ impl App {
     pub fn draw_menu(&mut self, ui: &Ui, locale: &mut Locale) {
         ui.menu_bar(|| {
             ui.menu(locale.get("file"), || {
-                if ui.menu_item_config(locale.get("file-new")).shortcut("Ctrl + N").build() {
+                if ui
+                    .menu_item_config(locale.get("file-new"))
+                    .shortcut("Ctrl + N")
+                    .build()
+                {
                     self.clear_state();
                 }
 
-                if ui.menu_item_config(locale.get("file-load")).shortcut("Ctrl + O").build() {
+                if ui
+                    .menu_item_config(locale.get("file-load"))
+                    .shortcut("Ctrl + O")
+                    .build()
+                {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
                     }
                 }
 
-                if ui.menu_item_config(locale.get("file-save")).shortcut("Ctrl + S").build() {
+                if ui
+                    .menu_item_config(locale.get("file-save"))
+                    .shortcut("Ctrl + S")
+                    .build()
+                {
                     self.save_state();
                 }
 
