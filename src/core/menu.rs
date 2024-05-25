@@ -105,6 +105,7 @@ impl App {
                                 .arg(self.text_fields.y_label.to_string());
                         }
 
+                        
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
                             Err(err) => eprintln!("{err}"),
@@ -125,14 +126,14 @@ impl App {
                         .arg(&py_code)
                         .arg("--csv")
                         .args(self.sidebar_state.time_flags());
-
+                    
                     match execute_python_code(&mut command) {
                         Ok(output) => {
                             self.simulation_state = Some(SimulationState::from_csv(output, locale));
                             if let Some(mut simulation_state) = self.simulation_state.clone() {
                                 if !self.text_fields.x_label.is_empty() {
                                     simulation_state.plot.xlabel =
-                                        self.text_fields.x_label.to_string();
+                                    self.text_fields.x_label.to_string();
                                 }
                                 if !self.text_fields.y_label.is_empty() {
                                     simulation_state.plot.ylabel =
