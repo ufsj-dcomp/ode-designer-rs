@@ -1,14 +1,17 @@
 use imgui::Ui;
 
 use crate::{
+    core::adjust_params,
     locale::{Locale, LANGUAGES},
-    {nodes::expression, App},
+    nodes::expression,
+    App,
 };
 use rfd::FileDialog;
 
 use std::{cell::RefCell, fs::read_to_string, process::Command};
 
 use super::{
+    adjust_params::ParameterEstimationState,
     app::{AppState, SimulationState},
     python::{execute_python_code, PythonError},
 };
@@ -105,7 +108,6 @@ impl App {
                                 .arg(self.text_fields.y_label.to_string());
                         }
 
-                        
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
                             Err(err) => eprintln!("{err}"),
@@ -126,14 +128,14 @@ impl App {
                         .arg(&py_code)
                         .arg("--csv")
                         .args(self.sidebar_state.time_flags());
-                    
+
                     match execute_python_code(&mut command) {
                         Ok(output) => {
                             self.simulation_state = Some(SimulationState::from_csv(output, locale));
                             if let Some(mut simulation_state) = self.simulation_state.clone() {
                                 if !self.text_fields.x_label.is_empty() {
                                     simulation_state.plot.xlabel =
-                                    self.text_fields.x_label.to_string();
+                                        self.text_fields.x_label.to_string();
                                 }
                                 if !self.text_fields.y_label.is_empty() {
                                     simulation_state.plot.ylabel =
@@ -148,10 +150,11 @@ impl App {
             });
 
             if ui.menu_item("Parameter estimation") {
-                self.state = if let Some(AppState::EstimatingParameters) = self.state {
-                    None
+                if let Some(AppState::EstimatingParameters) = self.state {
+                    self.state = None;
                 } else {
-                    Some(AppState::EstimatingParameters)
+                    self.state = Some(AppState::EstimatingParameters);
+                    self.parameter_estimation_state.set_update_needed(true);
                 }
             }
 

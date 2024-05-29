@@ -1,71 +1,71 @@
+use imgui::{DragDropFlags, Ui};
+use imnodes::NodeId;
 use std::cell::{Ref, RefCell};
 use std::collections::BTreeMap;
 use std::ops::Range;
-use imgui::{DragDropFlags, Ui};
-use imnodes::NodeId;
 
 use crate::nodes::{Node, NodeImpl, Term};
 
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 
+use super::App;
+
 #[derive(Debug)]
 pub struct Parameter {
     pub term: Term,
     pub range: Range<f32>,
-    selected: bool, 
+    pub selected: bool,
 }
 
 #[derive(Default, Debug)]
 pub struct ParameterEstimationState {
-    pub parameters: BTreeMap<NodeId,Parameter>,
+    pub parameters: BTreeMap<NodeId, Parameter>,
+    pub update_needed: bool,
 }
 
 impl ParameterEstimationState {
-
     pub fn new(variables: Vec<Term>) -> Self {
         let mut parameters = BTreeMap::new();
-        
-        for term in variables.iter(){
-            parameters.insert(term.id, Parameter {
-                term: term.clone(),
-                range: 0.01..1.0,
-                selected: false,
-            });
+
+        for term in variables.iter() {
+            parameters.insert(
+                term.id,
+                Parameter {
+                    term: term.clone(),
+                    range: 0.01..1.0,
+                    selected: false,
+                },
+            );
         }
-        
+
         println!("parameters: {:#?}", parameters);
         Self {
             parameters: parameters,
+            update_needed: false,
         }
     }
-    //pub fn update(&mut self, variables: Vec<Term>) {
-        /* Verificar quais parâmetros foram removidos ou criados */
-        
-        /*self.parameters = variables
-            .into_iter()
-            .map(|term| Parameter {
-                term: term.clone(),
-                range: 0.01..1.0,
-                selected: false,
-            })
-            .collect();        */
-    //}
 
-    pub fn draw_tables(&mut self, ui: &Ui){
+    pub fn set_update_needed(&mut self, value: bool) {
+        self.update_needed = value;
+    }
+
+    pub fn clear_selected(&mut self) {
+        self.parameters.clear();
+    }
+
+    pub fn draw_tables(&mut self, ui: &Ui) {
         ui.columns(4, "Parameters", true);
 
         if let Some(_t) = ui.begin_table("Parameters", 2) {
             ui.table_setup_column("Variable Name");
-            ui.table_setup_column("Initial Value");            
+            ui.table_setup_column("Initial Value");
             ui.table_headers_row();
 
-            for (index, (id, parameter)) in 
-            //for (id, parameter) in 
-            self
+            for (index, (id, parameter)) in self
                 .parameters
                 .iter()
                 .enumerate()
-                .filter(|(_id, value) | ! value.1.selected)
+                .filter(|(_id, value)| !value.1.selected)
             {
                 ui.table_next_row();
                 ui.table_next_column();
@@ -76,7 +76,7 @@ impl ParameterEstimationState {
                 if let Some(tooltip) = ui
                     .drag_drop_source_config(drag_drop_name)
                     .flags(DragDropFlags::empty())
-                    .begin_payload(id)
+                    .begin_payload(id.clone())
                 {
                     ui.text(parameter.term.name());
                     tooltip.end();
@@ -101,11 +101,10 @@ impl ParameterEstimationState {
             if let Some(Ok(payload_data)) =
                 target.accept_payload::<NodeId, _>(drag_drop_name, DragDropFlags::empty())
             {
-                let selected_id: NodeId = payload_data.data; 
-                if let Some(parameter) = self.parameters.get_mut(&selected_id){
+                let selected_id: NodeId = payload_data.data;
+                if let Some(parameter) = self.parameters.get_mut(&selected_id) {
                     parameter.selected = true;
                 }
-                //println!("index: {}", payload_data.data.);
             }
             target.pop();
         }
@@ -121,19 +120,27 @@ impl ParameterEstimationState {
             for (id, parameter) in self
                 .parameters
                 .iter_mut()
-                .filter(|(id, value) | value.selected)
-            {                
+                .filter(|(_, value)| value.selected)
+            {
                 ui.table_next_row();
                 let stack = ui.push_id(&imgui::ImString::new(parameter.term.name()));
                 ui.table_next_column();
                 {
                     ui.text(imgui::ImString::new(parameter.term.name()));
                     ui.table_next_column();
-                    ui.input_float(format!("##min-{0}", parameter.term.name()), &mut parameter.range.start).build();
+                    ui.input_float(
+                        format!("##min-{0}", parameter.term.name()),
+                        &mut parameter.range.start,
+                    )
+                    .build();
                     ui.table_next_column();
-                    ui.input_float(format!("##max={0}", parameter.term.name()), &mut parameter.range.end).build();
+                    ui.input_float(
+                        format!("##max={0}", parameter.term.name()),
+                        &mut parameter.range.end,
+                    )
+                    .build();
                 }
-                stack.pop();                        
+                stack.pop();
             }
         }
 
@@ -160,18 +167,14 @@ impl ParameterEstimationState {
         let mut arguments: Vec<GA_Argument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
 
-        for (_id, parameter) in self.parameters.iter(){
+        for (_id, parameter) in self.parameters.iter() {
             arguments.push(GA_Argument::new(
                 parameter.term.name().to_string(),
                 parameter.term.initial_value,
             ));
         }
 
-        for (_id, parameter) in self.parameters
-            .iter()
-            .filter(|(_id, param) | param.selected)
-        {                
-
+        for (_id, parameter) in self.parameters.iter().filter(|(_id, param)| param.selected) {
             bounds.push(Bound::new(
                 parameter.term.name().to_string(),
                 parameter.range.start as f64,

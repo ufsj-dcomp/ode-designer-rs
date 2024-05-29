@@ -1,6 +1,6 @@
 use std::borrow::{Borrow, Cow};
 use std::cell::{Ref, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -32,12 +32,12 @@ use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{DragDropFlags, Key, StyleVar, TabItem, Ui};
+use imgui::{DragDropFlags, Key, StyleVar, TabItem, TabItemFlags, Ui};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
-use super::adjust_params::{self, ParameterEstimationState};
+use super::adjust_params::{self, Parameter, ParameterEstimationState};
 use super::plot::CSVData;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -403,6 +403,35 @@ impl AppState {
 }
 
 impl App {
+    pub fn check_and_update_parameter_estimation(&mut self) {
+        let all_population_ids = self.get_all_population_ids();
+        let all_constants = self.get_all_constants(&all_population_ids);
+
+        let new_parameters = adjust_params::ParameterEstimationState::new(all_constants);
+        let new_params = new_parameters.parameters;
+
+        self.parameter_estimation_state
+            .parameters
+            .retain(|id, parameter| {
+                if let Some(new_parameter) = new_params.get(id) {
+                    if new_parameter.term.name() != parameter.term.name() {
+                        parameter.term.leaf.symbol = new_parameter.term.name().to_string();
+                    }
+                    true
+                } else {
+                    false
+                }
+            });
+
+        for (id, parameter) in new_params {
+            if !self.parameter_estimation_state.parameters.contains_key(&id) {
+                self.parameter_estimation_state
+                    .parameters
+                    .insert(id, parameter);
+            }
+        }
+    }
+
     fn is_model_valid(&self) -> bool {
         let population_ids: HashSet<_> = self.get_all_population_ids();
 
@@ -444,10 +473,6 @@ impl App {
     }
 
     pub fn draw_tab_parameter_estimation(&mut self, ui: &imgui::Ui) {
-        let all_population_ids = self.get_all_population_ids();
-        let all_constants = self.get_all_constants(&all_population_ids);
-        
-        self.parameter_estimation_state = ParameterEstimationState::new(all_constants);
         self.parameter_estimation_state.draw_tables(ui);
     }
 
@@ -577,6 +602,8 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new(locale.get("tab-model"));
                     tab_model.build(ui, || {
+                        self.parameter_estimation_state.set_update_needed(true);
+
                         if let Some(node) = self.sidebar_state.draw(ui, &self.node_types, locale) {
                             self.add_node(node);
                         }
@@ -597,15 +624,20 @@ impl App {
                         }
                     }
 
-                    if let Some(AppState::EstimatingParameters) = self.state {                        
+                    if let Some(AppState::EstimatingParameters) = self.state {
                         if self.is_model_valid() {
                             let mut user_kept_open = true;
                             let tab_item = TabItem::new("Estimating Parameters");
                             tab_item.opened(&mut user_kept_open).build(ui, || {
+                                if self.parameter_estimation_state.update_needed {
+                                    self.check_and_update_parameter_estimation();
+                                    self.parameter_estimation_state.set_update_needed(false);
+                                }
                                 self.draw_tab_parameter_estimation(ui);
                             });
                             if !user_kept_open {
                                 self.state = None;
+                                self.parameter_estimation_state.clear_selected();
                             }
                         }
                     }
@@ -838,7 +870,7 @@ impl App {
                         acc
                     })
             }
-            Message::RenameNode(node_id, node_name) => { 
+            Message::RenameNode(node_id, node_name) => {
                 for (_, node) in self.nodes.iter_mut() {
                     if let Node::Assigner(asg) = node
                         && let Some((asg_node_id, _)) = asg.operates_on
@@ -848,7 +880,7 @@ impl App {
                     }
                 }
 
-                //TO DO: renomear os nomes dos nós do BTreeMap paramaters 
+                //TO DO: renomear os nomes dos nós do BTreeMap paramaters
 
                 None
             }
