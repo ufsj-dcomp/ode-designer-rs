@@ -1,51 +1,71 @@
 use std::cell::{Ref, RefCell};
-
+use std::collections::BTreeMap;
+use std::ops::Range;
 use imgui::{DragDropFlags, Ui};
+use imnodes::NodeId;
 
 use crate::nodes::{Node, NodeImpl, Term};
 
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 
+#[derive(Debug)]
 pub struct Parameter {
     pub term: Term,
-    pub bounds: (f32, f32),
-}
-#[derive(Default)]
-pub struct Model {
-    pub parameters: Vec<Parameter>,
-    pub adjusted_parameters: RefCell<Vec<usize>>,
+    pub range: Range<f32>,
+    selected: bool, 
 }
 
-impl Model {
+#[derive(Default, Debug)]
+pub struct ParameterEstimationState {
+    pub parameters: BTreeMap<NodeId,Parameter>,
+}
+
+impl ParameterEstimationState {
+
     pub fn new(variables: Vec<Term>) -> Self {
-        let parameters = variables
+        let mut parameters = BTreeMap::new();
+        
+        for term in variables.iter(){
+            parameters.insert(term.id, Parameter {
+                term: term.clone(),
+                range: 0.01..1.0,
+                selected: false,
+            });
+        }
+        
+        println!("parameters: {:#?}", parameters);
+        Self {
+            parameters: parameters,
+        }
+    }
+    //pub fn update(&mut self, variables: Vec<Term>) {
+        /* Verificar quais parâmetros foram removidos ou criados */
+        
+        /*self.parameters = variables
             .into_iter()
             .map(|term| Parameter {
                 term: term.clone(),
-                bounds: Default::default(),
+                range: 0.01..1.0,
+                selected: false,
             })
-            .collect();
+            .collect();        */
+    //}
 
-        Self {
-            parameters,
-            adjusted_parameters: RefCell::new(Vec::new()),
-        }
-    }
-
-    pub fn draw_tables(&mut self, ui: &Ui, selected: &RefCell<Vec<usize>>){
+    pub fn draw_tables(&mut self, ui: &Ui){
         ui.columns(4, "Parameters", true);
 
-        if let Some(_t) = ui.begin_table("Parameters", 3) {
+        if let Some(_t) = ui.begin_table("Parameters", 2) {
             ui.table_setup_column("Variable Name");
-            ui.table_setup_column("Initial Value");
-            ui.table_setup_column("Estimate");
+            ui.table_setup_column("Initial Value");            
             ui.table_headers_row();
 
-            for (index, parameter) in self
+            for (index, (id, parameter)) in 
+            //for (id, parameter) in 
+            self
                 .parameters
                 .iter()
                 .enumerate()
-                .filter(|(id, _)| !RefCell::borrow(selected).contains(id))
+                .filter(|(_id, value) | ! value.1.selected)
             {
                 ui.table_next_row();
                 ui.table_next_column();
@@ -56,7 +76,7 @@ impl Model {
                 if let Some(tooltip) = ui
                     .drag_drop_source_config(drag_drop_name)
                     .flags(DragDropFlags::empty())
-                    .begin_payload(index)
+                    .begin_payload(id)
                 {
                     ui.text(parameter.term.name());
                     tooltip.end();
@@ -79,11 +99,13 @@ impl Model {
 
         if let Some(target) = ui.drag_drop_target() {
             if let Some(Ok(payload_data)) =
-                target.accept_payload::<usize, _>(drag_drop_name, DragDropFlags::empty())
+                target.accept_payload::<NodeId, _>(drag_drop_name, DragDropFlags::empty())
             {
-                selected.borrow_mut().push(payload_data.data);
-
-                println!("index: {}", payload_data.data);
+                let selected_id: NodeId = payload_data.data; 
+                if let Some(parameter) = self.parameters.get_mut(&selected_id){
+                    parameter.selected = true;
+                }
+                //println!("index: {}", payload_data.data.);
             }
             target.pop();
         }
@@ -96,62 +118,64 @@ impl Model {
             ui.table_setup_column("Max");
             ui.table_headers_row();
 
-            for id in selected.borrow().iter() {
-                let parameter = &mut self.parameters[*id];
-
+            for (id, parameter) in self
+                .parameters
+                .iter_mut()
+                .filter(|(id, value) | value.selected)
+            {                
                 ui.table_next_row();
                 let stack = ui.push_id(&imgui::ImString::new(parameter.term.name()));
                 ui.table_next_column();
                 {
-                ui.text(imgui::ImString::new(parameter.term.name()));
-                ui.table_next_column();
-                ui.input_float("##min", &mut parameter.bounds.0).build();
-                ui.table_next_column();
-                ui.input_float("##max", &mut parameter.bounds.1).build();
+                    ui.text(imgui::ImString::new(parameter.term.name()));
+                    ui.table_next_column();
+                    ui.input_float(format!("##min-{0}", parameter.term.name()), &mut parameter.range.start).build();
+                    ui.table_next_column();
+                    ui.input_float(format!("##max={0}", parameter.term.name()), &mut parameter.range.end).build();
                 }
-                stack.pop();
+                stack.pop();                        
             }
-
-            //ui.push_style_color(style_color, color)
-
-            //ui.color_button("color_button", [1.0, 0.0, 0.0, 1.0]);
         }
 
         ui.next_column();
         let run_button = ui.button("Run");
 
         if run_button {
-            self.populate_config_data(selected);
+            self.populate_config_data();
         }
     }
 
-    pub fn populate_config_data(&self, selected: &RefCell<Vec<usize>>) {
+    pub fn populate_config_data(&self) {
         let metadata = GA_Metadata {
             name: String::from("TODO!"),
             start_time: 0.0,
             delta_time: 0.1,
             end_time: 10.0,
             population_size: 100,
-            crossover_rate: 0.7,
-            mutation_rate: 0.01,
-            max_iterations: 1000,
+            crossover_rate: 0.5,
+            mutation_rate: 0.75,
+            max_iterations: 50,
         };
 
         let mut arguments: Vec<GA_Argument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
 
-        for id in selected.borrow().iter() {
-            let parameter = &self.parameters[*id];
-
+        for (_id, parameter) in self.parameters.iter(){
             arguments.push(GA_Argument::new(
                 parameter.term.name().to_string(),
                 parameter.term.initial_value,
             ));
+        }
+
+        for (_id, parameter) in self.parameters
+            .iter()
+            .filter(|(_id, param) | param.selected)
+        {                
 
             bounds.push(Bound::new(
                 parameter.term.name().to_string(),
-                parameter.bounds.0 as f64,
-                parameter.bounds.1 as f64,
+                parameter.range.start as f64,
+                parameter.range.end as f64,
             ));
         }
 

@@ -148,12 +148,10 @@ impl App {
             });
 
             if ui.menu_item("Parameter estimation") {
-                self.state = if let Some(AppState::EstimatingParameters { .. }) = self.state {
+                self.state = if let Some(AppState::EstimatingParameters) = self.state {
                     None
                 } else {
-                    Some(AppState::EstimatingParameters {
-                        selected: Default::default(),
-                    })
+                    Some(AppState::EstimatingParameters)
                 }
             }
 

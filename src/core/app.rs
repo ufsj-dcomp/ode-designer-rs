@@ -37,7 +37,7 @@ use imgui::{DragDropFlags, Key, StyleVar, TabItem, Ui};
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
-use super::adjust_params;
+use super::adjust_params::{self, ParameterEstimationState};
 use super::plot::CSVData;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -236,6 +236,7 @@ pub struct App {
     pub sidebar_state: SideBarState,
     pub extensions: Vec<Extension>,
     pub text_fields: TextFields,
+    pub parameter_estimation_state: ParameterEstimationState,
 }
 
 pub enum AppState {
@@ -249,9 +250,7 @@ pub enum AppState {
         search_query: String,
     },
     ManagingExtensions,
-    EstimatingParameters {
-        selected: RefCell<Vec<usize>>,
-    },
+    EstimatingParameters,
 }
 
 enum StateAction {
@@ -444,12 +443,12 @@ impl App {
             .collect()
     }
 
-    pub fn draw_tab_parameter_estimation(&self, ui: &imgui::Ui, selected: &RefCell<Vec<usize>>) {
+    pub fn draw_tab_parameter_estimation(&mut self, ui: &imgui::Ui) {
         let all_population_ids = self.get_all_population_ids();
         let all_constants = self.get_all_constants(&all_population_ids);
-        let mut model = adjust_params::Model::new(all_constants);
-
-        model.draw_tables(ui,selected);
+        
+        self.parameter_estimation_state = ParameterEstimationState::new(all_constants);
+        self.parameter_estimation_state.draw_tables(ui);
     }
 
     /// Draws the nodes and other elements
@@ -598,12 +597,12 @@ impl App {
                         }
                     }
 
-                    if let Some(AppState::EstimatingParameters { ref selected }) = self.state {
+                    if let Some(AppState::EstimatingParameters) = self.state {                        
                         if self.is_model_valid() {
                             let mut user_kept_open = true;
                             let tab_item = TabItem::new("Estimating Parameters");
                             tab_item.opened(&mut user_kept_open).build(ui, || {
-                                self.draw_tab_parameter_estimation(ui, selected);
+                                self.draw_tab_parameter_estimation(ui);
                             });
                             if !user_kept_open {
                                 self.state = None;
@@ -839,7 +838,7 @@ impl App {
                         acc
                     })
             }
-            Message::RenameNode(node_id, node_name) => {
+            Message::RenameNode(node_id, node_name) => { 
                 for (_, node) in self.nodes.iter_mut() {
                     if let Node::Assigner(asg) = node
                         && let Some((asg_node_id, _)) = asg.operates_on
@@ -848,6 +847,8 @@ impl App {
                         asg.operates_on = Some((node_id, node_name.clone()));
                     }
                 }
+
+                //TO DO: renomear os nomes dos nós do BTreeMap paramaters 
 
                 None
             }
