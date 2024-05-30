@@ -154,12 +154,9 @@ impl App {
                     self.state = None;
                 } else {
                     self.state = Some(AppState::EstimatingParameters);
-                    self.parameter_estimation_state.set_update_needed(true);
+                    //self.parameter_estimation_state.set_update_needed(true);
                 }
             }
-
-            /*/*let ode_system = self.generate_equations();
-            println!("ODEs: {:#?}", ode_system); */ */
 
             if ui.menu_item(locale.get("extensions")) {
                 self.state = if let Some(AppState::ManagingExtensions) = self.state {

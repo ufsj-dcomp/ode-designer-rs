@@ -20,7 +20,7 @@ pub struct Parameter {
 #[derive(Default, Debug)]
 pub struct ParameterEstimationState {
     pub parameters: BTreeMap<NodeId, Parameter>,
-    pub update_needed: bool,
+    //pub update_needed: bool,
 }
 
 impl ParameterEstimationState {
@@ -38,15 +38,15 @@ impl ParameterEstimationState {
             );
         }
 
-        println!("parameters: {:#?}", parameters);
+        //println!("parameters: {:#?}", parameters);
         Self {
             parameters: parameters,
-            update_needed: false,
+            //update_needed: false,
         }
     }
 
     pub fn set_update_needed(&mut self, value: bool) {
-        self.update_needed = value;
+        //self.update_needed = value;
     }
 
     pub fn clear_selected(&mut self) {

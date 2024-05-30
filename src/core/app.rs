@@ -397,12 +397,16 @@ impl AppState {
                     StateAction::Clear
                 }
             }
-            AppState::EstimatingParameters { .. } => StateAction::Keep,
+            AppState::EstimatingParameters =>{ 
+                println!("State = estimating parameters");                 
+                StateAction::Keep               
+            },
         }
     }
 }
 
 impl App {
+
     pub fn check_and_update_parameter_estimation(&mut self) {
         let all_population_ids = self.get_all_population_ids();
         let all_constants = self.get_all_constants(&all_population_ids);
@@ -602,7 +606,7 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new(locale.get("tab-model"));
                     tab_model.build(ui, || {
-                        self.parameter_estimation_state.set_update_needed(true);
+                        //self.parameter_estimation_state.set_update_needed(true);
 
                         if let Some(node) = self.sidebar_state.draw(ui, &self.node_types, locale) {
                             self.add_node(node);
@@ -625,22 +629,22 @@ impl App {
                     }
 
                     if let Some(AppState::EstimatingParameters) = self.state {
-                        if self.is_model_valid() {
-                            let mut user_kept_open = true;
+                        let mut user_kept_open = true;
+                        if self.is_model_valid() {                            
                             let tab_item = TabItem::new("Estimating Parameters");
                             tab_item.opened(&mut user_kept_open).build(ui, || {
-                                if self.parameter_estimation_state.update_needed {
-                                    self.check_and_update_parameter_estimation();
-                                    self.parameter_estimation_state.set_update_needed(false);
-                                }
+                                //if self.parameter_estimation_state.update_needed {
+                                self.check_and_update_parameter_estimation();
+                                    //self.parameter_estimation_state.set_update_needed(false);
+                                //}
                                 self.draw_tab_parameter_estimation(ui);
-                            });
-                            if !user_kept_open {
-                                self.state = None;
-                                self.parameter_estimation_state.clear_selected();
-                            }
+                            });                            
                         }
-                    }
+                        if !user_kept_open {
+                            self.state = None;
+                            self.parameter_estimation_state.clear_selected();
+                        }
+                    } 
                 });
             });
     }
