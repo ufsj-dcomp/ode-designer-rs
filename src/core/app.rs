@@ -29,6 +29,7 @@ use crate::nodes::{
     PendingOperations, Term,
 };
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
+use crate::ode::odesystem::{create_ode_system, OdeSystem};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
@@ -472,7 +473,9 @@ impl App {
     }
 
     pub fn draw_tab_parameter_estimation(&mut self, ui: &imgui::Ui) {
-        self.parameter_estimation_state.draw_tables(ui);
+        self.parameter_estimation_state.draw_tables(ui); 
+        self.generate_equations();       
+        //println!("Ode system: {:#?}", self.parameter_estimation_state.ode_system);
     }
 
     /// Draws the nodes and other elements
@@ -629,8 +632,8 @@ impl App {
                             let tab_item = TabItem::new("Estimating Parameters");
                             tab_item.opened(&mut user_kept_open).build(ui, || {
                                 if self.parameter_estimation_state.update_needed {
-                                self.check_and_update_parameter_estimation();
-                                self.parameter_estimation_state.set_update_needed(false);
+                                    self.check_and_update_parameter_estimation();
+                                    self.parameter_estimation_state.set_update_needed(false);
                                 }
                                 self.draw_tab_parameter_estimation(ui);
                             });
@@ -976,7 +979,7 @@ impl App {
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
     }
 
-    /*pub fn generate_equations(&self) -> OdeSystem {
+    pub fn generate_equations(&mut self) {
         let model: odeir::Model = self.create_json().into();
 
         let odeir::Model::ODE(ode_model) = model else {
@@ -984,21 +987,13 @@ impl App {
         };
 
         let extension_lookup_paths: Vec<_> =
-            self.extensions.iter().map(|ext| &ext.file_path).collect();
+            self.extensions.iter().map(|ext| &ext.file_path).collect();        
 
-        let equations_text = odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths);
-
-        let mut ode_system = OdeSystem::create_ode_system(equations_text);
-        for (arg_name, arg_value) in ode_model.core.arguments {
-            match arg_value {
-                Argument::Composite {..}=> (),
-                Argument::Value { name, value } => {
-                    ode_system.values.insert(name, value);
-                }
-            }
-        }
-        ode_system
-    }*/
+        self.parameter_estimation_state.ode_system = create_ode_system(
+            odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
+            &self.parameter_estimation_state.ode_system.config_data
+        );
+    }    
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
         let file_path = FileDialog::new().add_filter(ext, &[ext]).save_file()?;

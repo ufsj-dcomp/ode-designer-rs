@@ -1,6 +1,5 @@
 use mexprp::{Answer, Context, Expression};
 use std::{collections::BTreeMap, sync::RwLock};
-
 use ode_solvers::*;
 use std::{
     fs::File,
@@ -12,7 +11,7 @@ use super::ga_json::ConfigData;
 
 pub type State = DVector<f64>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct OdeSystem {
     pub config_data: ConfigData,
     pub equations: BTreeMap<String, (Expression<f64>, f64)>,
@@ -58,7 +57,9 @@ impl OdeSystem {
 }
 
 impl ode_solvers::System<f64, State> for OdeSystem {
+    
     fn system(&mut self, _t: f64, y: &State, dydt: &mut State) {
+        
         self.update_context_with_state(y);
 
         let mut i: usize = 0;
@@ -72,6 +73,7 @@ impl ode_solvers::System<f64, State> for OdeSystem {
 }
 
 pub fn solve(ode_system: &OdeSystem, y: &State) -> Vec<State> {
+    
     let t_ini = ode_system.config_data.metadata.start_time;
     let t_final = ode_system.config_data.metadata.end_time;
     let dt = ode_system.config_data.metadata.delta_time;

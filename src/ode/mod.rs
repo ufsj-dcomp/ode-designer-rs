@@ -1,9 +1,9 @@
 mod csvdata;
 mod ga;
 pub mod ga_json;
-pub mod model;
+pub mod odesystem;
 
-use crate::ode::model::solve;
+use crate::ode::odesystem::solve;
 use ode_solvers::DVector;
 use std::{
     collections::BTreeMap,
@@ -15,7 +15,7 @@ use self::{
     csvdata::CSVData,
     ga::GA,
     ga_json::{load_json, Bound, ConfigData},
-    model::{create_ode_system, OdeSystem, State},
+    odesystem::{create_ode_system, OdeSystem, State},
 };
 /* Objective: to find the parameter values that better adjust the set of experimental data. */
 
@@ -67,9 +67,12 @@ impl ParameterEstimation {
     }
 
     pub fn estimate_parameters(&mut self, ode_system: &mut OdeSystem) {
+
         match CSVData::load_data(File::open(self.data_file.clone()).unwrap()) {
+
             Ok(csv_data) => {
                 let mut bounds: BTreeMap<String, Bound> = BTreeMap::new();
+
                 for bound in self.config_data.bounds.iter() {
                     bounds.insert(bound.name.clone(), bound.clone());
                 }
@@ -88,6 +91,7 @@ impl ParameterEstimation {
                 );
 
                 let mut indexes: Vec<usize> = vec![];
+
                 for label in csv_data.labels.iter() {
                     let mut pop_index: usize = 0;
                     for key in ode_system.equations.keys() {

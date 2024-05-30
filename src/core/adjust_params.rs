@@ -7,6 +7,7 @@ use std::ops::Range;
 use crate::nodes::{Node, NodeImpl, Term};
 
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
+use crate::ode::odesystem::OdeSystem;
 
 use super::App;
 
@@ -22,6 +23,7 @@ pub struct ParameterEstimationState {
     pub parameters: BTreeMap<NodeId, Parameter>,
     pub update_needed: bool,
     pub is_tab_open: bool,
+    pub ode_system: OdeSystem,
 }
 
 impl ParameterEstimationState {
@@ -43,6 +45,7 @@ impl ParameterEstimationState {
             parameters: parameters,
             update_needed: false,
             is_tab_open: false,
+            ode_system: OdeSystem::default(),
         }
     }
 
@@ -62,7 +65,7 @@ impl ParameterEstimationState {
             ui.table_setup_column("Initial Value");
             ui.table_headers_row();
 
-            for (index, (id, parameter)) in self
+            for (_index, (id, parameter)) in self
                 .parameters
                 .iter()
                 .enumerate()
@@ -153,7 +156,7 @@ impl ParameterEstimationState {
         }
     }
 
-    pub fn populate_config_data(&self) {
+    pub fn populate_config_data(&mut self) {
         let metadata = GA_Metadata {
             name: String::from("TODO!"),
             start_time: 0.0,
@@ -185,12 +188,10 @@ impl ParameterEstimationState {
 
         arguments.sort_by(|a, b| a.name.cmp(&b.name));
 
-        let config_data = ConfigData {
+        self.ode_system.config_data = ConfigData {
             metadata,
             arguments,
             bounds,
         };
-
-        println!("{:?}", config_data);
-    }
+    }    
 }

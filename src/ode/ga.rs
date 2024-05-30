@@ -212,19 +212,12 @@ impl GA {
             c.fitness = fitness_function(&c.values);
         });
 
-        /*self.population
-        .iter_mut()
-        .for_each(| c | {
-            c.fitness = fitness_function(&c.values);
-        });*/
-
         let mut i: usize = 0;
         let mut solutions: Vec<String> = vec![];
 
         while i < self.max_generations {
-            println!("iteration {:?}: ", i);
+            //println!("iteration {:?}: ", i);
             let mut p_size: usize = self.population.len();
-            //println!("p_size is {:?}", p_size);
 
             for _j in 0..(p_size / 4) {
                 let parents: (&Chromosome, &Chromosome) = self.select_parents();
