@@ -150,11 +150,11 @@ impl App {
             });
 
             if ui.menu_item("Parameter estimation") {
-                if let Some(AppState::EstimatingParameters) = self.state {
-                    self.state = None;
+                if self.parameter_estimation_state.is_tab_open {
+                    self.parameter_estimation_state.is_tab_open = false;
                 } else {
-                    self.state = Some(AppState::EstimatingParameters);
-                    //self.parameter_estimation_state.set_update_needed(true);
+                    self.parameter_estimation_state.is_tab_open = true;
+                    self.parameter_estimation_state.set_update_needed(true);
                 }
             }
 
