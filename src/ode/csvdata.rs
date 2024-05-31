@@ -47,8 +47,4 @@ impl CSVData {
 
         Ok(data)
     }
-
-    pub fn population_count(&self) -> usize {
-        self.lines[0].len()
-    }
 }

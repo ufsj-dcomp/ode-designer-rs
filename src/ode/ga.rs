@@ -123,7 +123,11 @@ impl GA {
     }
 
     fn select_parents(&self) -> (&Chromosome, &Chromosome) {
-        let upper_bound: f64 = self.population.par_iter().map(|c| c.fitness).sum();
+        let upper_bound: f64 = 
+            self.population
+                .par_iter()
+                .map(|c| c.fitness)
+                .sum();
 
         let mut rng = rand::thread_rng();
         let p_size: usize = self.population.len();
@@ -172,16 +176,18 @@ impl GA {
         let length: f64 = parents.0.values.len() as f64;
         let number_of_chromosomes: i32 = (self.crossover_rate * length) as i32;
 
-        let (left_child_1, right_child_2) = parents
-            .0
-            .values
-            .clone()
-            .split_inplace_at(number_of_chromosomes as usize);
-        let (right_child_1, left_child_2) = parents
-            .1
-            .values
-            .clone()
-            .split_inplace_at(number_of_chromosomes as usize);
+        let (left_child_1, right_child_2) = 
+            parents
+                .0
+                .values
+                .clone()
+                .split_inplace_at(number_of_chromosomes as usize);
+        let (right_child_1, left_child_2) = 
+            parents
+                .1
+                .values
+                .clone()
+                .split_inplace_at(number_of_chromosomes as usize);
 
         let mut left_vec: Vec<f64> = left_child_1.into();
         left_vec.append(&mut left_child_2.into());
@@ -278,6 +284,7 @@ impl GA {
             solutions,
         )
         .unwrap();
+        
         Ok(best)
     }
 

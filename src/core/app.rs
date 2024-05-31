@@ -85,8 +85,6 @@ pub struct SimulationState {
     pub plot: PlotInfo,
     pub plot_layout: PlotLayout,
     pub colors: Vec<ImVec4>,
-    pub flag_simulation: bool,
-    pub flag_plot_all: bool,
     pub set_focus_to_tab: bool,
 }
 #[derive(PartialEq)]
@@ -110,8 +108,6 @@ impl SimulationState {
             plot: PlotInfo::new(csv_data, locale),
             plot_layout: PlotLayout::new(2, 2, pane_count as u32),
             colors: COLORS.to_owned(),
-            flag_simulation: false,
-            flag_plot_all: false,
             set_focus_to_tab: true,
         }
     }

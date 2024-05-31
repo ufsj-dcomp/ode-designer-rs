@@ -5,17 +5,13 @@ pub mod odesystem;
 
 use crate::ode::odesystem::solve;
 use ode_solvers::DVector;
-use std::{
-    collections::BTreeMap,
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::fs::File;
 
 use self::{
     csvdata::CSVData,
     ga::GA,
-    ga_json::{load_json, Bound, ConfigData},
-    odesystem::{create_ode_system, OdeSystem, State},
+    ga_json::ConfigData,
+    odesystem::{OdeSystem, State},
 };
 /* Objective: to find the parameter values that better adjust the set of experimental data. */
 
@@ -44,11 +40,6 @@ impl ParameterEstimation {
         match CSVData::load_data(File::open(self.data_file.clone()).unwrap()) {
 
             Ok(csv_data) => {
-                let mut bounds: BTreeMap<String, Bound> = BTreeMap::new();
-
-                for bound in self.config_data.bounds.iter() {
-                    bounds.insert(bound.name.clone(), bound.clone());
-                }
 
                 self.ga = GA::new(
                     self.config_data.metadata.max_iterations,
@@ -84,12 +75,13 @@ impl ParameterEstimation {
                 );
 
                 match self.ga.optimize(|values: &Vec<f64>| {
-                    //let mut ode_system = global_ode_system.clone();
+                    
                     ode_system.update_context(values);
 
                     //println!("context: {:#?}", ode_system.context);
 
                     let ode_result: Vec<DVector<f64>> = solve(&ode_system, &initial_condition);
+                    
                     if ode_result.len() == 0 {
                         //error
                         return 1000.0;
