@@ -237,7 +237,7 @@ pub struct App {
     pub sidebar_state: SideBarState,
     pub extensions: Vec<Extension>,
     pub text_fields: TextFields,
-    pub parameter_estimation_state: ParameterEstimationState,
+    pub parameter_estimation_state: Option<ParameterEstimationState>,
 }
 
 pub enum AppState {
@@ -402,36 +402,6 @@ impl AppState {
 }
 
 impl App {
-
-    pub fn check_and_update_parameter_estimation(&mut self) {
-        let all_population_ids = self.get_all_population_ids();
-        let all_constants = self.get_all_constants(&all_population_ids);
-
-        let new_parameters = adjust_params::ParameterEstimationState::new(all_constants);
-        let new_params = new_parameters.parameters;
-
-        self.parameter_estimation_state
-            .parameters
-            .retain(|id, parameter| {
-                if let Some(new_parameter) = new_params.get(id) {
-                    if new_parameter.term.name() != parameter.term.name() {
-                        parameter.term.leaf.symbol = new_parameter.term.name().to_string();
-                    }
-                    true
-                } else {
-                    false
-                }
-            });
-
-        for (id, parameter) in new_params {
-            if !self.parameter_estimation_state.parameters.contains_key(&id) {
-                self.parameter_estimation_state
-                    .parameters
-                    .insert(id, parameter);
-            }
-        }
-    }
-
     fn is_model_valid(&self) -> bool {
         let population_ids: HashSet<_> = self.get_all_population_ids();
 
@@ -451,7 +421,7 @@ impl App {
         has_terms && has_assigner_operating_on_term
     }
 
-    fn get_all_population_ids(&self) -> HashSet<&NodeId> {
+    pub fn get_all_population_ids(&self) -> HashSet<&NodeId> {
         self.nodes
             .iter()
             .filter_map(|(_id, node)| match node {
@@ -461,7 +431,7 @@ impl App {
             .collect()
     }
 
-    fn get_all_constants(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
+    pub fn get_all_constants(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
         self.nodes
             .iter()
             .filter_map(|(id, node)| match node {
@@ -470,12 +440,6 @@ impl App {
             })
             .cloned()
             .collect()
-    }
-
-    pub fn draw_tab_parameter_estimation(&mut self, ui: &imgui::Ui) {
-        self.parameter_estimation_state.draw_tables(ui); 
-        self.generate_equations();       
-        //println!("Ode system: {:#?}", self.parameter_estimation_state.ode_system);
     }
 
     /// Draws the nodes and other elements
@@ -604,8 +568,6 @@ impl App {
                 tab_bar.build(ui, || {
                     let tab_model = TabItem::new(locale.get("tab-model"));
                     tab_model.build(ui, || {
-                        self.parameter_estimation_state.set_update_needed(true);
-
                         if let Some(node) = self.sidebar_state.draw(ui, &self.node_types, locale) {
                             self.add_node(node);
                         }
@@ -626,23 +588,11 @@ impl App {
                         }
                     }
 
-                    if self.parameter_estimation_state.is_tab_open {
-                        if self.is_model_valid() {
-                            let mut user_kept_open = true;
-                            let tab_item = TabItem::new("Estimating Parameters");
-                            tab_item.opened(&mut user_kept_open).build(ui, || {
-                                if self.parameter_estimation_state.update_needed {
-                                    self.check_and_update_parameter_estimation();
-                                    self.parameter_estimation_state.set_update_needed(false);
-                                }
-                                self.draw_tab_parameter_estimation(ui);
-                            });
-                            if !user_kept_open {
-                                self.parameter_estimation_state.is_tab_open = false;
-                                self.parameter_estimation_state.clear_selected();
-                            }
+                    if let Some(param_state) = &mut self.parameter_estimation_state {
+                        if let Some(param_tab_token) = ui.tab_item("Estimating Parameters") {
+                            param_state.draw_tables(ui);
                         }
-                    } 
+                    }
                 });
             });
     }
@@ -665,6 +615,10 @@ impl App {
     pub fn add_node(&mut self, node: Node) -> NodeId {
         let node_id = node.id();
 
+        if let Node::Term(term) = &node && let Some(param_state) = &mut self.parameter_estimation_state {
+            param_state.add_variable(term.clone());
+        }
+
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
         }
@@ -673,9 +627,8 @@ impl App {
             self.output_pins.insert(*output.id(), node_id);
         }
 
-        let node_id_copy = node_id;
         self.nodes.insert(node_id, node);
-        node_id_copy
+        node_id
     }
 
     pub fn get_node(&self, id: NodeId) -> Option<&Node> {
@@ -776,7 +729,24 @@ impl App {
                     panic!("This node must be an assigner. If not, how could the modal have been opened?");
                 };
 
-                assigner.operates_on = Some((value, target_name));
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.remove_variable(&value);
+                }
+
+                assigner.operates_on
+                    .replace((value, target_name))
+                    .map(|(previous_node_id, _)| vec![Message::UnnatributeAssignerOperatesOn(previous_node_id)])
+            }
+            Message::UnnatributeAssignerOperatesOn(previous_node_id) => {
+                self.parameter_estimation_state.as_ref()?;
+                let term = self.get_node(previous_node_id).and_then(Node::as_term).cloned();
+
+                if let Some(param_state) = &mut self.parameter_estimation_state
+                    && let Some(term) = term
+                {
+                    param_state.add_variable(term.clone());
+                }
+
                 None
             }
             Message::SetNodePos {
@@ -787,9 +757,11 @@ impl App {
                 None
             }
             Message::RemoveNode(node_id) => {
-                let Some(mut node) = self.nodes.remove(&node_id) else {
-                    return None;
-                };
+                let mut node = self.nodes.remove(&node_id)?;
+
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.remove_variable(&node_id);
+                }
 
                 let mut removed_input_ids = HashSet::new();
 
@@ -882,7 +854,9 @@ impl App {
                     }
                 }
 
-                //TO DO: renomear os nomes dos nós do BTreeMap paramaters
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.rename_variable(&node_id, node_name);
+                }
 
                 None
             }
@@ -981,6 +955,9 @@ impl App {
 
     pub fn generate_equations(&mut self) {
         let model: odeir::Model = self.create_json().into();
+        let Some(param_state) = &mut self.parameter_estimation_state else {
+            return;
+        };
 
         let odeir::Model::ODE(ode_model) = model else {
             unreachable!("This program can only produce ODE models for now");
@@ -989,9 +966,9 @@ impl App {
         let extension_lookup_paths: Vec<_> =
             self.extensions.iter().map(|ext| &ext.file_path).collect();        
 
-        self.parameter_estimation_state.ode_system = create_ode_system(
+        param_state.ode_system = create_ode_system(
             odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
-            &self.parameter_estimation_state.ode_system.config_data
+            &param_state.ode_system.config_data
         );
     }    
 
@@ -1162,6 +1139,7 @@ impl App {
         self.received_messages.clear();
         self.simulation_state = None;
         self.sidebar_state.clear_state();
+        self.parameter_estimation_state.take();
     }
 
     pub fn update_locale(&mut self, locale: &mut Locale, lang: LanguageIdentifier) {

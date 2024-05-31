@@ -19,6 +19,7 @@ pub enum Message {
         assigner_id: NodeId,
         value: NodeId,
     },
+    UnnatributeAssignerOperatesOn(NodeId),
     SetNodePos {
         node_id: NodeId,
         screen_space_pos: [f32; 2],

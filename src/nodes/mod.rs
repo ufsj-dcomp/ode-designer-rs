@@ -80,6 +80,13 @@ pub enum Node {
 }
 
 impl Node {
+    pub fn as_term(&self) -> Option<&Term> {
+        match self {
+            Self::Term(term) => Some(term),
+            _ => None,
+        }
+    }
+
     pub fn build_from_ui(name: String, node_type: &NodeTypeRepresentation) -> Self {
         let node_id = NodeId::generate();
 

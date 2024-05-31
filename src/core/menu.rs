@@ -149,13 +149,11 @@ impl App {
                 }
             });
 
-            if ui.menu_item("Parameter estimation") {
-                if self.parameter_estimation_state.is_tab_open {
-                    self.parameter_estimation_state.is_tab_open = false;
-                } else {
-                    self.parameter_estimation_state.is_tab_open = true;
-                    self.parameter_estimation_state.set_update_needed(true);
-                }
+            if ui.menu_item("Parameter estimation") && self.parameter_estimation_state.is_none() {
+                let all_population_ids = self.get_all_population_ids();
+                let all_constants = self.get_all_constants(&all_population_ids);
+                let param_state = ParameterEstimationState::new(all_constants);
+                self.parameter_estimation_state.replace(param_state);
             }
 
             if ui.menu_item(locale.get("extensions")) {

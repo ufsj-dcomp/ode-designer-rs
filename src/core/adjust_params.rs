@@ -13,48 +13,60 @@ use super::App;
 
 #[derive(Debug)]
 pub struct Parameter {
-    pub term: Term,
-    pub range: Range<f32>,
-    pub selected: bool,
+    term: Term,
+    range: Range<f32>,
+    selected: bool,
+    min_label: String,
+    max_label: String
+}
+
+impl Parameter {
+    pub fn new(term: Term) -> Self {
+        let node_id: i32 = term.id().into();
+        Self {
+            term,
+            range: 0.01..1.0,
+            selected: false,
+            min_label: format!("##min-{node_id}"),
+            max_label: format!("##max-{node_id}"),
+        }
+    }
 }
 
 #[derive(Default, Debug)]
 pub struct ParameterEstimationState {
-    pub parameters: BTreeMap<NodeId, Parameter>,
-    pub update_needed: bool,
-    pub is_tab_open: bool,
+    parameters: BTreeMap<NodeId, Parameter>,
     pub ode_system: OdeSystem,
 }
 
 impl ParameterEstimationState {
-    pub fn new(variables: Vec<Term>) -> Self {
-        let mut parameters = BTreeMap::new();
-
-        for term in variables.iter() {
-            parameters.insert(
-                term.id,
-                Parameter {
-                    term: term.clone(),
-                    range: 0.01..1.0,
-                    selected: false,
-                },
-            );
-        }
-
+    pub fn new(terms: impl IntoIterator<Item = Term>) -> Self {
         Self {
-            parameters: parameters,
-            update_needed: false,
-            is_tab_open: false,
-            ode_system: OdeSystem::default(),
+            parameters: terms
+                .into_iter()
+                .map(|term| (term.id(), Parameter::new(term)))
+                .collect(),
+            ode_system: Default::default(),
         }
     }
 
-    pub fn set_update_needed(&mut self, value: bool) {
-        self.update_needed = value;
+    pub fn add_variable(&mut self, term: Term) {
+        self.parameters.insert(term.id(), Parameter::new(term));
+    }
+
+    pub fn remove_variable(&mut self, node_id: &NodeId) {
+        self.parameters.remove(node_id);
+    }
+
+    pub fn rename_variable(&mut self, node_id: &NodeId, name: impl ToOwned<Owned = String>) {
+        if let Some(param) = self.parameters.get_mut(node_id) {
+            name.clone_into(param.term.name_mut());
+        }
     }
 
     pub fn clear_selected(&mut self) {
-        self.parameters.clear();
+        self.parameters.values_mut()
+            .for_each(|param| param.selected = false);
     }
 
     pub fn draw_tables(&mut self, ui: &Ui) {
@@ -65,22 +77,21 @@ impl ParameterEstimationState {
             ui.table_setup_column("Initial Value");
             ui.table_headers_row();
 
-            for (_index, (id, parameter)) in self
+            for (id, parameter) in self
                 .parameters
                 .iter()
-                .enumerate()
-                .filter(|(_id, value)| !value.1.selected)
+                .filter(|(_id, param)| !param.selected)
             {
                 ui.table_next_row();
                 ui.table_next_column();
 
-                ui.button_with_size(&imgui::ImString::new(parameter.term.name()), [60.0, 20.0]);
+                ui.button_with_size(parameter.term.name(), [60.0, 20.0]);
 
                 let drag_drop_name = "parameter_drag";
                 if let Some(tooltip) = ui
                     .drag_drop_source_config(drag_drop_name)
                     .flags(DragDropFlags::empty())
-                    .begin_payload(id.clone())
+                    .begin_payload(*id)
                 {
                     ui.text(parameter.term.name());
                     tooltip.end();
@@ -121,25 +132,25 @@ impl ParameterEstimationState {
             ui.table_setup_column("Max");
             ui.table_headers_row();
 
-            for (id, parameter) in self
+            for  parameter in self
                 .parameters
-                .iter_mut()
-                .filter(|(_, value)| value.selected)
+                .values_mut()
+                .filter(|param| param.selected)
             {
                 ui.table_next_row();
-                let stack = ui.push_id(&imgui::ImString::new(parameter.term.name()));
+                let stack = ui.push_id(parameter.term.name());
                 ui.table_next_column();
                 {
                     ui.text(imgui::ImString::new(parameter.term.name()));
                     ui.table_next_column();
                     ui.input_float(
-                        format!("##min-{0}", parameter.term.name()),
+                        &parameter.min_label,
                         &mut parameter.range.start,
                     )
                     .build();
                     ui.table_next_column();
                     ui.input_float(
-                        format!("##max={0}", parameter.term.name()),
+                        &parameter.max_label,
                         &mut parameter.range.end,
                     )
                     .build();
