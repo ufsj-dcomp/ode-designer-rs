@@ -589,8 +589,8 @@ impl App {
                     }
 
                     if let Some(param_state) = &mut self.parameter_estimation_state {
-                        if let Some(param_tab_token) = ui.tab_item("Estimating Parameters") {
-                            param_state.draw_tables(ui);
+                        if let Some(_param_tab_token) = ui.tab_item(locale.get("tab-parameter-estimation")) {
+                            param_state.draw_tables(ui, locale);
                         }
                     }
                 });

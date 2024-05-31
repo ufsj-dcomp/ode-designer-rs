@@ -1,15 +1,13 @@
-use imgui::{DragDropFlags, Ui};
+use imgui::{DragDropFlags, MouseButton, Ui};
 use imnodes::NodeId;
-use std::cell::{Ref, RefCell};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use crate::nodes::{Node, NodeImpl, Term};
+use crate::locale::Locale;
+use crate::nodes::{NodeImpl, Term};
 
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
-
-use super::App;
 
 #[derive(Debug)]
 pub struct Parameter {
@@ -69,12 +67,17 @@ impl ParameterEstimationState {
             .for_each(|param| param.selected = false);
     }
 
-    pub fn draw_tables(&mut self, ui: &Ui) {
+    pub fn draw_tables(&mut self, ui: &Ui, locale: &Locale) {
+        // This is required because we want to replace the drag-and-drop target
+        // component, which would only receive data *after* nothing is being
+        // dragged anymore
+        static mut DRAGGING: bool = false;
+        const DRAG_DROP_NAME: &str = "parameter_drag";
+        
         ui.columns(4, "Parameters", true);
-
         if let Some(_t) = ui.begin_table("Parameters", 2) {
-            ui.table_setup_column("Variable Name");
-            ui.table_setup_column("Initial Value");
+            ui.table_setup_column(locale.get("variable-name"));
+            ui.table_setup_column(locale.get("initial-value"));
             ui.table_headers_row();
 
             for (id, parameter) in self
@@ -87,12 +90,14 @@ impl ParameterEstimationState {
 
                 ui.button_with_size(parameter.term.name(), [60.0, 20.0]);
 
-                let drag_drop_name = "parameter_drag";
                 if let Some(tooltip) = ui
-                    .drag_drop_source_config(drag_drop_name)
+                    .drag_drop_source_config(DRAG_DROP_NAME)
                     .flags(DragDropFlags::empty())
                     .begin_payload(*id)
                 {
+                    // Safety: this is fine because the software isn't
+                    // multi-threaded and this global is local to this function
+                    unsafe { DRAGGING = true; }
                     ui.text(parameter.term.name());
                     tooltip.end();
                 }
@@ -108,31 +113,34 @@ impl ParameterEstimationState {
 
         ui.next_column();
 
-        ui.button_with_size("Drag and Drop", [100.0, 75.0]);
-
-        let drag_drop_name = "parameter_drag";
-
-        if let Some(target) = ui.drag_drop_target() {
-            if let Some(Ok(payload_data)) =
-                target.accept_payload::<NodeId, _>(drag_drop_name, DragDropFlags::empty())
-            {
-                let selected_id: NodeId = payload_data.data;
-                if let Some(parameter) = self.parameters.get_mut(&selected_id) {
-                    parameter.selected = true;
+        if unsafe { DRAGGING } {
+            ui.button_with_size(locale.get("dnd-parameter-estimation"), [100.0, 100.0]);
+            if let Some(target) = ui.drag_drop_target() {
+                if let Some(Ok(payload_data)) =
+                    target.accept_payload(DRAG_DROP_NAME, DragDropFlags::empty())
+                {
+                    let selected_id: NodeId = payload_data.data;
+                    if let Some(parameter) = self.parameters.get_mut(&selected_id) {
+                        parameter.selected = true;
+                        // Safety: this is fine because the software isn't
+                        // multi-threaded and this global is local to this
+                        // function
+                        unsafe { DRAGGING = false; }
+                    }
+                } else if !ui.is_mouse_down(MouseButton::Left) {
+                    // Safety: this is fine because the software isn't
+                    // multi-threaded and this global is local to this function
+                    unsafe { DRAGGING = false; }
                 }
+                target.pop();
             }
-            target.pop();
-        }
-
-        ui.next_column();
-
-        if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
-            ui.table_setup_column("Name");
-            ui.table_setup_column("Min");
-            ui.table_setup_column("Max");
+        } else if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
+            ui.table_setup_column(locale.get("variable-name"));
+            ui.table_setup_column(locale.get("min-value"));
+            ui.table_setup_column(locale.get("max-value"));
             ui.table_headers_row();
 
-            for  parameter in self
+            for parameter in self
                 .parameters
                 .values_mut()
                 .filter(|param| param.selected)
