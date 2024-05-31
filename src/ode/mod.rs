@@ -39,33 +39,6 @@ impl ParameterEstimation {
         }
     }
 
-    //Remover
-    pub fn ode_system(&mut self, config_file_path: &str, model_file_path: &str) -> OdeSystem {
-        self.config_data = match load_json(config_file_path) {
-            Ok(config_model) => {
-                println!("Config data: {:?}", config_model);
-                config_model
-            }
-            Err(e) => {
-                println!("Error caused by {:?}", e);
-                ConfigData::default()
-            }
-        };
-
-        let file: File = match File::open(model_file_path) {
-            Ok(f) => f,
-            Err(e) => {
-                println!("Error! {:?}", e);
-                return OdeSystem::new(self.config_data.clone());
-            }
-        };
-
-        let input_buffer: &mut String = &mut String::from("");
-        BufReader::new(file).read_to_string(input_buffer).unwrap();
-
-        return create_ode_system(input_buffer.to_string(), &self.config_data);
-    }
-
     pub fn estimate_parameters(&mut self, ode_system: &mut OdeSystem) {
 
         match CSVData::load_data(File::open(self.data_file.clone()).unwrap()) {

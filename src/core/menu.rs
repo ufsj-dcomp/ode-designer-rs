@@ -151,9 +151,10 @@ impl App {
 
             if ui.menu_item("Parameter estimation") && self.parameter_estimation_state.is_none() {
                 let all_population_ids = self.get_all_population_ids();
-                let all_constants = self.get_all_constants(&all_population_ids);
-                let param_state = ParameterEstimationState::new(all_constants);
+                let all_constants = self.get_all_constants(&all_population_ids);                
+                let param_state = ParameterEstimationState::new(all_constants.clone());                
                 self.parameter_estimation_state.replace(param_state);
+                self.generate_equations(all_constants);                           
             }
 
             if ui.menu_item(locale.get("extensions")) {

@@ -1,5 +1,5 @@
 use mexprp::{Answer, Context, Expression};
-use std::{collections::BTreeMap, sync::RwLock};
+use std::collections::BTreeMap;
 use ode_solvers::*;
 use std::{
     fs::File,
@@ -7,6 +7,7 @@ use std::{
     path::Path,
 };
 
+use crate::nodes::Term;
 use super::ga_json::ConfigData;
 
 pub type State = DVector<f64>;
@@ -19,9 +20,10 @@ pub struct OdeSystem {
 }
 
 impl OdeSystem {
-    pub fn new(cfg: ConfigData) -> Self {
+
+    pub fn new() -> Self {
         Self {
-            config_data: cfg,
+            config_data: ConfigData::default(),
             equations: BTreeMap::new(),
             context: Context::new(),
         }
@@ -34,7 +36,7 @@ impl OdeSystem {
             }
         }
         return 0.0;
-    }
+    }        
 
     pub fn update_context(&mut self, values: &Vec<f64>) {
         //let lock_context = RwLock::new(&self.context);
@@ -99,9 +101,13 @@ pub fn solve(ode_system: &OdeSystem, y: &State) -> Vec<State> {
     }
 }
 
-pub fn create_ode_system(input: String, config_data: &ConfigData) -> OdeSystem {
-    let mut ode_system = OdeSystem::new(config_data.clone());
-
+pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -> OdeSystem {
+    let mut ode_system = OdeSystem::new();
+    
+    for term in terms.into_iter() {
+        ode_system.context.set_var(&&term.leaf.symbol.trim().to_string(), term.initial_value);
+    }
+    
     let lines = input.split("\n").collect::<Vec<_>>();
 
     for line in lines {
@@ -112,8 +118,8 @@ pub fn create_ode_system(input: String, config_data: &ConfigData) -> OdeSystem {
             .collect::<Vec<_>>();
 
         if new_line.len() == 2 {
-            let population = new_line[0].trim().to_string();
 
+            let population = new_line[0].trim().to_string();
             let ode_rhs: Expression<f64> = Expression::parse(&new_line[1].trim()).unwrap();
 
             ode_system.equations.insert(
@@ -122,14 +128,7 @@ pub fn create_ode_system(input: String, config_data: &ConfigData) -> OdeSystem {
             );
         }
     }
-
-    for arg in config_data.arguments.iter() {
-        ode_system
-            .context
-            .set_var(&arg.name.trim().to_string(), arg.value);
-    }
-
-    return ode_system;
+    ode_system
 }
 
 pub fn save(times: &Vec<f64>, states: &Vec<State>, filename: &Path) {

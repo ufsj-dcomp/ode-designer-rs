@@ -9,7 +9,7 @@ use crate::nodes::{NodeImpl, Term};
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Parameter {
     term: Term,
     range: Range<f32>,
@@ -31,7 +31,7 @@ impl Parameter {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct ParameterEstimationState {
     parameters: BTreeMap<NodeId, Parameter>,
     pub ode_system: OdeSystem,
@@ -44,7 +44,7 @@ impl ParameterEstimationState {
                 .into_iter()
                 .map(|term| (term.id(), Parameter::new(term)))
                 .collect(),
-            ode_system: Default::default(),
+            ode_system: OdeSystem::new(),
         }
     }
 
@@ -76,7 +76,7 @@ impl ParameterEstimationState {
         
         ui.columns(4, "Parameters", true);
         if let Some(_t) = ui.begin_table("Parameters", 2) {
-            ui.table_setup_column(locale.get("variable-name"));
+            ui.table_setup_column(locale.get("parameter-name"));
             ui.table_setup_column(locale.get("initial-value"));
             ui.table_headers_row();
 
@@ -135,7 +135,7 @@ impl ParameterEstimationState {
                 target.pop();
             }
         } else if let Some(_t) = ui.begin_table("Parameters to be adjusted", 3) {
-            ui.table_setup_column(locale.get("variable-name"));
+            ui.table_setup_column(locale.get("parameter-name"));
             ui.table_setup_column(locale.get("min-value"));
             ui.table_setup_column(locale.get("max-value"));
             ui.table_headers_row();
@@ -177,7 +177,7 @@ impl ParameterEstimationState {
 
     pub fn populate_config_data(&mut self) {
         let metadata = GA_Metadata {
-            name: String::from("TODO!"),
+            name: String::from("GA"),
             start_time: 0.0,
             delta_time: 0.1,
             end_time: 10.0,
@@ -212,5 +212,7 @@ impl ParameterEstimationState {
             arguments,
             bounds,
         };
+
+        println!("Ode system: {:#?}", self.ode_system);
     }    
 }

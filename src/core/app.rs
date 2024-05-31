@@ -953,7 +953,7 @@ impl App {
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
     }
 
-    pub fn generate_equations(&mut self) {
+    pub fn generate_equations(&mut self, all_constants: Vec<Term>) {
         let model: odeir::Model = self.create_json().into();
         let Some(param_state) = &mut self.parameter_estimation_state else {
             return;
@@ -962,13 +962,12 @@ impl App {
         let odeir::Model::ODE(ode_model) = model else {
             unreachable!("This program can only produce ODE models for now");
         };
-
         let extension_lookup_paths: Vec<_> =
             self.extensions.iter().map(|ext| &ext.file_path).collect();        
 
         param_state.ode_system = create_ode_system(
             odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
-            &param_state.ode_system.config_data
+            all_constants
         );
     }    
 
