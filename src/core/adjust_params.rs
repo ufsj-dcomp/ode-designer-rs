@@ -8,6 +8,7 @@ use crate::nodes::{NodeImpl, Term};
 
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
+use crate::ode::ParameterEstimation;
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -35,6 +36,7 @@ impl Parameter {
 pub struct ParameterEstimationState {
     parameters: BTreeMap<NodeId, Parameter>,
     pub ode_system: OdeSystem,
+    pub estimator: ParameterEstimation,
 }
 
 impl ParameterEstimationState {
@@ -45,6 +47,7 @@ impl ParameterEstimationState {
                 .map(|term| (term.id(), Parameter::new(term)))
                 .collect(),
             ode_system: OdeSystem::new(),
+            estimator: ParameterEstimation::default(),
         }
     }
 
@@ -207,12 +210,13 @@ impl ParameterEstimationState {
 
         arguments.sort_by(|a, b| a.name.cmp(&b.name));
 
-        self.ode_system.config_data = ConfigData {
+        self.estimator.config_data = ConfigData {
             metadata,
             arguments,
             bounds,
         };
 
         println!("Ode system: {:#?}", self.ode_system);
+        println!("Estimator: {:#?}", self.estimator);
     }    
 }

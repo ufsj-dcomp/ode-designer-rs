@@ -15,22 +15,22 @@ use self::{
 };
 /* Objective: to find the parameter values that better adjust the set of experimental data. */
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct ParameterEstimation {
     ga: GA,
     best_solution: Vec<f64>,
-    data_file: String,
-    config_data: ConfigData,
+    pub data_file: String,
+    pub config_data: ConfigData,
 }
 
 //TO DO: create a thread to optimize the parameters values
 //the config input file can not be changed during execution of this ga instance
 impl ParameterEstimation {
-    pub fn new(file_name: String) -> Self {
+    pub fn new() -> Self {
         Self {
             ga: GA::default(),
             best_solution: vec![],
-            data_file: file_name,
+            data_file: String::from(""),
             config_data: ConfigData::default(),
         }
     }
@@ -67,20 +67,27 @@ impl ParameterEstimation {
                 }
 
                 let initial_condition: State = State::from_vec(
-                    ode_system
-                        .equations
-                        .keys()
-                        .map(|k: &String| ode_system.get_argument_value(k.to_string()))
-                        .collect(),
+                    self.config_data
+                            .arguments
+                            .iter()
+                            .map(|arg| arg.value)
+                            .collect()
                 );
 
                 match self.ga.optimize(|values: &Vec<f64>| {
                     
-                    ode_system.update_context(values);
+                    ode_system.update_context(self.config_data.arguments.clone(), values);
 
                     //println!("context: {:#?}", ode_system.context);
 
-                    let ode_result: Vec<DVector<f64>> = solve(&ode_system, &initial_condition);
+                    let ode_result: Vec<DVector<f64>> = 
+                    solve(
+                        &ode_system, 
+                        &initial_condition, 
+                        self.config_data.metadata.start_time,
+                        self.config_data.metadata.end_time,
+                        self.config_data.metadata.delta_time
+                    );
                     
                     if ode_result.len() == 0 {
                         //error
