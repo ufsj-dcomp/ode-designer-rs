@@ -13,7 +13,6 @@ use self::{
     ga_json::ConfigData,
     odesystem::{OdeSystem, State},
 };
-/* Objective: to find the parameter values that better adjust the set of experimental data. */
 
 #[derive(Default, Debug, Clone)]
 pub struct ParameterEstimation {
@@ -81,13 +80,13 @@ impl ParameterEstimation {
                     //println!("context: {:#?}", ode_system.context);
 
                     let ode_result: Vec<DVector<f64>> = 
-                    solve(
-                        &ode_system, 
-                        &initial_condition, 
-                        self.config_data.metadata.start_time,
-                        self.config_data.metadata.end_time,
-                        self.config_data.metadata.delta_time
-                    );
+                        solve(
+                            &ode_system, 
+                            &initial_condition, 
+                            self.config_data.metadata.start_time,
+                            self.config_data.metadata.end_time,
+                            self.config_data.metadata.delta_time
+                        );
                     
                     if ode_result.len() == 0 {
                         //error

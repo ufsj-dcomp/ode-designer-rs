@@ -10,6 +10,8 @@ use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
 
+use super::App;
+
 #[derive(Debug, Clone)]
 pub struct Parameter {
     term: Term,

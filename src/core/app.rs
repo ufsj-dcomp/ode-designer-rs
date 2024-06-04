@@ -530,7 +530,7 @@ impl App {
 
         if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O) {
             self.clear_state();
-            self.load_state();
+            let _ = self.load_state();
         }
     }
 
@@ -584,11 +584,21 @@ impl App {
                         }
                     }
 
-                    if let Some(param_state) = &mut self.parameter_estimation_state {
-                        if let Some(_param_tab_token) = ui.tab_item(locale.get("tab-parameter-estimation")) {
-                            param_state.draw_tables(ui, locale);
+                    let mut opened = false;
+                    if self.parameter_estimation_state.is_some() {
+                        opened = true;
+                    }
+                    
+                    if ui.tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened).is_some(){
+                        if let Some(param_state) = &mut self.parameter_estimation_state{
+                            param_state.draw_tables(ui, locale);                            
                         }
                     }
+
+                    if ! opened {
+                        self.parameter_estimation_state = None;
+                    }
+
                 });
             });
     }

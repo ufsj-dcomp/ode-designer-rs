@@ -1,15 +1,13 @@
 use quicksort::quicksort_by;
 use rand::Rng;
 use rayon::iter::{
-    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+    IntoParallelRefIterator, ParallelIterator,
 };
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::sync::Mutex;
 use std::vec;
-use std::{cmp::Ordering, sync::Arc};
-//use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+use std::cmp::Ordering;
 use anyhow::Error;
 use std::fmt;
 use vecshard::ShardExt;
