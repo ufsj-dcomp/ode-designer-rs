@@ -479,7 +479,9 @@ impl App {
 
         if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O) {
             self.clear_state();
-            self.load_state();
+            if let Err(e) = self.load_state() {
+                log::error!("{e}");
+            }
         }
     }
 

@@ -1,12 +1,13 @@
 use imgui::Ui;
 
 use crate::{
-    locale::{Locale, LANGUAGES},
+    locale::{self, Locale, LANGUAGES},
+    utils::localized_error,
     App,
 };
 use rfd::FileDialog;
 
-use std::{fs::read_to_string, process::Command};
+use std::{collections::HashMap, fs::read_to_string, process::Command};
 
 use super::{
     app::{AppState, SimulationState},
@@ -25,7 +26,7 @@ impl App {
                 if let Ok(file_content) = read_to_string(&file_path) {
                     self.simulation_state = Some(SimulationState::from_csv(file_content, locale));
                 } else {
-                    eprintln!("Error: Failed to read file content.");
+                    localized_error!(locale, "error-csv-load", "file" => file_path.display().to_string())
                 }
             }
         }
@@ -49,7 +50,8 @@ impl App {
                 {
                     self.clear_state();
                     if let Err(err) = self.load_state() {
-                        eprintln!("Couldn't load model from file: {err}");
+                        localized_error!(locale, "error-csv-load");
+                        eprintln!("{err}");
                     }
                 }
 
@@ -86,7 +88,10 @@ impl App {
 
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
-                            Err(err) => eprintln!("{err}"),
+                            Err(err) => {
+                                localized_error!(locale, "error-pdf-export");
+                                eprintln!("{err}")
+                            }
                         }
                     }
                 }
@@ -106,7 +111,10 @@ impl App {
                     Ok(output) => {
                         self.simulation_state = Some(SimulationState::from_csv(output, locale));
                     }
-                    Err(err) => eprintln!("{err}"),
+                    Err(err) => {
+                        localized_error!(locale, "error-python-exec");
+                        eprintln!("{err}")
+                    }
                 }
             }
 

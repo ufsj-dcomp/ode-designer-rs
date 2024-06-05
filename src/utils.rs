@@ -1,5 +1,25 @@
 use imnodes::ImVec2;
 
+macro_rules! fluent_map {
+    ($($key:expr => $val:expr),* $(,)?) => {
+        std::collections::HashMap::from_iter([
+            $(($key, fluent_bundle::FluentValue::from($val))),*
+        ])
+    };
+}
+
+macro_rules! localized_error {
+    ($locale:expr, $text:expr $(,)?) => {
+        log::error!("{}.", $locale.get($text))
+    };
+    ($locale:expr, $text:expr, $($tail:tt)*) => {
+        log::error!("{}.", &*$locale.fmt($text, &$crate::utils::fluent_map!{$($tail)*}))
+    };
+}
+
+pub(crate) use fluent_map;
+pub(crate) use localized_error;
+
 #[derive(Debug)]
 pub enum ModelFragment {
     Argument(odeir::Argument),
