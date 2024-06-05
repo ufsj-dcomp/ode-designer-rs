@@ -14,7 +14,7 @@ use vecshard::ShardExt;
 
 use super::ga_json::Bound;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default)] //TO DO: Serialize and deserialize with Serde 
 pub struct Chromosome {
     values: Vec<f64>, //genes
     pub fitness: f64,

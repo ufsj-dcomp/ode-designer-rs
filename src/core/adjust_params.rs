@@ -1,16 +1,18 @@
 use imgui::{DragDropFlags, MouseButton, Ui};
 use imnodes::NodeId;
+use rfd::FileDialog;
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::ops::Range;
+use std::path::PathBuf;
 
 use crate::locale::Locale;
 use crate::nodes::{NodeImpl, Term};
 
+use crate::ode::csvdata::CSVData;
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
-
-use super::App;
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -37,19 +39,26 @@ impl Parameter {
 #[derive(Default, Debug, Clone)]
 pub struct ParameterEstimationState {
     parameters: BTreeMap<NodeId, Parameter>,
+    populations: BTreeMap<NodeId, Term>,
     pub ode_system: OdeSystem,
     pub estimator: ParameterEstimation,
+    file_path: PathBuf,
 }
 
 impl ParameterEstimationState {
-    pub fn new(terms: impl IntoIterator<Item = Term>) -> Self {
+    pub fn new(populations: impl IntoIterator<Item = Term>, params: impl IntoIterator<Item = Term>) -> Self {
         Self {
-            parameters: terms
+            parameters: params
                 .into_iter()
                 .map(|term| (term.id(), Parameter::new(term)))
                 .collect(),
+            populations: populations
+                .into_iter()
+                .map(|term| (term.id(), term))
+                .collect(),
             ode_system: OdeSystem::new(),
             estimator: ParameterEstimation::default(),
+            file_path: PathBuf::new()
         }
     }
 
@@ -70,6 +79,20 @@ impl ParameterEstimationState {
     pub fn clear_selected(&mut self) {
         self.parameters.values_mut()
             .for_each(|param| param.selected = false);
+    }
+
+    fn load_data_dialog(&mut self) -> PathBuf {
+        let file = FileDialog::new()
+            .add_filter("csv", &["csv"])
+            .set_directory(".")
+            .pick_file();
+
+        if let Some(file_path) = file {
+            file_path
+        }
+        else {
+            PathBuf::new()
+        }
     }
 
     pub fn draw_tables(&mut self, ui: &Ui, locale: &Locale) {
@@ -173,10 +196,22 @@ impl ParameterEstimationState {
         }
 
         ui.next_column();
-        let run_button = ui.button("Run");
 
+        let load_data_button = ui.button("Load Data"); //locale.get("load-data")
+        if load_data_button {
+            self.file_path = self.load_data_dialog();
+        }
+
+        let run_button = ui.button("Run");
         if run_button {
-            self.populate_config_data();
+            match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
+                Ok(csv_data) => {
+                    self.populate_config_data();
+                    //passar o vetor de parâmetros selecionados 
+                    self.estimator.estimate_parameters(csv_data, self.ode_system.clone());
+                }
+                Err(_) => return,
+            }
         }
     }
 
@@ -184,23 +219,30 @@ impl ParameterEstimationState {
         let metadata = GA_Metadata {
             name: String::from("GA"),
             start_time: 0.0,
-            delta_time: 0.1,
-            end_time: 10.0,
-            population_size: 100,
+            delta_time: 0.01,
+            end_time: 100.0,
+            population_size: 80,
             crossover_rate: 0.5,
-            mutation_rate: 0.75,
-            max_iterations: 50,
+            mutation_rate: 0.8,
+            max_iterations: 10,
         };
 
         let mut arguments: Vec<GA_Argument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
+
+        for (_id, term) in self.populations.iter() {
+            arguments.push(GA_Argument::new(
+                term.name().to_string(),
+                term.initial_value,
+            ));
+        }
 
         for (_id, parameter) in self.parameters.iter() {
             arguments.push(GA_Argument::new(
                 parameter.term.name().to_string(),
                 parameter.term.initial_value,
             ));
-        }
+        }        
 
         for (_id, parameter) in self.parameters.iter().filter(|(_id, param)| param.selected) {
             bounds.push(Bound::new(
@@ -217,8 +259,8 @@ impl ParameterEstimationState {
             arguments,
             bounds,
         };
-
-        println!("Ode system: {:#?}", self.ode_system);
-        println!("Estimator: {:#?}", self.estimator);
+        
+        println!("Estimator: {:#?}", self.estimator);   
+        println!("Ode system: {:#?}", self.ode_system);     
     }    
 }

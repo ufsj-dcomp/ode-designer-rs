@@ -427,6 +427,17 @@ impl App {
             .collect()
     }
 
+    pub fn get_all_populations(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
+        self.nodes
+            .iter()
+            .filter_map(|(id, node)| match node {
+                Node::Term(term) if all_population_ids.contains(id) => Some(term),
+                _ => None,
+            })
+            .cloned()
+            .collect()
+    }
+
     pub fn get_all_constants(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
         self.nodes
             .iter()
@@ -960,21 +971,24 @@ impl App {
     }
 
     pub fn generate_equations(&mut self, all_constants: Vec<Term>) {
-        let model: odeir::Model = self.create_json().into();
-        let Some(param_state) = &mut self.parameter_estimation_state else {
-            return;
-        };
+        if self.is_model_valid() {
+            let model: odeir::Model = self.create_json().into();
+            let Some(param_state) = &mut self.parameter_estimation_state else {
+                return;
+            };
 
-        let odeir::Model::ODE(ode_model) = model else {
-            unreachable!("This program can only produce ODE models for now");
-        };
-        let extension_lookup_paths: Vec<_> =
-            self.extensions.iter().map(|ext| &ext.file_path).collect();        
+            let odeir::Model::ODE(ode_model) = model else {
+                unreachable!("This program can only produce ODE models for now");
+            };
+            let extension_lookup_paths: Vec<_> =
+                self.extensions.iter().map(|ext| &ext.file_path).collect();        
 
-        param_state.ode_system = create_ode_system(
-            odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
-            all_constants
-        );
+            param_state.ode_system = create_ode_system(
+                odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
+                all_constants
+            );
+        }
+        //else Error
     }    
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
