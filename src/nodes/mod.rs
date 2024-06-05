@@ -6,7 +6,6 @@ pub mod expression;
 pub mod term;
 
 use std::{
-    borrow::Cow,
     ops::{Deref, DerefMut},
     rc::Rc,
 };
@@ -21,7 +20,13 @@ use imgui::{ImColor32, Ui};
 use imnodes::{InputPinId, NodeId, NodeScope, OutputPinId};
 
 use crate::{
-    core::{app::AppState, App, GeneratesId}, exprtree::{ExpressionNode, ExpressionTree, Sign}, extensions::CustomNodeSpecification, locale::Locale, message::{Message, SendData}, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
+    core::{app::AppState, App, GeneratesId},
+    exprtree::{ExpressionNode, ExpressionTree, Sign},
+    extensions::CustomNodeSpecification,
+    locale::Locale,
+    message::{Message, SendData},
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use derive_more::From;
@@ -49,7 +54,11 @@ pub struct NodeTypeRepresentation {
 }
 
 impl NodeTypeRepresentation {
-    pub fn new<S: ToString>(name: S, variant: NodeVariant, custom_node_spec: Option<Rc<CustomNodeSpecification>>) -> Self {
+    pub fn new<S: ToString>(
+        name: S,
+        variant: NodeVariant,
+        custom_node_spec: Option<Rc<CustomNodeSpecification>>,
+    ) -> Self {
         Self {
             name: name.to_string(),
             variant,

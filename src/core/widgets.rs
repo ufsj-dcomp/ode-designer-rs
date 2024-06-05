@@ -11,7 +11,7 @@ pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
         .build()
 }
 
-pub fn search_bar(ui: &Ui, mut buf: &mut String) {
+pub fn search_bar(ui: &Ui, buf: &mut String) {
     let _k = ui.push_style_var(StyleVar::ItemSpacing([0.2, 0.0]));
     // Magnifying glass icon
     ui.text("\u{f002}");

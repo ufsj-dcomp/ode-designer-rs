@@ -3,8 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::rc::Rc;
 
 use fluent_bundle::FluentValue;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -19,7 +17,7 @@ use unic_langid::LanguageIdentifier;
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
-use crate::extensions::{CustomNodeSpecification, Extension};
+use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
@@ -105,7 +103,13 @@ impl SimulationState {
         }
     }
 
-    pub fn draw_tabs(&mut self, ui: &Ui, plot_ui: &mut PlotUi, set_focus: bool, locale: &mut Locale) -> TabAction {
+    pub fn draw_tabs(
+        &mut self,
+        ui: &Ui,
+        plot_ui: &mut PlotUi,
+        set_focus: bool,
+        locale: &mut Locale,
+    ) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
 
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
@@ -162,7 +166,9 @@ impl SimulationState {
             // Safety: this variable is local to this function, which is not run
             // in parallel or anything of the sort (since self is mutable).
             // Therefore, it's safe to access this static variable and mutate it
-            unsafe { ARGS.insert("idx", tab_idx.into()); }
+            unsafe {
+                ARGS.insert("idx", tab_idx.into());
+            }
             imgui::TabItem::new(locale.fmt("tab-idx", unsafe { &ARGS }))
                 .opened(&mut opened)
                 .build(ui, || {
@@ -449,7 +455,9 @@ impl App {
         let _padding = ui.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
         let _rounding = ui.push_style_var(imgui::StyleVar::WindowRounding(0.0));
 
-        let scope = imnodes::editor(context, |mut editor| self.draw_editor(ui, &mut editor, locale));
+        let scope = imnodes::editor(context, |mut editor| {
+            self.draw_editor(ui, &mut editor, locale)
+        });
 
         if let Some(link) = scope.links_created() {
             self.add_link(link.start_pin, link.end_pin);
@@ -475,7 +483,13 @@ impl App {
         }
     }
 
-    pub fn draw(&mut self, ui: &Ui, context: &mut imnodes::EditorContext, plot_ui: &mut PlotUi, locale: &mut Locale) {
+    pub fn draw(
+        &mut self,
+        ui: &Ui,
+        context: &mut imnodes::EditorContext,
+        plot_ui: &mut PlotUi,
+        locale: &mut Locale,
+    ) {
         let flags =
         // No borders etc for top-level window
         imgui::WindowFlags::NO_DECORATION | imgui::WindowFlags::NO_MOVE
@@ -531,7 +545,9 @@ impl App {
                 .copied()
                 .zip(NodeVariant::VARIANTS)
                 .filter(|(_, variant)| variant != &&NodeVariant::Custom)
-                .map(|(name, variant)| NodeTypeRepresentation::new(locale.get(name), *variant, None))
+                .map(|(name, variant)| {
+                    NodeTypeRepresentation::new(locale.get(name), *variant, None)
+                })
                 .collect(),
             ..Self::default()
         }
@@ -1023,7 +1039,7 @@ impl App {
 
     pub fn update_locale(&mut self, locale: &mut Locale, lang: LanguageIdentifier) {
         locale.set_lang(lang);
-        
+
         // The non-custom nodes must have their names updated. They're not
         // translated on the fly, but rather are stored in the Vec already
         // translated.
@@ -1052,9 +1068,12 @@ mod tests {
 
     use super::App;
     use crate::{
-        core::{initialize_id_generator, GeneratesId}, exprtree::{ExpressionNode, Operation, Sign}, locale::Locale, message::Message, nodes::{
-            Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
-        }, pins::{OutputPin, Pin}
+        core::{initialize_id_generator, GeneratesId},
+        exprtree::{ExpressionNode, Operation, Sign},
+        locale::Locale,
+        message::Message,
+        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, SimpleNodeBuilder, Term},
+        pins::{OutputPin, Pin},
     };
 
     struct ExpressionNodeBuilder<'pin> {

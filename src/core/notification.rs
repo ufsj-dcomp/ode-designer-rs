@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicU8;
 use std::sync::OnceLock;
 use std::{
-    sync::{mpsc, Arc, Mutex},
+    sync::Mutex,
     time::{Duration, Instant},
 };
 

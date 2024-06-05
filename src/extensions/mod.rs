@@ -1,11 +1,4 @@
-use std::{
-    borrow::Cow,
-    fs::File,
-    io::{BufReader, Read},
-    path::PathBuf,
-    rc::Rc,
-    str::FromStr,
-};
+use std::{fs::File, io::Read, path::PathBuf, rc::Rc, str::FromStr};
 
 use rfd::FileDialog;
 
@@ -92,13 +85,11 @@ impl App {
             .map(CustomNodeSpecification::from)
             .map(Rc::from)
             .inspect(|node_spec| {
-                self.node_types.push(
-                    NodeTypeRepresentation::new(
-                        format!("󰯂 {}", node_spec.function.name),
-                        NodeVariant::Custom,
-                        Some(Rc::clone(node_spec)),
-                    )
-                );
+                self.node_types.push(NodeTypeRepresentation::new(
+                    format!("󰯂 {}", node_spec.function.name),
+                    NodeVariant::Custom,
+                    Some(Rc::clone(node_spec)),
+                ));
             })
             .collect();
 

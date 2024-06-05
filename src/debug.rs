@@ -8,4 +8,3 @@ pub fn draw(ui: &Ui) {
         log::trace!("This is the message body");
     }
 }
-

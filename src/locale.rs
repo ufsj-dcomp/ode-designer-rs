@@ -1,10 +1,10 @@
-use std::{collections::{btree_map::Entry, BTreeMap, HashMap}, str::FromStr};
+use std::collections::{btree_map::Entry, BTreeMap, HashMap};
 
 use crc32fast::Hasher;
 use fluent_bundle::FluentValue;
 use fluent_templates::Loader;
 use list_files_macro::list_files;
-use unic_langid::{langid, langids, LanguageIdentifier};
+use unic_langid::{langid, LanguageIdentifier};
 
 fluent_templates::static_loader! {
     static LOCALES = {
@@ -36,10 +36,8 @@ const WORDS: &[&str] = &konst::iter::collect_const!(&str =>
         map(|(name, _)| konst::string::trim(name)),
 );
 
-pub const LANGUAGES: &[(LanguageIdentifier, &str)] = &[
-    (langid!("en"), "English"),
-    (langid!("pt"), "Português"),
-];
+pub const LANGUAGES: &[(LanguageIdentifier, &str)] =
+    &[(langid!("en"), "English"), (langid!("pt"), "Português")];
 
 pub struct Locale {
     lang: LanguageIdentifier,
@@ -82,10 +80,12 @@ impl Locale {
     /// exist. If running on release, it will return the message id
     pub fn get(&self, word: &'static str) -> &str {
         if cfg!(debug_assertions) {
-            self.translations.get(word)
+            self.translations
+                .get(word)
                 .unwrap_or_else(|| panic!("Word could not be translated: {word}"))
         } else {
-            self.translations.get(word)
+            self.translations
+                .get(word)
                 .map(String::as_str)
                 .unwrap_or(word)
         }
@@ -94,11 +94,7 @@ impl Locale {
     /// Fetches/Caches a parametrized message translation. Both the message id
     /// and the arguments are used for indexing. In the case of the arguments,
     /// the pairs (argument_name, argument_value) are hashed together
-    pub fn fmt(
-        &mut self,
-        word: &'static str,
-        args: &HashMap<&'static str, FluentValue>
-    ) -> &str {
+    pub fn fmt(&mut self, word: &'static str, args: &HashMap<&'static str, FluentValue>) -> &str {
         let mut hasher = Hasher::new();
         args.iter().for_each(|(k, v)| {
             hasher.update(k.as_bytes());

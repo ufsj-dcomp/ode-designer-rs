@@ -1,11 +1,17 @@
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 use imgui::ImColor32;
 use imnodes::{InputPinId, NodeId};
 use odeir::models::CompositionStyle;
 
 use crate::{
-    core::App, exprtree::{ExpressionNode, ExpressionTree}, extensions::CustomNodeSpecification, locale::Locale, message::Message, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
+    core::App,
+    exprtree::{ExpressionNode, ExpressionTree},
+    extensions::CustomNodeSpecification,
+    locale::Locale,
+    message::Message,
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use super::{

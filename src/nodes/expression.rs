@@ -4,12 +4,17 @@ use odeir::models::CompositionStyle;
 use strum::VariantArray;
 
 use crate::{
-    core::App, exprtree::{ExpressionNode, ExpressionTree, Operation, Sign}, locale::Locale, message::Message, pins::{InputPin, OutputPin, Pin}, utils::ModelFragment
+    core::App,
+    exprtree::{ExpressionNode, ExpressionTree, Operation, Sign},
+    locale::Locale,
+    message::Message,
+    pins::{InputPin, OutputPin, Pin},
+    utils::ModelFragment,
 };
 
 use super::{
     composition_utils::{build_composition, build_from_composition},
-    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder,
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperations, SimpleNodeBuilder,
 };
 
 const MINIMUM_PIN_COUNT: usize = 2;
