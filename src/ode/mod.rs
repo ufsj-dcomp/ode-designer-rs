@@ -26,7 +26,7 @@ impl ParameterEstimation {
     pub fn new() -> Self {
         Self {
             ga: GA::default(),
-            best_solution: vec![],            
+            best_solution: vec![],
             config_data: ConfigData::default(),
         }
     }
@@ -59,11 +59,11 @@ impl ParameterEstimation {
 
         let initial_condition: State = State::from_vec(
             self.config_data
-                    .arguments
-                    .iter()
-                    .filter(|arg| ode_system.equations.contains_key(&arg.name))
-                    .map(|arg| arg.value)                    
-                    .collect()
+                .arguments
+                .iter()
+                .filter(|arg| ode_system.equations.contains_key(&arg.name))
+                .map(|arg| arg.value)
+                .collect(),
         );
         println!("initial condition: {:#?}", initial_condition);
         ode_system.set_context(all_args);
@@ -74,15 +74,14 @@ impl ParameterEstimation {
 
             //println!("context: {:#?}", ode_system.context);
 
-            let ode_result: Vec<DVector<f64>> = 
-                solve(
-                    &ode_system, 
-                    &initial_condition, 
-                    self.config_data.metadata.start_time,
-                    self.config_data.metadata.end_time,
-                    self.config_data.metadata.delta_time
-                );
-            
+            let ode_result: Vec<DVector<f64>> = solve(
+                &ode_system,
+                &initial_condition,
+                self.config_data.metadata.start_time,
+                self.config_data.metadata.end_time,
+                self.config_data.metadata.delta_time,
+            );
+
             if ode_result.len() == 0 {
                 //error
                 return 1000.0;

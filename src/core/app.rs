@@ -599,17 +599,19 @@ impl App {
                     if self.parameter_estimation_state.is_some() {
                         opened = true;
                     }
-                    
-                    if ui.tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened).is_some(){
-                        if let Some(param_state) = &mut self.parameter_estimation_state{
-                            param_state.draw_tables(ui, locale);                            
+
+                    if ui
+                        .tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened)
+                        .is_some()
+                    {
+                        if let Some(param_state) = &mut self.parameter_estimation_state {
+                            param_state.draw_tables(ui, locale);
                         }
                     }
 
-                    if ! opened {
+                    if !opened {
                         self.parameter_estimation_state = None;
                     }
-
                 });
             });
     }
@@ -632,7 +634,9 @@ impl App {
     pub fn add_node(&mut self, node: Node) -> NodeId {
         let node_id = node.id();
 
-        if let Node::Term(term) = &node && let Some(param_state) = &mut self.parameter_estimation_state {
+        if let Node::Term(term) = &node
+            && let Some(param_state) = &mut self.parameter_estimation_state
+        {
             param_state.add_variable(term.clone());
         }
 
@@ -750,13 +754,19 @@ impl App {
                     param_state.remove_variable(&value);
                 }
 
-                assigner.operates_on
+                assigner
+                    .operates_on
                     .replace((value, target_name))
-                    .map(|(previous_node_id, _)| vec![Message::UnnatributeAssignerOperatesOn(previous_node_id)])
+                    .map(|(previous_node_id, _)| {
+                        vec![Message::UnnatributeAssignerOperatesOn(previous_node_id)]
+                    })
             }
             Message::UnnatributeAssignerOperatesOn(previous_node_id) => {
                 self.parameter_estimation_state.as_ref()?;
-                let term = self.get_node(previous_node_id).and_then(Node::as_term).cloned();
+                let term = self
+                    .get_node(previous_node_id)
+                    .and_then(Node::as_term)
+                    .cloned();
 
                 if let Some(param_state) = &mut self.parameter_estimation_state
                     && let Some(term) = term
@@ -885,6 +895,12 @@ impl App {
                 self.input_pins.remove(&pin_id);
                 None
             }
+            Message::SetInitialValue(node_id, value) => {
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.set_initial_value(&node_id, value);
+                }
+                None
+            }
         }
     }
 
@@ -981,15 +997,18 @@ impl App {
                 unreachable!("This program can only produce ODE models for now");
             };
             let extension_lookup_paths: Vec<_> =
-                self.extensions.iter().map(|ext| &ext.file_path).collect();        
+                self.extensions.iter().map(|ext| &ext.file_path).collect();
 
             param_state.ode_system = create_ode_system(
-                odeir::transformations::ode::render_txt_with_equations(&ode_model, &extension_lookup_paths), 
-                all_constants
+                odeir::transformations::ode::render_txt_with_equations(
+                    &ode_model,
+                    &extension_lookup_paths,
+                ),
+                all_constants,
             );
         }
         //else Error
-    }    
+    }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
         let file_path = FileDialog::new().add_filter(ext, &[ext]).save_file()?;
