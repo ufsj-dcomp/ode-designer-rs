@@ -204,7 +204,7 @@ impl ParameterEstimationState {
         }
 
         let run_button = ui.button("Run");
-        if run_button {
+        if run_button { //App:: 
             match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
                 Ok(csv_data) => {
                     self.populate_config_data();
@@ -230,12 +230,12 @@ impl ParameterEstimationState {
         let metadata = GA_Metadata {
             name: String::from("GA"),
             start_time: 0.0,
-            delta_time: 0.01,
+            delta_time: 0.05,
             end_time: 100.0,
             population_size: 80,
             crossover_rate: 0.5,
-            mutation_rate: 0.8,
-            max_iterations: 10,
+            mutation_rate: 0.7,
+            max_iterations: 50,
         };
 
         let mut arguments: Vec<GA_Argument> = vec![];

@@ -75,7 +75,7 @@ impl ParameterEstimation {
             //update_context deve receber somente os argumentos dos parâmetros selecionados
             ode_system.update_context(context_args.clone(), values);
 
-            println!("context: {:#?}", ode_system.context);
+            //println!("context: {:#?}", ode_system.context);
 
             let ode_result: Vec<DVector<f64>> = 
                 solve(
