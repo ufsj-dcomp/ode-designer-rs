@@ -240,7 +240,7 @@ impl GA {
             p_size = p_newsize;
 
             //mutate and calculate fitness of each individual of new population
-            for id in 5..p_size {
+            for id in 1..p_size {
                 self.population[id].mutation(self.mutation_rate, &self.bounds);
 
                 self.population[id].fitness = fitness_function(&self.population[id].values);

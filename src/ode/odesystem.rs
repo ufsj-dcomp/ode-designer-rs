@@ -1,4 +1,5 @@
 use mexprp::{Answer, Context, Expression};
+//use meval::{Context,Error,Expr};
 use std::collections::BTreeMap;
 use ode_solvers::*;
 use std::{
@@ -25,7 +26,13 @@ impl OdeSystem {
             equations: BTreeMap::new(),
             context: Context::new(),
         }
-    }   
+    } 
+
+    pub fn set_context(&mut self, args: Vec<GA_Argument>) {
+        args
+            .iter()
+            .for_each(|arg| self.context.set_var(&arg.name, arg.value));
+    }  
 
     pub fn update_context(&mut self, args: Vec<GA_Argument>, values: &Vec<f64>) {
         args

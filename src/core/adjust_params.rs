@@ -209,19 +209,19 @@ impl ParameterEstimationState {
                 Ok(csv_data) => {
                     self.populate_config_data();
                     
-                    let mut context_args: Vec<GA_Argument> = vec![];
+                    let mut args_selected_params: Vec<GA_Argument> = vec![];
                     for (_id, parameter) in self.parameters.iter() {
                         if parameter.selected {
-                            context_args.push(
+                            args_selected_params.push(
                                 GA_Argument::new(
                                 parameter.term.name().to_string(),
                                 parameter.term.initial_value)
                             );
                         }                        
                     }
-                    self.estimator.estimate_parameters(csv_data, context_args, self.ode_system.clone());
+                    self.estimator.estimate_parameters(csv_data, self.estimator.config_data.arguments.clone(), args_selected_params, self.ode_system.clone())
                 }
-                Err(_) => return,
+                Err(_) => println!("Error!"),
             }
         }
     }
@@ -232,10 +232,10 @@ impl ParameterEstimationState {
             start_time: 0.0,
             delta_time: 0.05,
             end_time: 100.0,
-            population_size: 80,
+            population_size: 100,
             crossover_rate: 0.5,
-            mutation_rate: 0.7,
-            max_iterations: 50,
+            mutation_rate: 0.85,
+            max_iterations: 30,
         };
 
         let mut arguments: Vec<GA_Argument> = vec![];
@@ -263,7 +263,7 @@ impl ParameterEstimationState {
             ));
         }
 
-        arguments.sort_by(|a, b| a.name.cmp(&b.name));
+        //arguments.sort_by(|a, b| a.name.cmp(&b.name));
 
         self.estimator.config_data = ConfigData {
             metadata,
@@ -271,7 +271,6 @@ impl ParameterEstimationState {
             bounds,
         };
         
-        println!("Estimator: {:#?}", self.estimator);   
-        println!("Ode system: {:#?}", self.ode_system);     
+        println!("Estimator: {:#?}", self.estimator);           
     }    
 }

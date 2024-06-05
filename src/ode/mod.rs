@@ -2,7 +2,7 @@ pub(crate) mod csvdata;
 mod ga;
 pub mod ga_json;
 pub mod odesystem;
-use crate::ode::odesystem::solve;
+use crate::ode::{self, odesystem::solve};
 use ga_json::GA_Argument;
 use ode_solvers::DVector;
 
@@ -31,7 +31,7 @@ impl ParameterEstimation {
         }
     }
 
-    pub fn estimate_parameters(&mut self, csv_data: CSVData, context_args: Vec<GA_Argument>, mut ode_system: OdeSystem) {
+    pub fn estimate_parameters(&mut self, csv_data: CSVData, all_args: Vec<GA_Argument>, args_selected_params: Vec<GA_Argument>, mut ode_system: OdeSystem) {
 
         self.ga = GA::new(
             self.config_data.metadata.max_iterations,
@@ -46,10 +46,7 @@ impl ParameterEstimation {
             self.config_data.bounds.len(),
         );
 
-        //println!("GA after initialization: {:#?}", self.ga);
-
         let mut indexes: Vec<usize> = vec![];
-
         for label in csv_data.labels.iter() {
             let mut pop_index: usize = 0;
             for key in ode_system.equations.keys() {
@@ -69,11 +66,11 @@ impl ParameterEstimation {
                     .collect()
         );
         println!("initial condition: {:#?}", initial_condition);
+        ode_system.set_context(all_args);
 
         match self.ga.optimize(|values: &Vec<f64>| {
             
-            //update_context deve receber somente os argumentos dos parâmetros selecionados
-            ode_system.update_context(context_args.clone(), values);
+            ode_system.update_context(args_selected_params.clone(), values);
 
             //println!("context: {:#?}", ode_system.context);
 
