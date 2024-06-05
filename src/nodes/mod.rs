@@ -217,6 +217,16 @@ impl Node {
             }
         }
 
+        if inner_content_changed {
+            let node_set_value_msg = Message::SetInitialValue(self.id(), self.as_term().unwrap().initial_value);
+
+            if let Some(ref mut msg) = messages {
+                msg.push(node_set_value_msg);
+            } else {
+                messages = Some(vec![node_set_value_msg]);
+            }
+        }
+
         let app_state_change = inner_content_changed
             .then(|| self.trigger_app_state_change())
             .flatten();

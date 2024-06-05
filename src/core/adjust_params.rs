@@ -21,7 +21,7 @@ pub struct Parameter {
     range: Range<f32>,
     selected: bool,
     min_label: String,
-    max_label: String
+    max_label: String,
 }
 
 impl Parameter {
@@ -47,7 +47,10 @@ pub struct ParameterEstimationState {
 }
 
 impl ParameterEstimationState {
-    pub fn new(populations: impl IntoIterator<Item = Term>, params: impl IntoIterator<Item = Term>) -> Self {
+    pub fn new(
+        populations: impl IntoIterator<Item = Term>,
+        params: impl IntoIterator<Item = Term>,
+    ) -> Self {
         Self {
             parameters: params
                 .into_iter()
@@ -59,7 +62,7 @@ impl ParameterEstimationState {
                 .collect(),
             ode_system: OdeSystem::new(),
             estimator: ParameterEstimation::default(),
-            file_path: PathBuf::new()
+            file_path: PathBuf::new(),
         }
     }
 
@@ -77,8 +80,15 @@ impl ParameterEstimationState {
         }
     }
 
+    pub fn set_initial_value(&mut self, node_id: &NodeId, value: f64) {
+        if let Some(param) = self.parameters.get_mut(node_id) {
+            param.term.initial_value = value;
+        }
+    }
+
     pub fn clear_selected(&mut self) {
-        self.parameters.values_mut()
+        self.parameters
+            .values_mut()
             .for_each(|param| param.selected = false);
     }
 
@@ -90,8 +100,7 @@ impl ParameterEstimationState {
 
         if let Some(file_path) = file {
             file_path
-        }
-        else {
+        } else {
             PathBuf::new()
         }
     }
@@ -102,7 +111,7 @@ impl ParameterEstimationState {
         // dragged anymore
         static mut DRAGGING: bool = false;
         const DRAG_DROP_NAME: &str = "parameter_drag";
-        
+
         ui.columns(4, "Parameters", true);
         if let Some(_t) = ui.begin_table("Parameters", 2) {
             ui.table_setup_column(locale.get("parameter-name"));
@@ -126,7 +135,9 @@ impl ParameterEstimationState {
                 {
                     // Safety: this is fine because the software isn't
                     // multi-threaded and this global is local to this function
-                    unsafe { DRAGGING = true; }
+                    unsafe {
+                        DRAGGING = true;
+                    }
                     ui.text(parameter.term.name());
                     tooltip.end();
                 }
@@ -154,12 +165,16 @@ impl ParameterEstimationState {
                         // Safety: this is fine because the software isn't
                         // multi-threaded and this global is local to this
                         // function
-                        unsafe { DRAGGING = false; }
+                        unsafe {
+                            DRAGGING = false;
+                        }
                     }
                 } else if !ui.is_mouse_down(MouseButton::Left) {
                     // Safety: this is fine because the software isn't
                     // multi-threaded and this global is local to this function
-                    unsafe { DRAGGING = false; }
+                    unsafe {
+                        DRAGGING = false;
+                    }
                 }
                 target.pop();
             }
@@ -169,28 +184,18 @@ impl ParameterEstimationState {
             ui.table_setup_column(locale.get("max-value"));
             ui.table_headers_row();
 
-            for parameter in self
-                .parameters
-                .values_mut()
-                .filter(|param| param.selected)
-            {
+            for parameter in self.parameters.values_mut().filter(|param| param.selected) {
                 ui.table_next_row();
                 let stack = ui.push_id(parameter.term.name());
                 ui.table_next_column();
                 {
                     ui.text(imgui::ImString::new(parameter.term.name()));
                     ui.table_next_column();
-                    ui.input_float(
-                        &parameter.min_label,
-                        &mut parameter.range.start,
-                    )
-                    .build();
+                    ui.input_float(&parameter.min_label, &mut parameter.range.start)
+                        .build();
                     ui.table_next_column();
-                    ui.input_float(
-                        &parameter.max_label,
-                        &mut parameter.range.end,
-                    )
-                    .build();
+                    ui.input_float(&parameter.max_label, &mut parameter.range.end)
+                        .build();
                 }
                 stack.pop();
             }
@@ -253,7 +258,7 @@ impl ParameterEstimationState {
                 parameter.term.name().to_string(),
                 parameter.term.initial_value,
             ));
-        }        
+        }
 
         for (_id, parameter) in self.parameters.iter().filter(|(_id, param)| param.selected) {
             bounds.push(Bound::new(
@@ -270,8 +275,8 @@ impl ParameterEstimationState {
             arguments,
             bounds,
         };
-        
-        println!("Estimator: {:#?}", self.estimator);   
-        println!("Ode system: {:#?}", self.ode_system);     
-    }    
+
+        println!("Estimator: {:#?}", self.estimator);
+        println!("Ode system: {:#?}", self.ode_system);
+    }
 }

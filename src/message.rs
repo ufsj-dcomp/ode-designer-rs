@@ -28,6 +28,7 @@ pub enum Message {
     UnregisterPin(InputPinId),
     RemoveNode(NodeId),
     RenameNode(NodeId, String),
+    SetInitialValue(NodeId, f64),
 }
 
 #[derive(Debug, Clone)]

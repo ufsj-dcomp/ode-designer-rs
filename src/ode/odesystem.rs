@@ -1,14 +1,14 @@
 use mexprp::{Answer, Context, Expression};
-use std::collections::BTreeMap;
 use ode_solvers::*;
+use std::collections::BTreeMap;
 use std::{
     fs::File,
     io::{BufWriter, Write},
     path::Path,
 };
 
-use crate::nodes::Term;
 use super::ga_json::GA_Argument;
+use crate::nodes::Term;
 
 pub type State = DVector<f64>;
 
@@ -19,17 +19,15 @@ pub struct OdeSystem {
 }
 
 impl OdeSystem {
-
     pub fn new() -> Self {
         Self {
             equations: BTreeMap::new(),
             context: Context::new(),
         }
-    }   
+    }
 
     pub fn update_context(&mut self, args: Vec<GA_Argument>, values: &Vec<f64>) {
-        args
-            .iter()
+        args.iter()
             .zip(values)
             .for_each(|(arg, value)| self.context.set_var(&arg.name, *value));
     }
@@ -45,9 +43,7 @@ impl OdeSystem {
 }
 
 impl ode_solvers::System<f64, State> for OdeSystem {
-    
     fn system(&mut self, _t: f64, y: &State, dydt: &mut State) {
-        
         self.update_context_with_state(y);
 
         let mut i: usize = 0;
@@ -61,7 +57,6 @@ impl ode_solvers::System<f64, State> for OdeSystem {
 }
 
 pub fn solve(ode_system: &OdeSystem, y: &State, t_ini: f64, t_final: f64, dt: f64) -> Vec<State> {
-    
     let mut solver = Dop853::new(
         ode_system.clone(),
         t_ini,
@@ -85,11 +80,13 @@ pub fn solve(ode_system: &OdeSystem, y: &State, t_ini: f64, t_final: f64, dt: f6
 
 pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -> OdeSystem {
     let mut ode_system = OdeSystem::new();
-    
+
     for term in terms.into_iter() {
-        ode_system.context.set_var(&&term.leaf.symbol.trim().to_string(), term.initial_value);
+        ode_system
+            .context
+            .set_var(&&term.leaf.symbol.trim().to_string(), term.initial_value);
     }
-    
+
     let lines = input.split("\n").collect::<Vec<_>>();
 
     for line in lines {
@@ -100,10 +97,9 @@ pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -
             .collect::<Vec<_>>();
 
         if new_line.len() == 2 {
-
             let population = new_line[0].trim().to_string();
             let ode_rhs: Expression<f64> = Expression::parse(&new_line[1].trim()).unwrap();
-            ode_system.equations.insert(population.clone(),ode_rhs);
+            ode_system.equations.insert(population.clone(), ode_rhs);
         }
     }
     ode_system
