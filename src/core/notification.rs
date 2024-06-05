@@ -58,7 +58,7 @@ impl Message {
             .size(WIN_SIZE, imgui::Condition::Always)
             .build(|| {
                 tk.pop();
-                ui.text(self.body.as_str());
+                ui.text_wrapped(self.body.as_str());
                 // Start dismissing the notification
                 let pressed = ui.button("Ok");
                 (pressed, ui.window_size()[1] + Y_PADDING)
