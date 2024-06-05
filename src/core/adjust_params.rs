@@ -235,10 +235,12 @@ impl ParameterEstimationState {
         ui.input_float(locale.get("delta-time-pe"), &mut self.metadata.delta_time).build();
         ui.input_float(locale.get("end-time-pe"), &mut self.metadata.end_time).build();
 
-        let load_data_button = ui.button(locale.get("load-data-btn")); //locale.get("load-data")
+        let load_data_button = ui.button(locale.get("load-data-btn"));
         if load_data_button {
             self.file_path = self.load_data_dialog();
         }
+
+        ui.same_line_with_pos(150.0);
 
         let run_button = ui.button(locale.get("run"));
         if run_button { //App:: 

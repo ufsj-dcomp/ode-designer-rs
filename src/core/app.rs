@@ -600,12 +600,14 @@ impl App {
                         opened = true;
                     }
 
+                    if self.is_model_valid(){
                     if ui
                         .tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened)
                         .is_some()
                     {
-                        if let Some(param_state) = &mut self.parameter_estimation_state {
-                            param_state.draw_tables(ui, locale);
+                            if let Some(param_state) = &mut self.parameter_estimation_state {
+                                param_state.draw_tables(ui, locale);
+                            }
                         }
                     }
 
