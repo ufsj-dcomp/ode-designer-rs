@@ -1,5 +1,6 @@
 use imgui::{DragDropFlags, MouseButton, Ui};
 use imnodes::NodeId;
+use nom::error::context;
 use rfd::FileDialog;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -207,8 +208,18 @@ impl ParameterEstimationState {
             match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
                 Ok(csv_data) => {
                     self.populate_config_data();
-                    //passar o vetor de parâmetros selecionados 
-                    self.estimator.estimate_parameters(csv_data, self.ode_system.clone());
+                    
+                    let mut context_args: Vec<GA_Argument> = vec![];
+                    for (_id, parameter) in self.parameters.iter() {
+                        if parameter.selected {
+                            context_args.push(
+                                GA_Argument::new(
+                                parameter.term.name().to_string(),
+                                parameter.term.initial_value)
+                            );
+                        }                        
+                    }
+                    self.estimator.estimate_parameters(csv_data, context_args, self.ode_system.clone());
                 }
                 Err(_) => return,
             }

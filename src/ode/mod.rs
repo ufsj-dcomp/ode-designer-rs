@@ -3,6 +3,7 @@ mod ga;
 pub mod ga_json;
 pub mod odesystem;
 use crate::ode::odesystem::solve;
+use ga_json::GA_Argument;
 use ode_solvers::DVector;
 
 use self::{
@@ -30,7 +31,7 @@ impl ParameterEstimation {
         }
     }
 
-    pub fn estimate_parameters(&mut self, csv_data: CSVData, mut ode_system: OdeSystem) {
+    pub fn estimate_parameters(&mut self, csv_data: CSVData, context_args: Vec<GA_Argument>, mut ode_system: OdeSystem) {
 
         self.ga = GA::new(
             self.config_data.metadata.max_iterations,
@@ -72,7 +73,7 @@ impl ParameterEstimation {
         match self.ga.optimize(|values: &Vec<f64>| {
             
             //update_context deve receber somente os argumentos dos parâmetros selecionados
-            ode_system.update_context(self.config_data.arguments.clone(), values);
+            ode_system.update_context(context_args.clone(), values);
 
             println!("context: {:#?}", ode_system.context);
 
