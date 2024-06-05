@@ -36,6 +36,17 @@ impl Parameter {
         }
     }
 }
+#[derive(Default, Debug, Clone)]
+pub struct MetadataFields {
+    pub name: String,
+    pub start_time: f32,
+    pub delta_time: f32,
+    pub end_time: f32,
+    pub population_size: i32,
+    pub crossover_rate: f32,
+    pub mutation_rate: f32,
+    pub max_iterations: i32,
+}
 
 #[derive(Default, Debug, Clone)]
 pub struct ParameterEstimationState {
@@ -44,6 +55,7 @@ pub struct ParameterEstimationState {
     pub ode_system: OdeSystem,
     pub estimator: ParameterEstimation,
     file_path: PathBuf,
+    metadata: MetadataFields,
 }
 
 impl ParameterEstimationState {
@@ -51,6 +63,16 @@ impl ParameterEstimationState {
         populations: impl IntoIterator<Item = Term>,
         params: impl IntoIterator<Item = Term>,
     ) -> Self {
+        let default_metadata = MetadataFields {
+            name: String::from("GA"),
+            start_time: 0.0,
+            delta_time: 0.05,
+            end_time: 100.0,
+            population_size: 80,
+            crossover_rate: 0.5,
+            mutation_rate: 0.7,
+            max_iterations: 50,
+        };
         Self {
             parameters: params
                 .into_iter()
@@ -63,6 +85,7 @@ impl ParameterEstimationState {
             ode_system: OdeSystem::new(),
             estimator: ParameterEstimation::default(),
             file_path: PathBuf::new(),
+            metadata: default_metadata,
         }
     }
 
@@ -202,13 +225,22 @@ impl ParameterEstimationState {
         }
 
         ui.next_column();
+    
+        ui.input_int(locale.get("population-size"), &mut self.metadata.population_size).build();
+        ui.input_int(locale.get("max-iterations"), &mut self.metadata.max_iterations).build();
+        ui.input_float(locale.get("crossover-rate"), &mut self.metadata.crossover_rate).build();
+        ui.input_float(locale.get("mutation-rate"), &mut self.metadata.mutation_rate).build();
+    
+        ui.input_float(locale.get("start-time-pe"), &mut self.metadata.start_time).build();
+        ui.input_float(locale.get("delta-time-pe"), &mut self.metadata.delta_time).build();
+        ui.input_float(locale.get("end-time-pe"), &mut self.metadata.end_time).build();
 
-        let load_data_button = ui.button("Load Data"); //locale.get("load-data")
+        let load_data_button = ui.button(locale.get("load-data-btn")); //locale.get("load-data")
         if load_data_button {
             self.file_path = self.load_data_dialog();
         }
 
-        let run_button = ui.button("Run");
+        let run_button = ui.button(locale.get("run"));
         if run_button { //App:: 
             match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
                 Ok(csv_data) => {
@@ -226,23 +258,25 @@ impl ParameterEstimationState {
                     }
                     self.estimator.estimate_parameters(csv_data, context_args, self.ode_system.clone());
                 }
-                Err(_) => return,
+                Err(_) => println!("TODO: notify system"),
             }
         }
     }
 
     pub fn populate_config_data(&mut self) {
+        let config_metadata = &self.metadata;
+
         let metadata = GA_Metadata {
             name: String::from("GA"),
-            start_time: 0.0,
-            delta_time: 0.05,
-            end_time: 100.0,
-            population_size: 80,
-            crossover_rate: 0.5,
-            mutation_rate: 0.7,
-            max_iterations: 50,
+            start_time: config_metadata.start_time as f64,
+            delta_time: config_metadata.delta_time as f64,
+            end_time: config_metadata.end_time as f64,
+            population_size: config_metadata.population_size as usize,
+            crossover_rate: config_metadata.crossover_rate as f64,
+            mutation_rate: config_metadata.mutation_rate as f64,
+            max_iterations: config_metadata.max_iterations as usize,
         };
-
+        
         let mut arguments: Vec<GA_Argument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
 
@@ -271,7 +305,7 @@ impl ParameterEstimationState {
         arguments.sort_by(|a, b| a.name.cmp(&b.name));
 
         self.estimator.config_data = ConfigData {
-            metadata,
+            metadata: metadata.clone(),
             arguments,
             bounds,
         };
