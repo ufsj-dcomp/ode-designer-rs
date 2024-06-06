@@ -1,0 +1,134 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.0,
+    "end_time": 0.0,
+    "positions": {
+      "N": {
+        "x": 191.0,
+        "y": 246.0
+      },
+      "N_eq": {
+        "x": 851.0,
+        "y": 388.0
+      },
+      "const": {
+        "x": 187.0,
+        "y": 524.0
+      },
+      "dNdt": {
+        "x": 1085.0,
+        "y": 445.0
+      },
+      "growth": {
+        "x": 487.0,
+        "y": 195.0
+      },
+      "growth_limitation": {
+        "x": 631.0,
+        "y": 521.0
+      },
+      "k": {
+        "x": 189.0,
+        "y": 404.0
+      },
+      "limitation": {
+        "x": 459.0,
+        "y": 386.0
+      },
+      "r": {
+        "x": 190.0,
+        "y": 140.0
+      }
+    },
+    "extension_files": []
+  },
+  "arguments": [
+    {
+      "name": "limitation",
+      "operation": "/",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "N",
+          "contribution": "+"
+        },
+        {
+          "name": "k",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N",
+      "value": 10.0
+    },
+    {
+      "name": "r",
+      "value": 0.2
+    },
+    {
+      "name": "k",
+      "value": 200.0
+    },
+    {
+      "name": "const",
+      "value": 1.0
+    },
+    {
+      "name": "N_eq",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "growth",
+          "contribution": "+"
+        },
+        {
+          "name": "growth_limitation",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "growth",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "r",
+          "contribution": "+"
+        },
+        {
+          "name": "N",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "growth_limitation",
+      "operation": "-",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "const",
+          "contribution": "+"
+        },
+        {
+          "name": "limitation",
+          "contribution": "+"
+        }
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "name": "dNdt",
+      "operates_on": "N",
+      "argument": "N_eq",
+      "contribution": "+"
+    }
+  ]
+}

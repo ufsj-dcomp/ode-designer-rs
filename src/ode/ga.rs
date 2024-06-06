@@ -1,7 +1,7 @@
 use anyhow::Error;
 use quicksort::quicksort_by;
 use rand::Rng;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::cmp::Ordering;
 use std::fmt;
 use std::fs::File;
@@ -12,19 +12,19 @@ use vecshard::ShardExt;
 
 use super::ga_json::Bound;
 
-#[derive(Debug, Clone, Default)] //TO DO: Serialize and deserialize with Serde
+#[derive(Debug, Clone, Default)] 
 pub struct Chromosome {
-    values: Vec<f64>, //genes
+    values: Vec<f64>, 
     pub fitness: f64,
-    mutation_percentage: f64,
 }
+
+const MUTATION_PERCENTAGE: f64 = 0.1;
 
 impl Chromosome {
     pub fn new_empty() -> Self {
         Self {
             values: vec![],
             fitness: 0.0,
-            mutation_percentage: 0.1,
         }
     }
 
@@ -32,7 +32,6 @@ impl Chromosome {
         Self {
             values: v,
             fitness: 0.0,
-            mutation_percentage: 0.1,
         }
     }
 
@@ -48,7 +47,7 @@ impl Chromosome {
         if p < mutation_rate {
             p = rng.gen_range(0.0..=1.0);
 
-            let value = self.mutation_percentage * self.values[c_index];
+            let value = MUTATION_PERCENTAGE * self.values[c_index];
 
             if p < 0.5 {
                 self.values[c_index] += value;
@@ -84,7 +83,6 @@ pub struct GA {
     crossover_rate: f64,
     pub population: Vec<Chromosome>,
     bounds: Vec<Bound>, //bound for each chromosome
-    minimization: bool,
 }
 
 impl GA {
@@ -93,7 +91,6 @@ impl GA {
         mut_rate: f64,
         cross_rate: f64,
         bounds: Vec<Bound>,
-        is_min: bool,
     ) -> Self {
         Self {
             max_generations: max,
@@ -101,7 +98,6 @@ impl GA {
             crossover_rate: cross_rate,
             population: vec![],
             bounds: bounds,
-            minimization: is_min,
         }
     }
 
@@ -141,20 +137,14 @@ impl GA {
         // Rotate the roulette
         while (prob_1 > 0.0 || prob_2 > 0.0) && i < p_size {
             if prob_1 > 0.0 {
-                if self.minimization {
-                    prob_1 -= upper_bound - self.population[i].fitness;
-                } else {
-                    prob_1 -= self.population[i].fitness;
-                }
+                prob_1 -= upper_bound - self.population[i].fitness;
+                
                 if prob_1 <= 0.0 {
                     parents.0 = &self.population[i];
                 }
             } else if prob_2 > 0.0 {
-                if self.minimization {
-                    prob_2 -= upper_bound - self.population[i].fitness;
-                } else {
-                    prob_2 -= self.population[i].fitness;
-                }
+                prob_2 -= upper_bound - self.population[i].fitness;
+                
                 if prob_2 <= 0.0 {
                     parents.1 = &self.population[i];
                 }
@@ -198,14 +188,14 @@ impl GA {
         }
     }
 
-    pub fn optimize<F>(&mut self, mut fitness_function: F) -> Result<Chromosome, ()>
+    pub fn optimize<F>(&mut self, fitness_function: F) -> Result<Chromosome, ()>
     where
-        F: FnMut(&Vec<f64>) -> f64, //+ Send + Sync + 'static
+        F: Fn(Vec<f64>) -> f64, 
     {
-        let mut best: Chromosome = Chromosome::new_empty();
+        let mut best: Chromosome = Chromosome::new_empty();        
 
         self.population.iter_mut().for_each(|c| {
-            c.fitness = fitness_function(&c.values);
+            c.fitness = fitness_function(c.values.clone());
         });
 
         let mut i: usize = 0;
@@ -215,13 +205,13 @@ impl GA {
             //println!("iteration {:?}: ", i);
             let mut p_size: usize = self.population.len();
 
-            for _j in 0..(p_size / 4) {
+            for _j in 0..(p_size / 5) {
                 let parents: (&Chromosome, &Chromosome) = self.select_parents();
 
                 let mut new_individuals: (Chromosome, Chromosome) = self.crossover(parents);
 
-                new_individuals.0.fitness = fitness_function(&new_individuals.0.values);
-                new_individuals.1.fitness = fitness_function(&new_individuals.1.values);
+                new_individuals.0.fitness = fitness_function(new_individuals.0.values.clone());
+                new_individuals.1.fitness = fitness_function(new_individuals.1.values.clone());
 
                 self.population.push(new_individuals.0);
                 self.population.push(new_individuals.1);
@@ -230,37 +220,25 @@ impl GA {
             let p_newsize: usize = self.population.len();
             let count: usize = p_newsize - p_size;
             p_size = p_newsize;
-
+            
             //mutate and calculate fitness of each individual of new population
             for id in 1..p_size {
                 self.population[id].mutation(self.mutation_rate, &self.bounds);
 
-                self.population[id].fitness = fitness_function(&self.population[id].values);
+                self.population[id].fitness = fitness_function(self.population[id].values.clone());
             }
 
             quicksort_by(&mut self.population, GA::compare);
 
             //get the best individual
-            if self.minimization {
-                best = self
-                    .population
-                    .first()
-                    .expect("The population vec is empty")
-                    .clone();
+            best = self
+                .population
+                .first()
+                .expect("The population vec is empty")
+                .clone();
 
-                for k in 0..count {
-                    self.population.remove(p_size - 1 - k);
-                }
-            } else {
-                best = self
-                    .population
-                    .last()
-                    .expect("The population vec is empty")
-                    .clone();
-
-                for k in 0..count {
-                    self.population.remove(k);
-                }
+            for k in 0..count {
+                self.population.remove(p_size - 1 - k);
             }
 
             solutions.push(best.to_string());
@@ -270,7 +248,7 @@ impl GA {
         }
 
         GA::to_disk::<String>(
-            Path::new(&String::from("./src/ode/tests/ga_iterations.txt")),
+            Path::new(&String::from("./src/ode/result/ga_iterations.txt")),
             solutions,
         )
         .unwrap();

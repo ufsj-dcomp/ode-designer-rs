@@ -33,10 +33,10 @@ impl OdeSystem {
             .for_each(|arg| self.context.set_var(&arg.name, arg.value));
     }  
 
-    pub fn update_context(&mut self, args: Vec<GA_Argument>, values: &Vec<f64>) {
+    pub fn update_context(&mut self, args: Vec<GA_Argument>, values: Vec<f64>) {
         args.iter()
             .zip(values)
-            .for_each(|(arg, value)| self.context.set_var(&arg.name, *value));
+            .for_each(|(arg, value)| self.context.set_var(&arg.name, value));
     }
 
     pub fn update_context_with_state(&mut self, y: &State) {
@@ -63,9 +63,12 @@ impl ode_solvers::System<f64, State> for OdeSystem {
     }
 }
 
-pub fn solve(ode_system: &OdeSystem, y: &State, t_ini: f64, t_final: f64, dt: f64) -> Vec<State> {
+pub fn solve(mut ode_system: OdeSystem, y: &State, t_ini: f64, t_final: f64, dt: f64, args: Vec<GA_Argument>, values: Vec<f64>) -> Vec<State> {
+
+    ode_system.update_context(args, values);
+
     let mut solver = Dop853::new(
-        ode_system.clone(),
+        ode_system,
         t_ini,
         t_final,
         dt,

@@ -2,7 +2,7 @@ pub(crate) mod csvdata;
 mod ga;
 pub mod ga_json;
 pub mod odesystem;
-use crate::ode::{self, odesystem::solve};
+use crate::ode::odesystem::solve;
 use ga_json::GA_Argument;
 use ode_solvers::DVector;
 
@@ -32,13 +32,12 @@ impl ParameterEstimation {
     }
 
     pub fn estimate_parameters(&mut self, csv_data: CSVData, all_args: Vec<GA_Argument>, args_selected_params: Vec<GA_Argument>, mut ode_system: OdeSystem) {
-
+  
         self.ga = GA::new(
             self.config_data.metadata.max_iterations,
             self.config_data.metadata.mutation_rate,
             self.config_data.metadata.crossover_rate,
             self.config_data.bounds.clone(),
-            true,
         );
 
         self.ga.generate_random_population(
@@ -65,21 +64,22 @@ impl ParameterEstimation {
                 .map(|arg| arg.value)
                 .collect(),
         );
-        println!("initial condition: {:#?}", initial_condition);
+        
         ode_system.set_context(all_args);
-
-        match self.ga.optimize(|values: &Vec<f64>| {
+        
+        match self.ga.optimize(|values: Vec<f64>| {
             
-            ode_system.update_context(args_selected_params.clone(), values);
-
+            //ode_system.update_context(args_selected_params.clone(), values);
             //println!("context: {:#?}", ode_system.context);
 
             let ode_result: Vec<DVector<f64>> = solve(
-                &ode_system,
+                ode_system.clone(),
                 &initial_condition,
                 self.config_data.metadata.start_time,
                 self.config_data.metadata.end_time,
                 self.config_data.metadata.delta_time,
+                args_selected_params.clone(),
+                values.clone()
             );
 
             if ode_result.len() == 0 {
@@ -125,6 +125,6 @@ impl ParameterEstimation {
                 self.best_solution = c.get_values();
             }
             Err(e) => println!("An error ocurred during the optimization: {:?}", e),
-        }
+        }       
     }
 }

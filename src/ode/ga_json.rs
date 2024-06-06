@@ -3,11 +3,9 @@ use std::{
     io::{BufReader, BufWriter, Error},
     path::Path,
 };
-
 use anyhow;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct GA_Metadata {
     pub name: String,
     pub start_time: f64,
@@ -20,7 +18,7 @@ pub struct GA_Metadata {
 }
 
 //initial condition
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct GA_Argument {
     pub name: String,
     pub value: f64,
@@ -36,7 +34,7 @@ impl GA_Argument {
 }
 
 //parameters to be adjusted
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Bound {
     pub name: String,
     pub min: f64,
@@ -53,34 +51,9 @@ impl Bound {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ConfigData {
     pub metadata: GA_Metadata,
     pub arguments: Vec<GA_Argument>, //manter o vetor ordenado
     pub bounds: Vec<Bound>,
-}
-
-pub fn save_json<P: AsRef<Path>>(data: ConfigData, path: P) -> anyhow::Result<(), Error> {
-    let file: File = match File::create(path) {
-        Ok(f) => f,
-        Err(e) => return Err(e.into()),
-    };
-    let writer: BufWriter<File> = BufWriter::new(file);
-    serde_json::to_writer_pretty(writer, &data)?;
-
-    Ok(())
-}
-
-pub fn load_json<P: AsRef<Path>>(path: P) -> anyhow::Result<ConfigData, Error> {
-    let file: File = match File::open(path) {
-        Ok(f) => f,
-        Err(e) => return Err(e.into()),
-    };
-    let reader: BufReader<File> = BufReader::new(file);
-    let json: Result<ConfigData, serde_json::Error> = serde_json::from_reader(reader);
-
-    match json {
-        Ok(f) => Ok(f),
-        Err(e) => return Err(e.into()),
-    }
 }

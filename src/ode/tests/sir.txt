@@ -1,3 +1,0 @@
-I = beta*S*I - alpha*I 
-R = alpha*I - gamma*R 
-S = -beta*S*I + gamma*R
