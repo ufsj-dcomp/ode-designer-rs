@@ -1165,7 +1165,7 @@ impl App {
         let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
             Err(NotCorrectModel::NotODE)?
         };
-
+        self.clear_state();
         self.try_read_model(model, file_path)
     }
 

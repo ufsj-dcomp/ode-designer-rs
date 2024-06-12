@@ -59,7 +59,6 @@ impl App {
                     .shortcut("Ctrl + O")
                     .build()
                 {
-                    self.clear_state();
                     if let Err(err) = self.load_state() {
                         eprintln!("Couldn't load model from file: {err}");
                     }
