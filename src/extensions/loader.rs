@@ -1,7 +1,4 @@
-use std::{
-    io::Read,
-    process::{Command, Stdio},
-};
+use std::process::Command;
 
 use minijinja::{context, Environment, Error as JinjaError};
 use serde::Deserialize;

@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     composition_utils::{build_composition, build_from_composition},
-    ExprWrapper, LinkEvent, NodeImpl, PendingOperation, PendingOperations, SimpleNodeBuilder,
+    ExprWrapper, LinkEvent, NodeImpl, PendingOperations, SimpleNodeBuilder,
 };
 
 const MINIMUM_PIN_COUNT: usize = 2;

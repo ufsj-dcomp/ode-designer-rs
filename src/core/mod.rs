@@ -16,6 +16,7 @@ pub mod adjust_params;
 pub mod app;
 mod id_gen;
 pub mod menu;
+pub mod notification;
 pub mod plot;
 pub mod python;
 pub mod side_bar;

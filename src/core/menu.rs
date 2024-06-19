@@ -1,19 +1,18 @@
 use imgui::Ui;
 
 use crate::{
-    core::adjust_params,
-    locale::{Locale, LANGUAGES},
-    nodes::expression,
+    locale::{self, Locale, LANGUAGES},
+    utils::localized_error,
     App,
 };
 use rfd::FileDialog;
 
-use std::{cell::RefCell, fs::read_to_string, process::Command};
+use std::{collections::HashMap, fs::read_to_string, process::Command};
 
 use super::{
     adjust_params::ParameterEstimationState,
     app::{AppState, SimulationState},
-    python::{execute_python_code, PythonError},
+    python::execute_python_code,
 };
 
 impl App {
@@ -28,10 +27,19 @@ impl App {
                 if let Ok(file_content) = read_to_string(&file_path) {
                     self.simulation_state = Some(SimulationState::from_csv(file_content, locale));
                 } else {
-                    eprintln!("Error: Failed to read file content.");
+                    localized_error!(locale, "error-csv-load", "file" => file_path.display().to_string())
                 }
             }
         }
+    }
+
+    pub fn draw_input_label(&mut self, ui: &Ui) {
+        ui.input_text("X Label", &mut self.text_fields.x_label)
+            .hint("time (days)")
+            .build();
+        ui.input_text("Y Label", &mut self.text_fields.y_label)
+            .hint("conc/ml")
+            .build();
     }
 
     pub fn draw_input_label(&mut self, ui: &Ui) {
@@ -60,7 +68,8 @@ impl App {
                     .build()
                 {
                     if let Err(err) = self.load_state() {
-                        eprintln!("Couldn't load model from file: {err}");
+                        localized_error!(locale, "error-csv-load");
+                        eprintln!("{err}");
                     }
                 }
 
@@ -109,7 +118,10 @@ impl App {
 
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
-                            Err(err) => eprintln!("{err}"),
+                            Err(err) => {
+                                localized_error!(locale, "error-pdf-export");
+                                eprintln!("{err}")
+                            }
                         }
                     }
                 }
@@ -143,7 +155,10 @@ impl App {
                                 self.simulation_state = Some(simulation_state);
                             }
                         }
-                        Err(err) => eprintln!("{err}"),
+                        Err(err) => {
+                        localized_error!(locale, "error-python-exec");
+                        eprintln!("{err}")
+                    }
                     }
                 }
             });

@@ -4,8 +4,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::rc::Rc;
 
 use fluent_bundle::FluentValue;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -21,7 +19,7 @@ use unic_langid::LanguageIdentifier;
 use crate::core::GeneratesId;
 use crate::errors::{InvalidNodeReason, InvalidNodeReference, NotCorrectModel};
 use crate::exprtree::Sign;
-use crate::extensions::{CustomNodeSpecification, Extension};
+use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
@@ -541,7 +539,9 @@ impl App {
 
         if ui.is_key_down(imgui::Key::LeftCtrl) && ui.is_key_down(imgui::Key::O) {
             self.clear_state();
-            let _ = self.load_state();
+            if let Err(e) = self.load_state() {
+                log::error!("{e}");
+            }
         }
     }
 
@@ -614,6 +614,8 @@ impl App {
                     if !opened {
                         self.parameter_estimation_state = None;
                     }
+
+                    super::notification::render_messages(ui);
                 });
             });
     }
@@ -1217,9 +1219,7 @@ mod tests {
         exprtree::{ExpressionNode, Operation, Sign},
         locale::Locale,
         message::Message,
-        nodes::{
-            Assigner, Expression, LinkEvent, Node, NodeImpl, NodeVariant, SimpleNodeBuilder, Term,
-        },
+        nodes::{Assigner, Expression, LinkEvent, Node, NodeImpl, SimpleNodeBuilder, Term},
         pins::{OutputPin, Pin},
     };
 

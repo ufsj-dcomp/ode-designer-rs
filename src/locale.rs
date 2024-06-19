@@ -1,13 +1,11 @@
-use std::{
-    collections::{btree_map::Entry, BTreeMap, HashMap},
-    str::FromStr,
-};
+use parking_lot::RwLock;
+use std::collections::{btree_map::Entry, BTreeMap, HashMap};
 
 use crc32fast::Hasher;
 use fluent_bundle::FluentValue;
 use fluent_templates::Loader;
 use list_files_macro::list_files;
-use unic_langid::{langid, langids, LanguageIdentifier};
+use unic_langid::{langid, LanguageIdentifier};
 
 fluent_templates::static_loader! {
     static LOCALES = {
@@ -45,7 +43,23 @@ pub const LANGUAGES: &[(LanguageIdentifier, &str)] =
 pub struct Locale {
     lang: LanguageIdentifier,
     translations: BTreeMap<&'static str, String>,
-    formatted: BTreeMap<(&'static str, u32), String>,
+    formatted: RwLock<BTreeMap<(&'static str, u32), String>>,
+}
+
+#[derive(Debug)]
+pub struct FormattedText<'a>(parking_lot::MappedRwLockReadGuard<'a, String>);
+
+impl<'a> std::ops::Deref for FormattedText<'a> {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_str()
+    }
+}
+
+impl<'a> AsRef<str> for FormattedText<'a> {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
 }
 
 /// Caching wrapper around [Fluent](https://projectfluent.org/)
@@ -53,7 +67,7 @@ impl Locale {
     pub fn new(lang: LanguageIdentifier) -> Self {
         Self {
             translations: Self::get_translations(&lang),
-            formatted: BTreeMap::new(),
+            formatted: Default::default(),
             lang,
         }
     }
@@ -62,7 +76,7 @@ impl Locale {
     /// new one
     pub fn set_lang(&mut self, lang: LanguageIdentifier) {
         self.translations = Self::get_translations(&lang);
-        self.formatted.clear();
+        self.formatted.write().clear();
         self.lang = lang;
     }
 
@@ -97,7 +111,11 @@ impl Locale {
     /// Fetches/Caches a parametrized message translation. Both the message id
     /// and the arguments are used for indexing. In the case of the arguments,
     /// the pairs (argument_name, argument_value) are hashed together
-    pub fn fmt(&mut self, word: &'static str, args: &HashMap<&'static str, FluentValue>) -> &str {
+    pub fn fmt<'a>(
+        &'a self,
+        word: &'static str,
+        args: &HashMap<&'static str, FluentValue>,
+    ) -> FormattedText<'a> {
         let mut hasher = Hasher::new();
         args.iter().for_each(|(k, v)| {
             hasher.update(k.as_bytes());
@@ -111,12 +129,16 @@ impl Locale {
         let hash = hasher.finalize();
         let key = (word, hash);
 
-        if let Entry::Vacant(e) = self.formatted.entry(key) {
+        let mut formatted = self.formatted.write();
+        if let Entry::Vacant(e) = formatted.entry(key) {
             let s = LOCALES.lookup_with_args(&self.lang, word, args);
             e.insert(s);
         }
 
-        self.formatted.get(&key).unwrap()
+        let formatted = parking_lot::RwLockWriteGuard::downgrade(formatted);
+        FormattedText(parking_lot::RwLockReadGuard::map(formatted, |formatted| {
+            formatted.get(&key).unwrap()
+        }))
     }
 
     pub fn current(&self) -> &LanguageIdentifier {

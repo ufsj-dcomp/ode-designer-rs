@@ -6,7 +6,6 @@ pub mod expression;
 pub mod term;
 
 use std::{
-    borrow::Cow,
     ops::{Deref, DerefMut},
     rc::Rc,
 };

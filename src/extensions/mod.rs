@@ -1,11 +1,4 @@
-use std::{
-    borrow::Cow,
-    fs::File,
-    io::{BufReader, Read},
-    path::PathBuf,
-    rc::Rc,
-    str::FromStr,
-};
+use std::{fs::File, io::Read, path::PathBuf, rc::Rc, str::FromStr};
 
 use rfd::FileDialog;
 
