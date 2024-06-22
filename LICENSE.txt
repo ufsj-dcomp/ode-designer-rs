@@ -1,0 +1,20 @@
+GPLv2-LICENSE 
+
+ODE-Designer, a software for building and simulating Ordinary Differential Equation Models. 
+
+Copyright (c) 2022-2024 Brenno Lemos Melquíades dos Santos, 
+Diego Augusto Silva Castro, Sávio Francisco Cirino da Paz, 
+Davi Jannotti Coelho Pinheiro e Alexandre Bittencourt Pigozzo
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+For the complete terms of the GNU General Public License, please see this URL:
+http://www.gnu.org/licenses/gpl-2.0.html

@@ -129,3 +129,19 @@ To compile and run the software outside of the AppImage, the Rust toolchain is r
 ```sh
 $ cargo run
 ```
+
+Or 
+
+```sh
+$ cargo build --release
+$ ./target/release/ode-designer-rs
+```
+
+If anything goes wrong, try 
+
+```sh
+$ git submodule update --init --recursive
+$ git submodule update --recursive --remote
+```
+
+Then, recompile and run again. 
