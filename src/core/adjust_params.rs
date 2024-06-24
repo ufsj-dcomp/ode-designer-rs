@@ -1,6 +1,5 @@
 use imgui::{DragDropFlags, MouseButton, Ui};
 use imnodes::NodeId;
-use nom::error::context;
 use rfd::FileDialog;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -48,7 +47,7 @@ pub struct MetadataFields {
     pub max_iterations: i32,
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ParameterEstimationState {
     parameters: BTreeMap<NodeId, Parameter>,
     populations: BTreeMap<NodeId, Term>,

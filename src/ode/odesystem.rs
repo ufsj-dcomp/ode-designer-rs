@@ -1,4 +1,4 @@
-use mexprp::{Answer, Context, Expression};
+use expr_evaluator::expr::{Expression,ExprContext};
 use ode_solvers::*;
 //use meval::{Context,Error,Expr};
 use std::collections::BTreeMap;
@@ -13,30 +13,30 @@ use crate::nodes::Term;
 
 pub type State = DVector<f64>;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct OdeSystem {
-    pub equations: BTreeMap<String, Expression<f64>>,
-    pub context: Context<f64>,
+    pub equations: BTreeMap<String, Expression>,
+    pub context: ExprContext,
 }
 
 impl OdeSystem {
     pub fn new() -> Self {
         Self {
             equations: BTreeMap::new(),
-            context: Context::new(),
+            context: ExprContext::new(),
         }
     } 
 
     pub fn set_context(&mut self, args: Vec<GA_Argument>) {
         args
             .iter()
-            .for_each(|arg| self.context.set_var(&arg.name, arg.value));
+            .for_each(|arg| self.context.set_var(arg.name.clone(), arg.value));
     }  
 
     pub fn update_context(&mut self, args: Vec<GA_Argument>, values: Vec<f64>) {
         args.iter()
             .zip(values)
-            .for_each(|(arg, value)| self.context.set_var(&arg.name, value));
+            .for_each(|(arg, value)| self.context.set_var(arg.name.clone(), value));
     }
 
     pub fn update_context_with_state(&mut self, y: &State) {
@@ -44,7 +44,7 @@ impl OdeSystem {
             .iter_mut()
             .zip(y.iter())
             .for_each(|(map, new_value)| {
-                self.context.set_var(map.0, *new_value);
+                self.context.set_var(map.0.to_string(), *new_value);
             });
     }
 }
@@ -54,9 +54,12 @@ impl ode_solvers::System<f64, State> for OdeSystem {
         self.update_context_with_state(y);
 
         let mut i: usize = 0;
-        for equation in self.equations.values() {
-            if let Ok(Answer::Single(expr_value)) = equation.eval_ctx(&self.context) {
-                dydt[i] = expr_value;
+        for equation in self.equations.values_mut() {
+
+            equation.set_context(self.context.clone());
+            
+            if let Ok(value) = equation.eval() {
+                dydt[i] = value;
             }
             i += 1;
         }
@@ -94,7 +97,7 @@ pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -
     for term in terms.into_iter() {
         ode_system
             .context
-            .set_var(&&term.leaf.symbol.trim().to_string(), term.initial_value);
+            .set_var(term.leaf.symbol.trim().to_string(), term.initial_value);
     }
 
     let lines = input.split("\n").collect::<Vec<_>>();
@@ -108,7 +111,8 @@ pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -
 
         if new_line.len() == 2 {
             let population = new_line[0].trim().to_string();
-            let ode_rhs: Expression<f64> = Expression::parse(&new_line[1].trim()).unwrap();
+            let mut ode_rhs: Expression = Expression::new();
+            ode_rhs.parse_expr(new_line[1].trim().to_string()).unwrap();
             ode_system.equations.insert(population.clone(), ode_rhs);
         }
     }

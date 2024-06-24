@@ -42,15 +42,6 @@ impl App {
             .build();
     }
 
-    pub fn draw_input_label(&mut self, ui: &Ui) {
-        ui.input_text("X Label", &mut self.text_fields.x_label)
-            .hint("time (days)")
-            .build();
-        ui.input_text("Y Label", &mut self.text_fields.y_label)
-            .hint("conc/ml")
-            .build();
-    }
-
     pub fn draw_menu(&mut self, ui: &Ui, locale: &mut Locale) {
         ui.menu_bar(|| {
             ui.menu(locale.get("file"), || {
