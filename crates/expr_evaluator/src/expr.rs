@@ -216,10 +216,8 @@ impl Expression {
     pub fn parse_expr(&mut self, text: String) -> Result<bool>{
         //parse the expression and creates the ast tree        
         let tokens = lexer::tokenize_string(text);
-        println!("{:#?}", tokens);
         let mut parser = Parser::new(tokens);
         self.ast = Some(parser.parse());
-        println!("AST: {:#?}", self.ast);
 
         Ok(true)
     }

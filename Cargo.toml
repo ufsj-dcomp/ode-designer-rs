@@ -48,7 +48,7 @@ quicksort = "1.1.0"
 rand = "0.8.5"
 vecshard = "0.2.1"
 ode_solvers = { path = "./crates/ode-solvers-main" }
-mexprp = "0.3.1"
+expr_evaluator = { path = "./crates/expr_evaluator" }
 rayon = "1.10.0"
 meval = "0.2.0"
 

@@ -48,10 +48,9 @@ impl Parser {
 
     fn adicao_opc(&mut self, node: Box<Node>) -> Box<Node>{
         self.c_token = self.next_token();
-        println!("token (adicao opc): {:?}", self.c_token);
+        
         match self.c_token.token_type.clone() {            
-            TokenKind::Operators(Operators::Plus) => { 
-                println!("É uma soma");       
+            TokenKind::Operators(Operators::Plus) => {      
                 let right_node = self.termo();
                 let binary_node = Box::new(Node::BinaryExpr { op: Operator::Plus, left_expr: node, right_expr: right_node });
                 return self.adicao_opc(binary_node);
@@ -72,7 +71,6 @@ impl Parser {
         self.c_token = self.next_token();
         match self.c_token.token_type.clone() {
             TokenKind::Operators(Operators::Multiplication) => {
-                println!("É uma multiplicação");
                 let right_node = self.fator();
                 let binary_node = Box::new(Node::BinaryExpr { op: Operator::Mult, left_expr: node, right_expr: right_node });
                 return self.termo_opc(binary_node);
@@ -93,7 +91,6 @@ impl Parser {
         let mut is_unary: bool = false;
         let mut is_minus: bool = false;
         self.c_token = self.next_token();
-        println!("token (fator): {:?}", self.c_token);
 
         match self.c_token.token_type.clone(){
             TokenKind::Operators(Operators::Minus) => {
@@ -120,7 +117,6 @@ impl Parser {
             self.back_token();
         }
         self.c_token = self.next_token();
-        println!("token (fator 2): {:?}", self.c_token);
         
         match self.c_token.token_type.clone() {
             TokenKind::Identifier(lexeme) =>  {
@@ -169,7 +165,7 @@ impl Parser {
     fn lista_args(&mut self) -> Vec<Box<Node>>{
         let mut args: Vec<Box<Node>> = vec![];
         self.c_token = self.next_token(); 
-        println!("token (lista_args): {:?}", self.c_token);
+
         match self.c_token.token_type.clone() {
             TokenKind::Operators(Operators::Plus) | TokenKind::Operators(Operators::Minus) | TokenKind::Identifier(_)
             | TokenKind::FloatConst(_) | TokenKind::Punctuation(Punctuation::LParen) => {
@@ -186,11 +182,10 @@ impl Parser {
 
     fn lista_args2(&mut self, mut args: Vec<Box<Node>>) -> Vec<Box<Node>>{
         self.c_token = self.next_token();
-        println!("token (lista_args2): {:?}", self.c_token);
+
         match self.c_token.token_type.clone() {
             TokenKind::Punctuation(Punctuation::Comma) => {
                 let node = self.expr();
-                println!("new arg: {:?}", node);
                 args.push(node);
                 args = self.lista_args2(args);
             },
