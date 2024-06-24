@@ -114,6 +114,7 @@ impl NotificationLogger {
 
 #[derive(Debug)]
 pub struct NotificationLogger {
+    crate_name: String,
     max_log_level: Level,
     next_id: AtomicU8,
     messages: Mutex<Vec<Message>>,
@@ -155,6 +156,7 @@ impl NotificationLogger {
     /// Creates a new [`NotificationLogger`]
     pub fn new() -> Self {
         Self {
+            crate_name: env!("CARGO_PKG_NAME").replace("-", "_"),
             max_log_level: Level::Warn,
             next_id: Default::default(),
             messages: Default::default(),
@@ -181,11 +183,11 @@ impl NotificationLogger {
 impl log::Log for NotificationLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
         dbg!(metadata);
-        metadata.target().contains(env!("CARGO_PKG_NAME")) && metadata.level() >= self.max_log_level
+        metadata.target().contains(&self.crate_name) && metadata.level() <= self.max_log_level
     }
 
     fn log(&self, record: &log::Record) {
-        if record.level() > self.max_log_level {
+        if !self.enabled(record.metadata()) {
             return
         }
         self.messages.lock().unwrap().push(Message {
@@ -204,6 +206,6 @@ impl log::Log for NotificationLogger {
 
     fn flush(&self) {
         // Nothing to be done here.
-        // The application is responsible  consuming the `Message`s.
+        // The application is responsible for consuming the `Message`s.
     }
 }
