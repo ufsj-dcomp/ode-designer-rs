@@ -185,6 +185,9 @@ impl log::Log for NotificationLogger {
     }
 
     fn log(&self, record: &log::Record) {
+        if record.level() > self.max_log_level {
+            return
+        }
         self.messages.lock().unwrap().push(Message {
             body: record.args().to_string(),
             level: record.level(),
