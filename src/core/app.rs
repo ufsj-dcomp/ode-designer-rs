@@ -1,5 +1,6 @@
 use std::borrow::{Borrow, Cow};
-use std::collections::{HashMap, HashSet};
+use std::cell::{Ref, RefCell};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -9,6 +10,7 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
+use odeir::Argument;
 use once_cell::sync::Lazy;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
@@ -21,16 +23,20 @@ use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations,
+    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
+    PendingOperations, Term,
 };
+use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
+use crate::ode::odesystem::{create_ode_system, OdeSystem};
 use crate::pins::Pin;
 use crate::utils::{ModelFragment, VecConversion};
 
-use imgui::{Key, StyleVar, TabItem, Ui};
+use imgui::{DragDropFlags, Key, StyleVar, TabItem, TabItemFlags, Ui};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
+use super::adjust_params::{self, Parameter, ParameterEstimationState};
 use super::plot::CSVData;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -72,19 +78,22 @@ const COLORS: &[ImVec4] = &[
     ImVec4::new(0.1, 0.4, 0.1, 1.0), //verde escuro
 ];
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SimulationState {
     pub plot: PlotInfo,
     pub plot_layout: PlotLayout,
     pub colors: Vec<ImVec4>,
-    pub flag_simulation: bool,
-    pub flag_plot_all: bool,
     pub set_focus_to_tab: bool,
 }
 #[derive(PartialEq)]
 pub enum TabAction {
     Open,
     Close,
+}
+#[derive(Default)]
+pub struct TextFields {
+    pub x_label: String,
+    pub y_label: String,
 }
 
 impl SimulationState {
@@ -97,8 +106,6 @@ impl SimulationState {
             plot: PlotInfo::new(csv_data, locale),
             plot_layout: PlotLayout::new(2, 2, pane_count as u32),
             colors: COLORS.to_owned(),
-            flag_simulation: false,
-            flag_plot_all: false,
             set_focus_to_tab: true,
         }
     }
@@ -223,6 +230,8 @@ pub struct App {
     pub(crate) simulation_state: Option<SimulationState>,
     pub sidebar_state: SideBarState,
     pub extensions: Vec<Extension>,
+    pub text_fields: TextFields,
+    pub parameter_estimation_state: Option<ParameterEstimationState>,
 }
 
 pub enum AppState {
@@ -386,8 +395,59 @@ impl AppState {
     }
 }
 
-/// Draws the nodes and other elements
 impl App {
+    fn is_model_valid(&self) -> bool {
+        let population_ids: HashSet<_> = self.get_all_population_ids();
+
+        let has_terms = self
+            .nodes
+            .iter()
+            .any(|(_, node)| matches!(node, Node::Term(_)));
+
+        let has_assigner_operating_on_term = self.nodes.iter().any(|(_, node)| {
+            if let Node::Term(term) = node {
+                population_ids.contains(&term.id)
+            } else {
+                false
+            }
+        });
+
+        has_terms && has_assigner_operating_on_term
+    }
+
+    pub fn get_all_population_ids(&self) -> HashSet<&NodeId> {
+        self.nodes
+            .iter()
+            .filter_map(|(_id, node)| match node {
+                Node::Assigner(assigner) => assigner.operates_on.as_ref().map(|(id, _)| id),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn get_all_populations(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
+        self.nodes
+            .iter()
+            .filter_map(|(id, node)| match node {
+                Node::Term(term) if all_population_ids.contains(id) => Some(term),
+                _ => None,
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_all_constants(&self, all_population_ids: &HashSet<&NodeId>) -> Vec<Term> {
+        self.nodes
+            .iter()
+            .filter_map(|(id, node)| match node {
+                Node::Term(term) if !all_population_ids.contains(id) => Some(term),
+                _ => None,
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// Draws the nodes and other elements
     pub fn draw_editor(&mut self, ui: &Ui, editor: &mut imnodes::EditorScope, locale: &Locale) {
         // Minimap
         editor.add_mini_map(imnodes::MiniMapLocation::BottomRight);
@@ -535,6 +595,26 @@ impl App {
                         }
                     }
 
+                    let mut opened = false;
+                    if self.parameter_estimation_state.is_some() {
+                        opened = true;
+                    }
+
+                    if self.is_model_valid(){
+                    if ui
+                        .tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened)
+                        .is_some()
+                    {
+                            if let Some(param_state) = &mut self.parameter_estimation_state {
+                                param_state.draw_tables(ui, locale);
+                            }
+                        }
+                    }
+
+                    if !opened {
+                        self.parameter_estimation_state = None;
+                    }
+
                     super::notification::render_messages(ui);
                 });
             });
@@ -558,6 +638,12 @@ impl App {
     pub fn add_node(&mut self, node: Node) -> NodeId {
         let node_id = node.id();
 
+        if let Node::Term(term) = &node
+            && let Some(param_state) = &mut self.parameter_estimation_state
+        {
+            param_state.add_variable(term.clone());
+        }
+
         for input in node.inputs().unwrap_or_default() {
             self.input_pins.insert(*input.id(), node_id);
         }
@@ -566,9 +652,8 @@ impl App {
             self.output_pins.insert(*output.id(), node_id);
         }
 
-        let node_id_copy = node_id;
         self.nodes.insert(node_id, node);
-        node_id_copy
+        node_id
     }
 
     pub fn get_node(&self, id: NodeId) -> Option<&Node> {
@@ -669,7 +754,30 @@ impl App {
                     panic!("This node must be an assigner. If not, how could the modal have been opened?");
                 };
 
-                assigner.operates_on = Some((value, target_name));
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.remove_variable(&value);
+                }
+
+                assigner
+                    .operates_on
+                    .replace((value, target_name))
+                    .map(|(previous_node_id, _)| {
+                        vec![Message::UnnatributeAssignerOperatesOn(previous_node_id)]
+                    })
+            }
+            Message::UnnatributeAssignerOperatesOn(previous_node_id) => {
+                self.parameter_estimation_state.as_ref()?;
+                let term = self
+                    .get_node(previous_node_id)
+                    .and_then(Node::as_term)
+                    .cloned();
+
+                if let Some(param_state) = &mut self.parameter_estimation_state
+                    && let Some(term) = term
+                {
+                    param_state.add_variable(term.clone());
+                }
+
                 None
             }
             Message::SetNodePos {
@@ -680,9 +788,11 @@ impl App {
                 None
             }
             Message::RemoveNode(node_id) => {
-                let Some(mut node) = self.nodes.remove(&node_id) else {
-                    return None;
-                };
+                let mut node = self.nodes.remove(&node_id)?;
+
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.remove_variable(&node_id);
+                }
 
                 let mut removed_input_ids = HashSet::new();
 
@@ -775,6 +885,10 @@ impl App {
                     }
                 }
 
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.rename_variable(&node_id, node_name);
+                }
+
                 None
             }
             Message::RegisterPin(node_id, pin_id) => {
@@ -783,6 +897,12 @@ impl App {
             }
             Message::UnregisterPin(pin_id) => {
                 self.input_pins.remove(&pin_id);
+                None
+            }
+            Message::SetInitialValue(node_id, value) => {
+                if let Some(param_state) = &mut self.parameter_estimation_state {
+                    param_state.set_initial_value(&node_id, value);
+                }
                 None
             }
         }
@@ -868,6 +988,30 @@ impl App {
             self.extensions.iter().map(|ext| &ext.file_path).collect();
 
         odeir::transformations::r4k::render_ode(&ode_model, &extension_lookup_paths)
+    }
+
+    pub fn generate_equations(&mut self, all_constants: Vec<Term>) {
+        if self.is_model_valid() {
+            let model: odeir::Model = self.create_json().into();
+            let Some(param_state) = &mut self.parameter_estimation_state else {
+                return;
+            };
+
+            let odeir::Model::ODE(ode_model) = model else {
+                unreachable!("This program can only produce ODE models for now");
+            };
+            let extension_lookup_paths: Vec<_> =
+                self.extensions.iter().map(|ext| &ext.file_path).collect();
+
+            param_state.ode_system = create_ode_system(
+                odeir::transformations::ode::render_txt_with_equations(
+                    &ode_model,
+                    &extension_lookup_paths,
+                ),
+                all_constants,
+            );
+        }
+        //else Error
     }
 
     pub fn save_to_file(&self, content: impl AsRef<[u8]>, ext: &str) -> Option<()> {
@@ -1023,7 +1167,7 @@ impl App {
         let odeir::Model::ODE(model) = serde_json::from_reader(reader)? else {
             Err(NotCorrectModel::NotODE)?
         };
-
+        self.clear_state();
         self.try_read_model(model, file_path)
     }
 
@@ -1037,6 +1181,7 @@ impl App {
         self.received_messages.clear();
         self.simulation_state = None;
         self.sidebar_state.clear_state();
+        self.parameter_estimation_state.take();
     }
 
     pub fn update_locale(&mut self, locale: &mut Locale, lang: LanguageIdentifier) {

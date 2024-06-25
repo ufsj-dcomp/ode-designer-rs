@@ -25,6 +25,9 @@
 
 -model-tab = { $label }###model-tab
 -all-plots-tab = { $label }###all-plots-tab
+-parameter-estimation-tab = { $label }###est-param-tab
+
+-parameter-estimation-dnd = { $label }###est-param-dnd
 
 -assigner-change-btn = { $label }###assigner-change
 -assigner-choose-btn = { $label }###assigner-choose

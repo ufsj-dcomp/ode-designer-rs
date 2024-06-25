@@ -1,0 +1,14 @@
+tab-parameter-estimation = { -parameter-estimation-tab(label: "Parameter Estimation") }
+min-value = Minimum
+max-value = Maximum
+dnd-parameter-estimation = { -parameter-estimation-dnd(label: "Drag and Drop") }
+parameter-name = Parameter
+initial-value = Initial value
+population-size = Population Size
+max-iterations = Max Iterations
+crossover-rate = Crossover Rate
+mutation-rate = Mutation Rate
+start-time-pe = Start Time
+delta-time-pe = Delta Time
+end-time-pe = End Time
+load-data-btn = Load Data

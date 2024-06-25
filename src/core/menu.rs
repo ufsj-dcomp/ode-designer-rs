@@ -10,6 +10,7 @@ use rfd::FileDialog;
 use std::{collections::HashMap, fs::read_to_string, process::Command};
 
 use super::{
+    adjust_params::ParameterEstimationState,
     app::{AppState, SimulationState},
     python::execute_python_code,
 };
@@ -32,6 +33,15 @@ impl App {
         }
     }
 
+    pub fn draw_input_label(&mut self, ui: &Ui) {
+        ui.input_text("X Label", &mut self.text_fields.x_label)
+            .hint("time (days)")
+            .build();
+        ui.input_text("Y Label", &mut self.text_fields.y_label)
+            .hint("conc/ml")
+            .build();
+    }
+
     pub fn draw_menu(&mut self, ui: &Ui, locale: &mut Locale) {
         ui.menu_bar(|| {
             ui.menu(locale.get("file"), || {
@@ -48,7 +58,6 @@ impl App {
                     .shortcut("Ctrl + O")
                     .build()
                 {
-                    self.clear_state();
                     if let Err(err) = self.load_state() {
                         localized_error!(locale, "error-csv-load");
                         eprintln!("{err}");
@@ -67,6 +76,7 @@ impl App {
             });
 
             ui.menu(locale.get("export"), || {
+                self.draw_input_label(ui);
                 if ui.menu_item(locale.get("export-code")) {
                     let py_code = self.generate_code();
                     self.save_to_file(py_code, "py");
@@ -86,6 +96,17 @@ impl App {
                             .arg(file_path)
                             .args(self.sidebar_state.time_flags());
 
+                        if !self.text_fields.x_label.is_empty() {
+                            command
+                                .arg("--xlabel")
+                                .arg(self.text_fields.x_label.to_string());
+                        }
+                        if !self.text_fields.y_label.is_empty() {
+                            command
+                                .arg("--ylabel")
+                                .arg(self.text_fields.y_label.to_string());
+                        }
+
                         match execute_python_code(&mut command) {
                             Ok(_) => {}
                             Err(err) => {
@@ -97,25 +118,50 @@ impl App {
                 }
             });
 
-            if ui.menu_item(locale.get("run")) {
-                let py_code = self.generate_code();
+            ui.menu(locale.get("run"), || {
+                self.draw_input_label(ui);
 
-                let mut command = Command::new("python3");
-                command
-                    .arg("-c")
-                    .arg(&py_code)
-                    .arg("--csv")
-                    .args(self.sidebar_state.time_flags());
+                if ui.menu_item(locale.get("run")) {
+                    let py_code = self.generate_code();
 
-                match execute_python_code(&mut command) {
-                    Ok(output) => {
-                        self.simulation_state = Some(SimulationState::from_csv(output, locale));
-                    }
-                    Err(err) => {
+                    let mut command = Command::new("python3");
+                    command
+                        .arg("-c")
+                        .arg(&py_code)
+                        .arg("--csv")
+                        .args(self.sidebar_state.time_flags());
+
+                    match execute_python_code(&mut command) {
+                        Ok(output) => {
+                            self.simulation_state = Some(SimulationState::from_csv(output, locale));
+                            if let Some(mut simulation_state) = self.simulation_state.clone() {
+                                if !self.text_fields.x_label.is_empty() {
+                                    simulation_state.plot.xlabel =
+                                        self.text_fields.x_label.to_string();
+                                }
+                                if !self.text_fields.y_label.is_empty() {
+                                    simulation_state.plot.ylabel =
+                                        self.text_fields.y_label.to_string();
+                                }
+                                self.simulation_state = Some(simulation_state);
+                            }
+                        }
+                        Err(err) => {
                         localized_error!(locale, "error-python-exec");
                         eprintln!("{err}")
                     }
+                    }
                 }
+            });
+
+            if ui.menu_item("Parameter estimation") && self.parameter_estimation_state.is_none() {
+                let all_population_ids = self.get_all_population_ids();
+                let all_constants = self.get_all_constants(&all_population_ids);
+                let all_populations = self.get_all_populations(&all_population_ids);
+                let param_state =
+                    ParameterEstimationState::new(all_populations, all_constants.clone());
+                self.parameter_estimation_state.replace(param_state);
+                self.generate_equations(all_constants);
             }
 
             if ui.menu_item(locale.get("extensions")) {

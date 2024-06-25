@@ -21,6 +21,7 @@ pub mod exprtree;
 pub mod extensions;
 pub mod locale;
 pub mod nodes;
+pub mod ode;
 pub mod pins;
 pub mod utils;
 
@@ -50,9 +51,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut locale = Locale::default();
     let mut app = App::new(&locale);
+    #[cfg(debug_assertions)]
+    let log_level = log::Level::Trace;
+    #[cfg(not(debug_assertions))]
+    let log_level = log::Level::Info;
 
     core::notification::NotificationLogger::new()
-        .with_max_log_level(log::Level::Trace.into())
+        .with_max_log_level(log_level.into())
         .init();
 
     let plot_ctx = implot::Context::create();

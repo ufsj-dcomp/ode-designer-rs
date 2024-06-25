@@ -79,6 +79,13 @@ pub enum Node {
 }
 
 impl Node {
+    pub fn as_term(&self) -> Option<&Term> {
+        match self {
+            Self::Term(term) => Some(term),
+            _ => None,
+        }
+    }
+
     pub fn build_from_ui(name: String, node_type: &NodeTypeRepresentation) -> Self {
         let node_id = NodeId::generate();
 
@@ -206,6 +213,23 @@ impl Node {
                 msg.push(node_rename_msg);
             } else {
                 messages = Some(vec![node_rename_msg]);
+            }
+        }
+
+        if inner_content_changed {
+            match self.as_term() {
+                Some(term) => {
+                    let node_set_value_msg = Message::SetInitialValue(self.id(), term.initial_value);
+                    
+                    if let Some(ref mut msg) = messages {
+                        msg.push(node_set_value_msg);
+                    } else {
+                        messages = Some(vec![node_set_value_msg]);
+                    }
+                },
+                None => {
+                    // TODO
+                }
             }
         }
 

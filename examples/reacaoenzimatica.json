@@ -7,121 +7,113 @@
     "end_time": 0.0,
     "positions": {
       "E": {
-        "x": -102.0,
-        "y": 284.0
+        "x": -15.0,
+        "y": 601.0
       },
       "EI": {
-        "x": 96.0,
-        "y": 703.0
+        "x": 183.0,
+        "y": 1020.0
       },
       "ES": {
-        "x": 360.0,
-        "y": 117.0
+        "x": 447.0,
+        "y": 434.0
       },
       "ES_eq": {
-        "x": 804.0,
-        "y": 102.0
+        "x": 931.0,
+        "y": 465.0
       },
       "E_eq": {
-        "x": 1075.0,
-        "y": 343.0
+        "x": 1162.0,
+        "y": 660.0
       },
       "I": {
-        "x": -101.0,
-        "y": 433.0
+        "x": -14.0,
+        "y": 750.0
       },
       "I_eq": {
-        "x": 548.0,
-        "y": 585.0
+        "x": 635.0,
+        "y": 902.0
       },
       "P": {
-        "x": 1049.0,
-        "y": 609.0
+        "x": 1136.0,
+        "y": 926.0
       },
       "S": {
-        "x": -107.0,
-        "y": 169.0
+        "x": -20.0,
+        "y": 486.0
       },
       "S_eq": {
-        "x": 516.1795654296875,
-        "y": -128.41360473632812
+        "x": 603.1795654296875,
+        "y": 188.58639526367188
       },
       "dEIdt": {
-        "x": 807.891357421875,
-        "y": 763.639892578125
+        "x": 894.891357421875,
+        "y": 1080.639892578125
       },
       "dESst": {
-        "x": 1137.0,
-        "y": 106.0
+        "x": 1297.0,
+        "y": 455.0
       },
       "dEdt": {
-        "x": 1489.0,
-        "y": 410.0
+        "x": 1576.0,
+        "y": 727.0
       },
       "dIdt": {
-        "x": 835.0,
-        "y": 573.0
+        "x": 922.0,
+        "y": 890.0
       },
       "dPdt": {
-        "x": 839.0,
-        "y": 408.0
+        "x": 926.0,
+        "y": 725.0
       },
       "dSdt": {
-        "x": 832.0,
-        "y": -102.0
+        "x": 919.0,
+        "y": 215.0
       },
       "k1": {
-        "x": -80.0,
-        "y": 69.0
+        "x": 7.0,
+        "y": 386.0
       },
       "k2": {
-        "x": 357.0,
-        "y": 230.0
+        "x": 444.0,
+        "y": 547.0
       },
       "k3": {
-        "x": 349.0,
-        "y": 374.0
+        "x": 436.0,
+        "y": 691.0
       },
       "k4": {
-        "x": -93.0,
-        "y": 562.0
+        "x": -6.0,
+        "y": 879.0
       },
       "k5": {
-        "x": 100.0,
-        "y": 795.0
+        "x": 187.0,
+        "y": 1112.0
       },
       "reaction1": {
-        "x": 195.0,
-        "y": -8.0
+        "x": 282.0,
+        "y": 309.0
       },
       "reaction2": {
-        "x": 600.0,
-        "y": 199.0
+        "x": 687.0,
+        "y": 516.0
       },
       "reaction3": {
-        "x": 598.0,
-        "y": 389.0
+        "x": 685.0,
+        "y": 706.0
       },
       "reaction4": {
-        "x": 154.0,
-        "y": 435.0
+        "x": 241.0,
+        "y": 752.0
       },
       "reaction5": {
-        "x": 372.0,
-        "y": 690.0
+        "x": 459.0,
+        "y": 1007.0
       }
     },
     "extension_files": []
   },
   "arguments": [
-    {
-      "name": "k5",
-      "value": 0.05
-    },
-    {
-      "name": "k4",
-      "value": 0.05
-    },
     {
       "name": "reaction3",
       "operation": "*",
@@ -138,23 +130,42 @@
       ]
     },
     {
-      "name": "E_eq",
-      "operation": "+",
+      "name": "reaction1",
+      "operation": "*",
       "style": "Infixed",
       "composition": [
         {
-          "name": "S_eq",
+          "name": "k1",
           "contribution": "+"
         },
         {
-          "name": "reaction3",
+          "name": "S",
           "contribution": "+"
         },
         {
-          "name": "I_eq",
+          "name": "E",
           "contribution": "+"
         }
       ]
+    },
+    {
+      "name": "reaction5",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "EI",
+          "contribution": "+"
+        },
+        {
+          "name": "k5",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "ES",
+      "value": 0.05
     },
     {
       "name": "reaction2",
@@ -172,38 +183,8 @@
       ]
     },
     {
-      "name": "S_eq",
-      "operation": "+",
-      "style": "Infixed",
-      "composition": [
-        {
-          "name": "reaction2",
-          "contribution": "+"
-        },
-        {
-          "name": "reaction1",
-          "contribution": "-"
-        }
-      ]
-    },
-    {
-      "name": "I_eq",
-      "operation": "+",
-      "style": "Infixed",
-      "composition": [
-        {
-          "name": "reaction5",
-          "contribution": "+"
-        },
-        {
-          "name": "reaction4",
-          "contribution": "-"
-        }
-      ]
-    },
-    {
-      "name": "k3",
-      "value": 0.5
+      "name": "P",
+      "value": 0.0
     },
     {
       "name": "reaction4",
@@ -229,16 +210,16 @@
       "value": 0.1
     },
     {
-      "name": "ES_eq",
+      "name": "I_eq",
       "operation": "+",
       "style": "Infixed",
       "composition": [
         {
-          "name": "S_eq",
-          "contribution": "-"
+          "name": "reaction5",
+          "contribution": "+"
         },
         {
-          "name": "reaction3",
+          "name": "reaction4",
           "contribution": "-"
         }
       ]
@@ -248,65 +229,100 @@
       "value": 0.0
     },
     {
-      "name": "reaction5",
-      "operation": "*",
+      "name": "E",
+      "value": 15.0
+    },
+    {
+      "name": "E_eq",
+      "operation": "+",
       "style": "Infixed",
       "composition": [
         {
-          "name": "EI",
+          "name": "S_eq",
           "contribution": "+"
         },
         {
-          "name": "k5",
+          "name": "reaction3",
+          "contribution": "+"
+        },
+        {
+          "name": "I_eq",
           "contribution": "+"
         }
       ]
-    },
-    {
-      "name": "S",
-      "value": 30.0
     },
     {
       "name": "I",
       "value": 5.0
     },
     {
-      "name": "k1",
-      "value": 0.2
+      "name": "S",
+      "value": 30.0
     },
     {
-      "name": "reaction1",
-      "operation": "*",
+      "name": "S_eq",
+      "operation": "+",
       "style": "Infixed",
       "composition": [
         {
-          "name": "k1",
+          "name": "reaction2",
           "contribution": "+"
         },
         {
-          "name": "S",
-          "contribution": "+"
-        },
-        {
-          "name": "E",
-          "contribution": "+"
+          "name": "reaction1",
+          "contribution": "-"
         }
       ]
     },
     {
-      "name": "P",
-      "value": 0.0
+      "name": "k1",
+      "value": 0.2
     },
     {
-      "name": "E",
-      "value": 15.0
+      "name": "ES_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "reaction3",
+          "contribution": "-"
+        },
+        {
+          "name": "reaction1",
+          "contribution": "+"
+        },
+        {
+          "name": "reaction2",
+          "contribution": "-"
+        }
+      ]
     },
     {
-      "name": "ES",
+      "name": "k4",
+      "value": 0.05
+    },
+    {
+      "name": "k3",
+      "value": 0.5
+    },
+    {
+      "name": "k5",
       "value": 0.05
     }
   ],
   "equations": [
+    {
+      "name": "dSdt",
+      "operates_on": "S",
+      "argument": "S_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dEIdt",
+      "operates_on": "EI",
+      "argument": "I_eq",
+      "contribution": "+"
+    },
     {
       "name": "dIdt",
       "operates_on": "I",
@@ -320,12 +336,6 @@
       "contribution": "+"
     },
     {
-      "name": "dEIdt",
-      "operates_on": "EI",
-      "argument": "I_eq",
-      "contribution": "+"
-    },
-    {
       "name": "dPdt",
       "operates_on": "P",
       "argument": "reaction3",
@@ -335,12 +345,6 @@
       "name": "dEdt",
       "operates_on": "E",
       "argument": "E_eq",
-      "contribution": "+"
-    },
-    {
-      "name": "dSdt",
-      "operates_on": "S",
-      "argument": "S_eq",
       "contribution": "+"
     }
   ]

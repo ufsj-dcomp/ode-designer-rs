@@ -12,6 +12,7 @@ use winit::dpi::Pixel;
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
 
+pub mod adjust_params;
 pub mod app;
 mod id_gen;
 pub mod menu;
