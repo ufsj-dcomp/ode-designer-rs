@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use fluent_bundle::FluentValue;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
@@ -29,7 +30,7 @@ use crate::nodes::{
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::{create_ode_system, OdeSystem};
 use crate::pins::Pin;
-use crate::utils::{ModelFragment, VecConversion};
+use crate::utils::{localized_error, ModelFragment, VecConversion};
 
 use imgui::{DragDropFlags, Key, StyleVar, TabItem, TabItemFlags, Ui};
 
@@ -38,6 +39,7 @@ use crate::core::plot::PlotLayout;
 
 use super::adjust_params::{self, Parameter, ParameterEstimationState};
 use super::plot::CSVData;
+use super::python::execute_python_code;
 use super::side_bar::SideBarState;
 use super::widgets;
 
@@ -607,6 +609,42 @@ impl App {
                     {
                             if let Some(param_state) = &mut self.parameter_estimation_state {
                                 param_state.draw_tables(ui, locale);
+                                if ui.button("Plot results") {   // locale.get("plot_results")
+                                    let estimated_params = param_state.get_estimated_parameters();
+                                    let params_str = estimated_params.into_iter()
+                                        .map(|(name, value)| format!("{}={}", name, value))
+                                        .collect::<Vec<String>>()
+                                        .join(" ");
+
+                                    let py_code = self.generate_code();
+
+                                    let mut command = Command::new("python3");
+                                    command
+                                        .arg("-c")
+                                        .arg(&py_code)
+                                        .arg("--csv")
+                                        .arg("--params")
+                                        .arg(params_str);
+
+                                    match execute_python_code(&mut command) {
+                                        Ok(output) => {
+                                            self.simulation_state = Some(SimulationState::from_csv(output, locale));
+                                            if let Some(mut simulation_state) = self.simulation_state.clone() {
+                                                if !self.text_fields.x_label.is_empty() {
+                                                    simulation_state.plot.xlabel = self.text_fields.x_label.to_string();
+                                                }
+                                                if !self.text_fields.y_label.is_empty() {
+                                                    simulation_state.plot.ylabel = self.text_fields.y_label.to_string();
+                                                }
+                                                self.simulation_state = Some(simulation_state);
+                                            }
+                                        }
+                                        Err(err) => {
+                                            localized_error!(locale, "error-python-exec");
+                                            eprintln!("{err}");
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

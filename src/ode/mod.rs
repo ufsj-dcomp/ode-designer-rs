@@ -16,7 +16,7 @@ use self::{
 #[derive(Default, Debug, Clone)]
 pub struct ParameterEstimation {
     ga: GA,
-    best_solution: Vec<f64>,
+    pub best_solution: Vec<f64>,
     pub config_data: ConfigData,
 }
 

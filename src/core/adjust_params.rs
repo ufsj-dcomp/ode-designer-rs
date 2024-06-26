@@ -5,7 +5,11 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::ops::Range;
 use std::path::PathBuf;
+use std::process::Command;
 
+use crate::core::app::SimulationState;
+use crate::core::python::execute_python_code;
+use crate::core::App;
 use crate::locale::Locale;
 use crate::nodes::{NodeImpl, Term};
 
@@ -13,6 +17,9 @@ use crate::ode::csvdata::CSVData;
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
+use crate::utils::localized_error;
+
+use super::app;
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -126,6 +133,24 @@ impl ParameterEstimationState {
             PathBuf::new()
         }
     }
+
+    pub fn get_estimated_parameters(&self) -> Vec<(String, f64)> {
+        let mut selected_parameters = self.parameters.iter()
+            .filter(|(_id, parameter)| parameter.selected)
+            .map(|(_id, parameter)| parameter.term.name().to_string())
+            .collect::<Vec<String>>();
+    
+        selected_parameters.sort(); 
+    
+        selected_parameters.into_iter()
+            .enumerate()
+            .map(|(index, name)| {
+                let value = self.estimator.best_solution[index];
+                (name, value)
+            })
+            .collect()
+    }
+    
 
     pub fn draw_tables(&mut self, ui: &Ui, locale: &Locale) {
         // This is required because we want to replace the drag-and-drop target
