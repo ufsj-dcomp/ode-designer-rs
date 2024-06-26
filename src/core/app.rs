@@ -547,6 +547,43 @@ impl App {
         }
     }
 
+    fn plot_results(&mut self, locale: &Locale, estimated_params: Vec<(String, f64)>) {
+        let params_str = estimated_params
+            .into_iter()
+            .map(|(name, value)| format!("{}={}", name, value))
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        let py_code = self.generate_code();
+
+        let mut command = Command::new("python3");
+        command
+            .arg("-c")
+            .arg(&py_code)
+            .arg("--csv")
+            .arg("--params")
+            .arg(params_str);
+
+        match execute_python_code(&mut command) {
+            Ok(output) => {
+                self.simulation_state = Some(SimulationState::from_csv(output, locale));
+                if let Some(mut simulation_state) = self.simulation_state.clone() {
+                    if !self.text_fields.x_label.is_empty() {
+                        simulation_state.plot.xlabel = self.text_fields.x_label.to_string();
+                    }
+                    if !self.text_fields.y_label.is_empty() {
+                        simulation_state.plot.ylabel = self.text_fields.y_label.to_string();
+                    }
+                    self.simulation_state = Some(simulation_state);
+                }
+            }
+            Err(err) => {
+                localized_error!(locale, "error-python-exec");
+                eprintln!("{err}");
+            }
+        }
+    }
+
     pub fn draw(
         &mut self,
         ui: &Ui,
@@ -602,48 +639,19 @@ impl App {
                         opened = true;
                     }
 
-                    if self.is_model_valid(){
-                    if ui
-                        .tab_item_with_opened(locale.get("tab-parameter-estimation"), &mut opened)
-                        .is_some()
-                    {
+                    if self.is_model_valid() {
+                        if ui
+                            .tab_item_with_opened(
+                                locale.get("tab-parameter-estimation"),
+                                &mut opened,
+                            )
+                            .is_some()
+                        {
                             if let Some(param_state) = &mut self.parameter_estimation_state {
                                 param_state.draw_tables(ui, locale);
-                                if ui.button("Plot results") {   // locale.get("plot_results")
+                                if ui.button(locale.get("plot-results")) {
                                     let estimated_params = param_state.get_estimated_parameters();
-                                    let params_str = estimated_params.into_iter()
-                                        .map(|(name, value)| format!("{}={}", name, value))
-                                        .collect::<Vec<String>>()
-                                        .join(" ");
-
-                                    let py_code = self.generate_code();
-
-                                    let mut command = Command::new("python3");
-                                    command
-                                        .arg("-c")
-                                        .arg(&py_code)
-                                        .arg("--csv")
-                                        .arg("--params")
-                                        .arg(params_str);
-
-                                    match execute_python_code(&mut command) {
-                                        Ok(output) => {
-                                            self.simulation_state = Some(SimulationState::from_csv(output, locale));
-                                            if let Some(mut simulation_state) = self.simulation_state.clone() {
-                                                if !self.text_fields.x_label.is_empty() {
-                                                    simulation_state.plot.xlabel = self.text_fields.x_label.to_string();
-                                                }
-                                                if !self.text_fields.y_label.is_empty() {
-                                                    simulation_state.plot.ylabel = self.text_fields.y_label.to_string();
-                                                }
-                                                self.simulation_state = Some(simulation_state);
-                                            }
-                                        }
-                                        Err(err) => {
-                                            localized_error!(locale, "error-python-exec");
-                                            eprintln!("{err}");
-                                        }
-                                    }
+                                    self.plot_results(locale, estimated_params);
                                 }
                             }
                         }

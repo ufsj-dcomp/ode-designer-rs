@@ -188,7 +188,7 @@ impl log::Log for NotificationLogger {
 
     fn log(&self, record: &log::Record) {
         if !self.enabled(record.metadata()) {
-            return
+            return;
         }
         self.messages.lock().unwrap().push(Message {
             body: record.args().to_string(),

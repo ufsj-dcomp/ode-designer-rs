@@ -1,4 +1,4 @@
-use expr_evaluator::expr::{Expression,ExprContext};
+use expr_evaluator::expr::{ExprContext, Expression};
 use ode_solvers::*;
 //use meval::{Context,Error,Expr};
 use std::collections::BTreeMap;
@@ -25,13 +25,12 @@ impl OdeSystem {
             equations: BTreeMap::new(),
             context: ExprContext::new(),
         }
-    } 
+    }
 
     pub fn set_context(&mut self, args: Vec<GA_Argument>) {
-        args
-            .iter()
+        args.iter()
             .for_each(|arg| self.context.set_var(arg.name.clone(), arg.value));
-    }  
+    }
 
     pub fn update_context(&mut self, args: Vec<GA_Argument>, values: Vec<f64>) {
         args.iter()
@@ -55,9 +54,8 @@ impl ode_solvers::System<f64, State> for OdeSystem {
 
         let mut i: usize = 0;
         for equation in self.equations.values_mut() {
-
             equation.set_context(self.context.clone());
-            
+
             if let Ok(value) = equation.eval() {
                 dydt[i] = value;
             }
@@ -66,19 +64,18 @@ impl ode_solvers::System<f64, State> for OdeSystem {
     }
 }
 
-pub fn solve(mut ode_system: OdeSystem, y: &State, t_ini: f64, t_final: f64, dt: f64, args: Vec<GA_Argument>, values: Vec<f64>) -> Vec<State> {
-
+pub fn solve(
+    mut ode_system: OdeSystem,
+    y: &State,
+    t_ini: f64,
+    t_final: f64,
+    dt: f64,
+    args: Vec<GA_Argument>,
+    values: Vec<f64>,
+) -> Vec<State> {
     ode_system.update_context(args, values);
 
-    let mut solver = Dop853::new(
-        ode_system,
-        t_ini,
-        t_final,
-        dt,
-        y.clone(),
-        1.0e-8,
-        1.0e-8,
-    );
+    let mut solver = Dop853::new(ode_system, t_ini, t_final, dt, y.clone(), 1.0e-8, 1.0e-8);
 
     match solver.integrate() {
         Ok(_stats) => {

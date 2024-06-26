@@ -31,8 +31,13 @@ impl ParameterEstimation {
         }
     }
 
-    pub fn estimate_parameters(&mut self, csv_data: CSVData, all_args: Vec<GA_Argument>, args_selected_params: Vec<GA_Argument>, mut ode_system: OdeSystem) {
-  
+    pub fn estimate_parameters(
+        &mut self,
+        csv_data: CSVData,
+        all_args: Vec<GA_Argument>,
+        args_selected_params: Vec<GA_Argument>,
+        mut ode_system: OdeSystem,
+    ) {
         self.ga = GA::new(
             self.config_data.metadata.max_iterations,
             self.config_data.metadata.mutation_rate,
@@ -64,11 +69,10 @@ impl ParameterEstimation {
                 .map(|arg| arg.value)
                 .collect(),
         );
-        
+
         ode_system.set_context(all_args);
-        
+
         match self.ga.optimize(|values: Vec<f64>| {
-            
             //ode_system.update_context(args_selected_params.clone(), values);
             //println!("context: {:#?}", ode_system.context);
 
@@ -79,7 +83,7 @@ impl ParameterEstimation {
                 self.config_data.metadata.end_time,
                 self.config_data.metadata.delta_time,
                 args_selected_params.clone(),
-                values.clone()
+                values.clone(),
             );
 
             if ode_result.len() == 0 {
@@ -125,6 +129,6 @@ impl ParameterEstimation {
                 self.best_solution = c.get_values();
             }
             Err(e) => println!("An error ocurred during the optimization: {:?}", e),
-        }       
+        }
     }
 }

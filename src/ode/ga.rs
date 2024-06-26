@@ -12,9 +12,9 @@ use vecshard::ShardExt;
 
 use super::ga_json::Bound;
 
-#[derive(Debug, Clone, Default)] 
+#[derive(Debug, Clone, Default)]
 pub struct Chromosome {
-    values: Vec<f64>, 
+    values: Vec<f64>,
     pub fitness: f64,
 }
 
@@ -86,12 +86,7 @@ pub struct GA {
 }
 
 impl GA {
-    pub fn new(
-        max: usize,
-        mut_rate: f64,
-        cross_rate: f64,
-        bounds: Vec<Bound>,
-    ) -> Self {
+    pub fn new(max: usize, mut_rate: f64, cross_rate: f64, bounds: Vec<Bound>) -> Self {
         Self {
             max_generations: max,
             mutation_rate: mut_rate,
@@ -138,13 +133,13 @@ impl GA {
         while (prob_1 > 0.0 || prob_2 > 0.0) && i < p_size {
             if prob_1 > 0.0 {
                 prob_1 -= upper_bound - self.population[i].fitness;
-                
+
                 if prob_1 <= 0.0 {
                     parents.0 = &self.population[i];
                 }
             } else if prob_2 > 0.0 {
                 prob_2 -= upper_bound - self.population[i].fitness;
-                
+
                 if prob_2 <= 0.0 {
                     parents.1 = &self.population[i];
                 }
@@ -190,9 +185,9 @@ impl GA {
 
     pub fn optimize<F>(&mut self, fitness_function: F) -> Result<Chromosome, ()>
     where
-        F: Fn(Vec<f64>) -> f64, 
+        F: Fn(Vec<f64>) -> f64,
     {
-        let mut best: Chromosome = Chromosome::new_empty();        
+        let mut best: Chromosome = Chromosome::new_empty();
 
         self.population.iter_mut().for_each(|c| {
             c.fitness = fitness_function(c.values.clone());
@@ -220,7 +215,7 @@ impl GA {
             let p_newsize: usize = self.population.len();
             let count: usize = p_newsize - p_size;
             p_size = p_newsize;
-            
+
             //mutate and calculate fitness of each individual of new population
             for id in 1..p_size {
                 self.population[id].mutation(self.mutation_rate, &self.bounds);

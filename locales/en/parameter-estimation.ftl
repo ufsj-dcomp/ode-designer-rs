@@ -12,3 +12,6 @@ start-time-pe = Start Time
 delta-time-pe = Delta Time
 end-time-pe = End Time
 load-data-btn = Load Data
+select-all = Select All
+clear-all = Clear All
+plot-results = Plot Results

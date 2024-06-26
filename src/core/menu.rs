@@ -147,9 +147,9 @@ impl App {
                             }
                         }
                         Err(err) => {
-                        localized_error!(locale, "error-python-exec");
-                        eprintln!("{err}")
-                    }
+                            localized_error!(locale, "error-python-exec");
+                            eprintln!("{err}")
+                        }
                     }
                 }
             });
