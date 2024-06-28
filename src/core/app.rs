@@ -27,6 +27,7 @@ use crate::nodes::{
     LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
     PendingOperations, Term,
 };
+use crate::ode::csvdata;
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::{create_ode_system, OdeSystem};
 use crate::pins::Pin;
@@ -38,7 +39,7 @@ use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
 use super::adjust_params::{self, Parameter, ParameterEstimationState};
-use super::plot::CSVData;
+use super::plot::{self, CSVData};
 use super::python::execute_python_code;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -86,6 +87,7 @@ pub struct SimulationState {
     pub plot_layout: PlotLayout,
     pub colors: Vec<ImVec4>,
     pub set_focus_to_tab: bool,
+    real_data: Option<csvdata::CSVData>,
 }
 #[derive(PartialEq)]
 pub enum TabAction {
@@ -109,6 +111,7 @@ impl SimulationState {
             plot_layout: PlotLayout::new(2, 2, pane_count as u32),
             colors: COLORS.to_owned(),
             set_focus_to_tab: true,
+            real_data: Default::default(),
         }
     }
 
@@ -120,19 +123,19 @@ impl SimulationState {
         locale: &mut Locale,
     ) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
-
+    
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
-
+    
         let mut opened = true;
-
+    
         let mut flags = imgui::TabItemFlags::empty();
-
+    
         if set_focus {
             flags.set(imgui::TabItemFlags::SET_SELECTED, true);
         }
-
+    
         static mut ARGS: Lazy<HashMap<&'static str, FluentValue>> = Lazy::new(HashMap::new);
-
+    
         imgui::TabItem::new(locale.get("tab-all-plots"))
             .opened(&mut opened)
             .flags(flags)
@@ -159,19 +162,31 @@ impl SimulationState {
                                 );
                                 implot::PlotLine::new(label).plot(&self.plot.data.time, line);
                                 color_token.pop();
-                            })
+                            });
+    
+                        if let Some(ref real_data) = self.real_data {
+                            let color_token = implot::push_style_color(
+                                &implot::PlotColorElement::MarkerFill,
+                                1.0,
+                                1.0,
+                                1.0,
+                                1.0,
+                            );
+                            real_data.lines.iter().for_each(|line| {
+                                implot::PlotScatter::new("Real Data").plot(&real_data.time, line);
+                            });
+                            color_token.pop();
+                        }
                     });
             });
-
+    
         let populations_per_tab = (self.plot_layout.cols * self.plot_layout.rows) as usize;
         let individual_plot_size = [
             content_width / self.plot_layout.cols as f32,
             content_height / self.plot_layout.rows as f32,
         ];
-
-        for (tab_idx, tab_populations) in
-            self.plot.data.lines.chunks(populations_per_tab).enumerate()
-        {
+    
+        for (tab_idx, tab_populations) in self.plot.data.lines.chunks(populations_per_tab).enumerate() {
             // Safety: this variable is local to this function, which is not run
             // in parallel or anything of the sort (since self is mutable).
             // Therefore, it's safe to access this static variable and mutate it
@@ -202,21 +217,35 @@ impl SimulationState {
                                     );
                                     implot::PlotLine::new(label).plot(&self.plot.data.time, line);
                                     color_token.pop();
+    
+                                    if let Some(ref real_data) = self.real_data {
+                                        let color_token = implot::push_style_color(
+                                            &implot::PlotColorElement::MarkerFill,
+                                            1.0,
+                                            1.0,
+                                            1.0,
+                                            1.0,
+                                        );
+                                        real_data.lines.iter().for_each(|line| {
+                                            implot::PlotScatter::new("Real Data").plot(&real_data.time, line);
+                                        });
+                                        color_token.pop();
+                                    }
                                 });
-
+    
                             if idx & 1 == 0 {
                                 ui.same_line();
                             }
                         });
                 });
         }
-
+    
         if opened {
             TabAction::Open
         } else {
             TabAction::Close
         }
-    }
+    }    
 }
 
 #[derive(Default)]
@@ -547,7 +576,7 @@ impl App {
         }
     }
 
-    fn plot_results(&mut self, locale: &Locale, estimated_params: Vec<(String, f64)>) {
+    fn plot_results(&mut self, locale: &Locale, estimated_params: Vec<(String, f64)>, real_data: Option<csvdata::CSVData>) {
         let params_str = estimated_params
             .into_iter()
             .map(|(name, value)| format!("{}={}", name, value))
@@ -574,6 +603,7 @@ impl App {
                     if !self.text_fields.y_label.is_empty() {
                         simulation_state.plot.ylabel = self.text_fields.y_label.to_string();
                     }
+                    simulation_state.real_data = real_data;
                     self.simulation_state = Some(simulation_state);
                 }
             }
@@ -650,8 +680,17 @@ impl App {
                             if let Some(param_state) = &mut self.parameter_estimation_state {
                                 param_state.draw_tables(ui, locale);
                                 if ui.button(locale.get("plot-results")) {
-                                    let estimated_params = param_state.get_estimated_parameters();
-                                    self.plot_results(locale, estimated_params);
+                                    match param_state.load_real_data() {
+                                        Ok(real_data) => {
+                                            let estimated_params = param_state.get_estimated_parameters();
+                                            self.plot_results(locale, estimated_params, Some(real_data));
+                                        }
+                                        Err(err) => {
+                                            localized_error!(locale, "error-csv-read");
+                                            eprintln!("{err}");
+                                        }
+                                    }
+                                
                                 }
                             }
                         }

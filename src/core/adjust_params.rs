@@ -5,11 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::ops::Range;
 use std::path::PathBuf;
-use std::process::Command;
 
-use crate::core::app::SimulationState;
-use crate::core::python::execute_python_code;
-use crate::core::App;
 use crate::locale::Locale;
 use crate::nodes::{NodeImpl, Term};
 
@@ -17,9 +13,7 @@ use crate::ode::csvdata::CSVData;
 use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
-use crate::utils::localized_error;
 
-use super::app;
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -132,6 +126,10 @@ impl ParameterEstimationState {
         } else {
             PathBuf::new()
         }
+    }
+
+    pub fn load_real_data(&self) -> std::io::Result<CSVData> {
+        CSVData::load_data(File::open(&self.file_path)?)
     }
 
     pub fn get_estimated_parameters(&self) -> Vec<(String, f64)> {
@@ -305,7 +303,7 @@ impl ParameterEstimationState {
         let run_button = ui.button(locale.get("run"));
         if run_button {
             //App::
-            match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
+            match self.load_real_data() {
                 Ok(csv_data) => {
                     self.populate_config_data();
 
