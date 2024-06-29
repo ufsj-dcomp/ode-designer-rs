@@ -13,11 +13,21 @@ pub struct SideBarState {
     sim_times: Times,
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Times {
     pub start: f64,
     pub delta: f64,
     pub end: f64,
+}
+
+impl Default for Times {
+    fn default() -> Self {
+        Self {
+            start: 0.0,
+            delta: 0.01,
+            end: 50.0,
+        }
+    }
 }
 
 impl SideBarState {
