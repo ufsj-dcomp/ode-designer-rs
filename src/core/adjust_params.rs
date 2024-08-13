@@ -194,9 +194,9 @@ impl ParameterEstimationState {
                 } else if !ui.is_mouse_down(MouseButton::Left) {
                     // Safety: this is fine because the software isn't
                     // multi-threaded and this global is local to this function
-                    unsafe {
+                    /*unsafe {
                         DRAGGING = false;
-                    }
+                    }*/
                 }
                 target.pop();
             }
