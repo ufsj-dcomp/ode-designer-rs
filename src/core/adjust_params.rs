@@ -14,6 +14,7 @@ use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
 
+
 #[derive(Debug, Clone)]
 pub struct Parameter {
     term: Term,
@@ -127,6 +128,30 @@ impl ParameterEstimationState {
         }
     }
 
+    pub fn load_real_data(&self) -> std::io::Result<CSVData> {
+        CSVData::load_data(File::open(&self.file_path)?)
+    }
+
+    pub fn get_estimated_parameters(&self) -> Vec<(String, f64)> {
+        let mut selected_parameters = self
+            .parameters
+            .iter()
+            .filter(|(_id, parameter)| parameter.selected)
+            .map(|(_id, parameter)| parameter.term.name().to_string())
+            .collect::<Vec<String>>();
+
+        selected_parameters.sort();
+
+        selected_parameters
+            .into_iter()
+            .enumerate()
+            .map(|(index, name)| {
+                let value = self.estimator.best_solution[index];
+                (name, value)
+            })
+            .collect()
+    }
+
     pub fn draw_tables(&mut self, ui: &Ui, locale: &Locale) {
         // This is required because we want to replace the drag-and-drop target
         // component, which would only receive data *after* nothing is being
@@ -135,6 +160,10 @@ impl ParameterEstimationState {
         const DRAG_DROP_NAME: &str = "parameter_drag";
 
         ui.columns(4, "Parameters", true);
+
+        let all_selected = self.parameters.values().all(|param| param.selected);
+        let any_selected = self.parameters.values().any(|param| param.selected);
+
         if let Some(_t) = ui.begin_table("Parameters", 2) {
             ui.table_setup_column(locale.get("parameter-name"));
             ui.table_setup_column(locale.get("initial-value"));
@@ -170,6 +199,12 @@ impl ParameterEstimationState {
                 ui.text(imgui::ImString::new(value.to_string()));
 
                 ui.table_next_column();
+            }
+        }
+
+        if !all_selected && ui.button(locale.get("select-all")) {
+            for parameter in self.parameters.values_mut() {
+                parameter.selected = true;
             }
         }
 
@@ -222,17 +257,41 @@ impl ParameterEstimationState {
                 stack.pop();
             }
         }
+        if any_selected && ui.button(locale.get("clear-all")) {
+            for parameter in self.parameters.values_mut() {
+                parameter.selected = false;
+            }
+        }
 
         ui.next_column();
-    
-        ui.input_int(locale.get("population-size"), &mut self.metadata.population_size).build();
-        ui.input_int(locale.get("max-iterations"), &mut self.metadata.max_iterations).build();
-        ui.input_float(locale.get("crossover-rate"), &mut self.metadata.crossover_rate).build();
-        ui.input_float(locale.get("mutation-rate"), &mut self.metadata.mutation_rate).build();
-    
-        ui.input_float(locale.get("start-time-pe"), &mut self.metadata.start_time).build();
-        ui.input_float(locale.get("delta-time-pe"), &mut self.metadata.delta_time).build();
-        ui.input_float(locale.get("end-time-pe"), &mut self.metadata.end_time).build();
+
+        ui.input_int(
+            locale.get("population-size"),
+            &mut self.metadata.population_size,
+        )
+        .build();
+        ui.input_int(
+            locale.get("max-iterations"),
+            &mut self.metadata.max_iterations,
+        )
+        .build();
+        ui.input_float(
+            locale.get("crossover-rate"),
+            &mut self.metadata.crossover_rate,
+        )
+        .build();
+        ui.input_float(
+            locale.get("mutation-rate"),
+            &mut self.metadata.mutation_rate,
+        )
+        .build();
+
+        ui.input_float(locale.get("start-time-pe"), &mut self.metadata.start_time)
+            .build();
+        ui.input_float(locale.get("delta-time-pe"), &mut self.metadata.delta_time)
+            .build();
+        ui.input_float(locale.get("end-time-pe"), &mut self.metadata.end_time)
+            .build();
 
         let load_data_button = ui.button(locale.get("load-data-btn"));
         if load_data_button {
@@ -242,22 +301,27 @@ impl ParameterEstimationState {
         ui.same_line_with_pos(150.0);
 
         let run_button = ui.button(locale.get("run"));
-        if run_button { //App:: 
-            match CSVData::load_data(File::open(self.file_path.clone()).unwrap()) {
+        if run_button {
+            //App::
+            match self.load_real_data() {
                 Ok(csv_data) => {
                     self.populate_config_data();
-                    
+
                     let mut args_selected_params: Vec<GA_Argument> = vec![];
                     for (_id, parameter) in self.parameters.iter() {
                         if parameter.selected {
-                            args_selected_params.push(
-                                GA_Argument::new(
+                            args_selected_params.push(GA_Argument::new(
                                 parameter.term.name().to_string(),
-                                parameter.term.initial_value)
-                            );
-                        }                        
+                                parameter.term.initial_value,
+                            ));
+                        }
                     }
-                    self.estimator.estimate_parameters(csv_data, self.estimator.config_data.arguments.clone(), args_selected_params, self.ode_system.clone())
+                    self.estimator.estimate_parameters(
+                        csv_data,
+                        self.estimator.config_data.arguments.clone(),
+                        args_selected_params,
+                        self.ode_system.clone(),
+                    )
                 }
                 Err(_) => println!("TODO: notify system"),
             }
@@ -277,7 +341,7 @@ impl ParameterEstimationState {
             mutation_rate: config_metadata.mutation_rate as f64,
             max_iterations: config_metadata.max_iterations as usize,
         };
-        
+
         let mut arguments: Vec<GA_Argument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
 

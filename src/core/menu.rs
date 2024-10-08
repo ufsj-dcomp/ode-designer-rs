@@ -27,7 +27,7 @@ impl App {
                 if let Ok(file_content) = read_to_string(&file_path) {
                     self.simulation_state = Some(SimulationState::from_csv(file_content, locale));
                 } else {
-                    localized_error!(locale, "error-csv-load", "file" => file_path.display().to_string())
+                    localized_error!(locale, "error-csv-read", "file" => file_path.display().to_string())
                 }
             }
         }
@@ -59,7 +59,7 @@ impl App {
                     .build()
                 {
                     if let Err(err) = self.load_state() {
-                        localized_error!(locale, "error-csv-load");
+                        localized_error!(locale, "error-csv-read");
                         eprintln!("{err}");
                     }
                 }
@@ -147,9 +147,9 @@ impl App {
                             }
                         }
                         Err(err) => {
-                        localized_error!(locale, "error-python-exec");
-                        eprintln!("{err}")
-                    }
+                            localized_error!(locale, "error-python-exec");
+                            eprintln!("{err}")
+                        }
                     }
                 }
             });

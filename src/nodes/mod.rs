@@ -219,14 +219,15 @@ impl Node {
         if inner_content_changed {
             match self.as_term() {
                 Some(term) => {
-                    let node_set_value_msg = Message::SetInitialValue(self.id(), term.initial_value);
-                    
+                    let node_set_value_msg =
+                        Message::SetInitialValue(self.id(), term.initial_value);
+
                     if let Some(ref mut msg) = messages {
                         msg.push(node_set_value_msg);
                     } else {
                         messages = Some(vec![node_set_value_msg]);
                     }
-                },
+                }
                 None => {
                     // TODO
                 }

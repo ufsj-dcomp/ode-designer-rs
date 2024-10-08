@@ -1,9 +1,9 @@
+use anyhow;
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Error},
     path::Path,
 };
-use anyhow;
 
 #[derive(Debug, Clone, Default)]
 pub struct GA_Metadata {

@@ -12,3 +12,6 @@ start-time-pe = Tempo Inicial
 delta-time-pe = Tempo Delta
 end-time-pe = Tempo Final
 load-data-btn = Carregar Dados
+select-all = Selecionar Tudo
+clear-all = Limpar Tudo
+plot-results = Exibir Resultados
