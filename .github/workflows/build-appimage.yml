@@ -15,10 +15,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure Build Path Exists
-        shell: bash
-        run: mkdir -p container-target
-
       - name: Build the AppImage
         shell: bash
         run: docker build -t ode-designer-appimage-builder --output=. .
@@ -27,4 +23,4 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./container/ode-designer.AppImage
+        run: gh release upload ${{ github.event.release.tag_name }} ./ode-designer.AppImage
