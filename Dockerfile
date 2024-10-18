@@ -13,7 +13,7 @@ RUN ./python3.11.AppImage --appimage-extract
 
 # ------------------------------------------------------------------------------
 
-FROM python-appimage-downloader as python-appimage
+FROM python-appimage-downloader AS python-appimage
 ARG PYTHON_BASE_APPIMAGE_PATH
 ENV PYTHON_BASE_APPIMAGE_PATH=${PYTHON_BASE_APPIMAGE_PATH}
 
@@ -27,7 +27,7 @@ RUN cp -r ./squashfs-root $PYTHON_BASE_APPIMAGE_PATH
 
 # ------------------------------------------------------------------------------
 
-FROM ghcr.io/rust-lang/rust:nightly-slim AS setup
+FROM ghcr.io/rust-lang/rust:nightly-buster-slim AS setup
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
@@ -83,4 +83,10 @@ FROM builder-dependencies AS builder
 
 COPY . .
 
-ENTRYPOINT [ "appimage/scripts/build-appimage.sh" ]
+RUN appimage/scripts/build-appimage.sh
+
+# ------------------------------------------------------------------------------
+
+FROM scratch
+
+COPY --from=builder /ode-designer/target/appimage/ode-designer-rs.AppImage /ode-designer.AppImage

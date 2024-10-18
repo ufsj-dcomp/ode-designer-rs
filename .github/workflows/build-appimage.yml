@@ -21,10 +21,10 @@ jobs:
 
       - name: Build the AppImage
         shell: bash
-        run: docker compose up
+        run: docker build -t ode-designer-appimage-builder --output=. .
 
       - name: Attach AppImage to Release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./container-target/appimage/ode-designer-rs.AppImage
+        run: gh release upload ${{ github.event.release.tag_name }} ./container/ode-designer.AppImage

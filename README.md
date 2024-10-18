@@ -87,8 +87,20 @@ It is recommended to use the executables available in *Releases* on GitHub. [Thi
 
 The Linux distribution uses [AppImages](https://appimage.org/), which requires a runtime (`fuse2`) installable on all Linux-based distributions. It is commonly included by default by some distributions, or is already installed by another program.
 
+> [!NOTE]
+> Although AppImages can make binaries super portable in Linux, there's still a
+> hard dependency on your system's GLIBC, which cannot be redistributed. As it
+> stands, the **minimum supported version is 2.28**. You can check your system's
+> version with this command:
+> ```sh
+> ldd --version
+> ```
+>
+> If your system meets this requirement, but you still get errors related to
+> GLIBC, please open an issue and we'll look into it.
+
 <details>
-<summary><b>🐧 Para Debian/Ubuntu/Pop_OS!/ElementaryOS</b></summary>
+<summary><b>🐧 For Debian/Ubuntu/Pop_OS!/ElementaryOS</b></summary>
 
 ```sh
 $ sudo apt install libfuse2
@@ -97,7 +109,7 @@ $ sudo apt install libfuse2
 </details>
 
 <details>
-<summary><b>🐧 Para ArchLinux</b></summary>
+<summary><b>🐧 For ArchLinux</b></summary>
 
 ```sh
 $ sudo pacman -S fuse2
