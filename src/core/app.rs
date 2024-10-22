@@ -789,7 +789,7 @@ impl App {
                         self.input_pins.get(input_pin_id)?,
                         self.output_pins.get(output_pin_id)?,
                     ];
-                    let Some([input_node, output_node]) = self.nodes.get_many_mut(node_ids) else {
+                    let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids) else {
                         return None
                     };
                     if !input_node.should_link(input_pin_id) {
@@ -816,7 +816,7 @@ impl App {
                     self.input_pins.get(input_pin_id)?,
                     self.output_pins.get(output_pin_id)?,
                 ];
-                let Some([input_node, output_node]) = self.nodes.get_many_mut(node_ids) else {
+                let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids) else {
                     return None
                 };
                 input_node
