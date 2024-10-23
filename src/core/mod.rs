@@ -1,13 +1,13 @@
-use glium::glutin::dpi::LogicalSize;
-use glium::glutin::event::{Event, WindowEvent};
-use glium::glutin::event_loop::{ControlFlow, EventLoop};
-use glium::glutin::window::WindowBuilder;
-use glium::{glutin, Display, Surface};
+use glium::glutin::display::GetGlDisplay;
+use glium::glutin::prelude::{GlDisplay, NotCurrentGlContext};
+use winit::event::{Event, WindowEvent};
+use glium::{glutin, Surface};
 use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
+use raw_window_handle::HasRawWindowHandle;
+use std::num::NonZeroU32;
 use std::time::Instant;
-use winit::dpi::Pixel;
 
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
@@ -24,44 +24,67 @@ pub mod style;
 pub mod widgets;
 
 pub struct System {
-    pub event_loop: EventLoop<()>,
-    pub display: glium::Display,
+    pub event_loop: winit::event_loop::EventLoop<()>,
+    pub display: glium::Display<glutin::surface::WindowSurface>,
+    pub window: winit::window::Window,
     pub imgui: Context,
     pub platform: WinitPlatform,
     pub renderer: Renderer,
-    pub font_size: f32,
 }
 
 impl System {
-    pub fn make_window<T: Pixel>(title: &str, size: (T, T)) -> Self {
-        let event_loop = EventLoop::new();
-        let context = glutin::ContextBuilder::new().with_vsync(true);
-        let builder = WindowBuilder::new()
+    pub fn make_window<T: winit::dpi::Pixel>(title: &str, (width, height): (T, T)) -> Self {
+        let event_loop = winit::event_loop::EventLoop::new()
+            .unwrap(); // assumed to remain
+
+        let window_builder = winit::window::WindowBuilder::new()
             .with_title(title.to_owned())
             .with_transparent(false)
-            .with_inner_size(Into::<LogicalSize<T>>::into(size));
-        let display =
-            Display::new(builder, context, &event_loop).expect("Failed to initialize display");
+            .with_inner_size(winit::dpi::LogicalSize::new(width, height));
+
+        let config_template_builder = glutin::config::ConfigTemplateBuilder::new();
+        let display_builder = glutin_winit::DisplayBuilder::new()
+            .with_window_builder(Some(window_builder));
+
+        let (window, gl_config) = display_builder
+            .build(&event_loop, config_template_builder, |mut configs| configs.next().unwrap())
+            .unwrap();
+
+        let window = window.unwrap();
+        let raw_window_handle = window.raw_window_handle();
+
+        let context_attributes = glutin::context::ContextAttributesBuilder::new()
+            .build(Some(raw_window_handle));
+
+        let fallback_context_attributes = glutin::context::ContextAttributesBuilder::new()
+            .with_context_api(glutin::context::ContextApi::Gles(None))
+            .build(Some(raw_window_handle));
+
+        let gl_display = gl_config.display();
+        let not_current_gl_context = unsafe {
+            gl_display.create_context(&gl_config, &context_attributes).unwrap_or_else(|_| {
+                gl_display.create_context(&gl_config, &fallback_context_attributes)
+                .unwrap()
+            })
+        };
+
+        let attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
+            .build(
+                raw_window_handle,
+                NonZeroU32::new(width.cast()).unwrap(),
+                NonZeroU32::new(height.cast()).unwrap()
+            );
+
+        let surface = unsafe { gl_display.create_window_surface(&gl_config, &attrs).unwrap() };
+        let current_context = not_current_gl_context.make_current(&surface).unwrap();
+        let display = glium::Display::from_context_surface(current_context, surface).unwrap();
 
         let mut imgui = Context::create();
         imgui.io_mut().config_flags |= imgui::ConfigFlags::DOCKING_ENABLE;
         imgui.set_ini_filename(None);
 
-        /* if let Some(backend) = clipboard::init() {
-            imgui.set_clipboard_backend(backend);
-        } else {
-            eprintln!("Failed to initialize clipboard");
-        } */
-
         let mut platform = WinitPlatform::init(&mut imgui);
-        {
-            let gl_window = display.gl_window();
-            let window = gl_window.window();
-
-            let dpi_mode = HiDpiMode::Default;
-
-            platform.attach_window(imgui.io_mut(), window, dpi_mode);
-        }
+        platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Default);
 
         // Fixed font size. Note imgui_winit_support uses "logical
         // pixels", which are physical pixels scaled by the devices
@@ -103,10 +126,10 @@ impl System {
         Self {
             event_loop,
             display,
+            window,
             imgui,
             platform,
             renderer,
-            font_size,
         }
     }
 
@@ -117,50 +140,51 @@ impl System {
             mut imgui,
             mut platform,
             mut renderer,
+            window,
             ..
         } = self;
         let mut last_frame = Instant::now();
 
-        event_loop.run(move |event, _, control_flow| match event {
+        event_loop.run(move |event, elwt| match event {
             Event::NewEvents(_) => {
                 let now = Instant::now();
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
             }
-            Event::MainEventsCleared => {
-                let gl_window = display.gl_window();
-                platform
-                    .prepare_frame(imgui.io_mut(), gl_window.window())
-                    .expect("Failed to prepare frame");
-                gl_window.window().request_redraw();
+            Event::AboutToWait => {
+                platform.prepare_frame(imgui.io_mut(), &window).expect("Failed to prepare frame");
+                window.request_redraw();
             }
-            Event::RedrawRequested(_) => {
+            Event::WindowEvent { event: WindowEvent::RedrawRequested, .. } => {
                 let ui = imgui.frame();
 
                 let mut run = true;
                 run_ui(&mut run, ui);
                 if !run {
-                    *control_flow = ControlFlow::Exit;
+                    elwt.exit();
                 }
 
-                let gl_window = display.gl_window();
                 let mut target = display.draw();
                 target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
-                platform.prepare_render(ui, gl_window.window());
+                platform.prepare_render(ui, &window);
+
                 let draw_data = imgui.render();
+
                 renderer
                     .render(&mut target, draw_data)
                     .expect("Rendering failed");
                 target.finish().expect("Failed to swap buffers");
             }
+            Event::WindowEvent { event: WindowEvent::Resized(new_size), .. } => {
+                display.resize((new_size.width, new_size.height));
+            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => *control_flow = ControlFlow::Exit,
+            } => elwt.exit(),
             event => {
-                let gl_window = display.gl_window();
-                platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
+                platform.handle_event(imgui.io_mut(), &window, &event);
             }
-        })
+        }).unwrap();
     }
 }

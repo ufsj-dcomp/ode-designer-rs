@@ -13,21 +13,18 @@ derive_more = "0.99.17"
 log = "0.4.17"
 strum = { version = "0.26.1", features = ["strum_macros", "derive"] }
 enutil = { version = "0.1.0", features = ["derive"] }
-glium = "0.32.1"
+glium = { version = "0.34", features = ["winit"] }
+glutin-winit = "0.4"
 imnodes = { path = "./crates/imnodes" }
 odeir = { path = "./crates/odeir" }
 implot = { path = "./crates/implot-rs" }
 thiserror = "1.0.58"
 sorted-vec = "0.8.2"
 paste = "1.0.14"
-imgui = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending", features = ["docking", "tables-api"] }
-imgui-glium-renderer = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
-imgui-winit-support = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
-
-# For development of imgui-rs features
-# imgui = { path = "./crates/imgui-rs/imgui", features = ["docking"] }
-# imgui-glium-renderer = { path = "./crates/imgui-rs/imgui-glium-renderer" }
-# imgui-winit-support = { path = "./crates/imgui-rs/imgui-winit-support" }
+imgui = { version = "0.12", features = ["docking", "tables-api"] }
+imgui-glium-renderer = { version = "0.12" }
+imgui-winit-support = { version = "0.12" }
+raw-window-handle = "0.5"
 
 serde_json = "1.0.108"
 rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] }
@@ -53,11 +50,14 @@ rayon = "1.10.0"
 meval = "0.2.0"
 
 [target.'cfg(target_os = "linux")'.dependencies.winit]
-version = "0.27.5"
-features = ["wayland", "x11"]
+version = "0.29"
+default-features = false
+features = ["wayland", "x11", "rwh_05"]
 
 [target.'cfg(not(target_os = "linux"))'.dependencies.winit]
-version = "0.27.5"
+version = "0.29"
+default-features = false
+features = ["rwh_05"]
 
 [dev-dependencies]
 assert-json-diff = { git = "https://github.com/briankung/assert-json-diff/", branch = "feature/assert-json-contains" }

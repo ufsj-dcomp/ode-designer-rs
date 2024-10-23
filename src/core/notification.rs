@@ -182,7 +182,6 @@ impl NotificationLogger {
 
 impl log::Log for NotificationLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        dbg!(metadata);
         metadata.target().contains(&self.crate_name) && metadata.level() <= self.max_log_level
     }
 
