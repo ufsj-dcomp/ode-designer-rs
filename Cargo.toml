@@ -20,9 +20,9 @@ implot = { path = "./crates/implot-rs" }
 thiserror = "1.0.58"
 sorted-vec = "0.8.2"
 paste = "1.0.14"
-imgui = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending", features = ["docking", "tables-api"] }
-imgui-glium-renderer = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
-imgui-winit-support = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
+imgui = { version = "0.11.0", features = ["docking", "tables-api"] }
+imgui-glium-renderer = "0.11.0"
+imgui-winit-support = "0.11.0"
 
 # For development of imgui-rs features
 # imgui = { path = "./crates/imgui-rs/imgui", features = ["docking"] }
@@ -62,6 +62,12 @@ version = "0.27.5"
 [dev-dependencies]
 assert-json-diff = { git = "https://github.com/briankung/assert-json-diff/", branch = "feature/assert-json-contains" }
 rstest = { version = "0.18.2", default-features = false }
+
+[patch.crates-io]
+imgui = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending", features = ["docking", "tables-api"] }
+imgui-glium-renderer = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
+imgui-winit-support = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending" }
+imgui-sys = { git = "https://github.com/syndelis/imgui-rs", branch = "fix/alpha-blending", features = ["docking"] }
 
 [package.metadata.appimage]
 assets = ["assets"]
