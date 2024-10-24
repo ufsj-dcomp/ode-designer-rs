@@ -13,7 +13,7 @@ derive_more = "0.99.17"
 log = "0.4.17"
 strum = { version = "0.26.1", features = ["strum_macros", "derive"] }
 enutil = { version = "0.1.0", features = ["derive"] }
-glium = { version = "0.34", features = ["winit"] }
+glium = { version = "0.34", features = ["glutin-winit"] }
 glutin-winit = "0.4"
 imnodes = { path = "./crates/imnodes" }
 odeir = { path = "./crates/odeir" }

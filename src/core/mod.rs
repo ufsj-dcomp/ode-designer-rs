@@ -177,6 +177,7 @@ impl System {
             }
             Event::WindowEvent { event: WindowEvent::Resized(new_size), .. } => {
                 display.resize((new_size.width, new_size.height));
+                platform.handle_event(imgui.io_mut(), &window, &event);
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
