@@ -154,7 +154,9 @@ impl App {
                 }
             });
 
-            if ui.menu_item("Parameter estimation") && self.parameter_estimation_state.is_none() {
+            if ui.menu_item(locale.get("parameter-estimation"))
+                && self.parameter_estimation_state.is_none()
+            {
                 let all_population_ids = self.get_all_population_ids();
                 let all_constants = self.get_all_constants(&all_population_ids);
                 let all_populations = self.get_all_populations(&all_population_ids);

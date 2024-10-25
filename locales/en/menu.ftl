@@ -12,3 +12,5 @@ export-code = { -export-code-btn(label: "Generate Code") }
 export-pdf = { -export-pdf-btn(label: "Plot to PDF") }
 
 language = { -language-btn(label: "Language") }
+
+parameter-estimation = { -parameter-estimation-btn(label: "Parameter Estimation") }

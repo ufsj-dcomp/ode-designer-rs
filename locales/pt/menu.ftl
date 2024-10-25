@@ -12,3 +12,5 @@ export-code = { -export-code-btn(label: "Gerar Código") }
 export-pdf = { -export-pdf-btn(label: "Plotar em PDF") }
 
 language = { -language-btn(label: "Idioma") }
+
+parameter-estimation = { -parameter-estimation-btn(label: "Estimativa de Parâmetros") }
