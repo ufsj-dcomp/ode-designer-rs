@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-imgui = ["dep:imgui-glium-renderer", "dep:imgui-winit-support", "dep:winit", "dep:glium", "dep:imgui"]
+imgui = [
+    "dep:imgui-glium-renderer",
+    "dep:imgui-winit-support",
+    "dep:winit",
+    "dep:glium",
+    "dep:imgui",
+]
 
 [dependencies]
 anyhow = "1.0"
@@ -13,8 +19,8 @@ derive_more = "0.99.17"
 log = "0.4.17"
 strum = { version = "0.26.1", features = ["strum_macros", "derive"] }
 enutil = { version = "0.1.0", features = ["derive"] }
-glium = { version = "0.34", features = ["glutin-winit"] }
-glutin-winit = "0.4"
+glium = { version = "0.35", features = ["glutin-winit"] }
+glutin-winit = "0.5"
 imnodes = { path = "./crates/imnodes" }
 odeir = { path = "./crates/odeir" }
 implot = { path = "./crates/implot-rs" }
@@ -22,12 +28,14 @@ thiserror = "1.0.58"
 sorted-vec = "0.8.2"
 paste = "1.0.14"
 imgui = { version = "0.12", features = ["docking", "tables-api"] }
-imgui-glium-renderer = { version = "0.12" }
-imgui-winit-support = { version = "0.12" }
-raw-window-handle = "0.5"
+imgui-glium-renderer = { version = "0.13" }
+imgui-winit-support = { version = "0.13" }
+raw-window-handle = "0.6"
 
 serde_json = "1.0.108"
-rfd = { version = "0.12.1", default-features = false, features = ["xdg-portal"] }
+rfd = { version = "0.12.1", default-features = false, features = [
+    "xdg-portal",
+] }
 csv = "1.3.0"
 nom = "7.1.3"
 minijinja = "1.0.12"
@@ -50,14 +58,13 @@ rayon = "1.10.0"
 meval = "0.2.0"
 
 [target.'cfg(target_os = "linux")'.dependencies.winit]
-version = "0.29"
+version = "0.30"
 default-features = false
-features = ["wayland", "x11", "rwh_05"]
+features = ["wayland", "x11"]
 
 [target.'cfg(not(target_os = "linux"))'.dependencies.winit]
-version = "0.29"
+version = "0.30"
 default-features = false
-features = ["rwh_05"]
 
 [dev-dependencies]
 assert-json-diff = { git = "https://github.com/briankung/assert-json-diff/", branch = "feature/assert-json-contains" }
@@ -72,5 +79,5 @@ auto_link_exclude_list = [
     "libpthread.so*",
     "librt.so*",
     "libm.so*",
-    "libstdc++.so*"
+    "libstdc++.so*",
 ]

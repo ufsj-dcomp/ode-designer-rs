@@ -1,13 +1,13 @@
 use glium::glutin::display::GetGlDisplay;
 use glium::glutin::prelude::{GlDisplay, NotCurrentGlContext};
-use winit::event::{Event, WindowEvent};
 use glium::{glutin, Surface};
 use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use raw_window_handle::HasRawWindowHandle;
+use raw_window_handle::HasWindowHandle;
 use std::num::NonZeroU32;
 use std::time::Instant;
+use winit::event::{Event, WindowEvent};
 
 pub use app::App;
 pub use id_gen::{initialize_id_generator, GeneratesId};
@@ -34,27 +34,28 @@ pub struct System {
 
 impl System {
     pub fn make_window<T: winit::dpi::Pixel>(title: &str, (width, height): (T, T)) -> Self {
-        let event_loop = winit::event_loop::EventLoop::new()
-            .unwrap(); // assumed to remain
+        let event_loop = winit::event_loop::EventLoop::new().unwrap(); // assumed to remain
 
-        let window_builder = winit::window::WindowBuilder::new()
-            .with_title(title.to_owned())
+        let window_attrs = winit::window::WindowAttributes::default()
+            .with_title(title)
             .with_transparent(false)
             .with_inner_size(winit::dpi::LogicalSize::new(width, height));
 
         let config_template_builder = glutin::config::ConfigTemplateBuilder::new();
-        let display_builder = glutin_winit::DisplayBuilder::new()
-            .with_window_builder(Some(window_builder));
+        let display_builder =
+            glutin_winit::DisplayBuilder::new().with_window_attributes(Some(window_attrs));
 
         let (window, gl_config) = display_builder
-            .build(&event_loop, config_template_builder, |mut configs| configs.next().unwrap())
+            .build(&event_loop, config_template_builder, |mut configs| {
+                configs.next().unwrap()
+            })
             .unwrap();
 
         let window = window.unwrap();
-        let raw_window_handle = window.raw_window_handle();
+        let raw_window_handle = window.window_handle().unwrap().as_raw();
 
-        let context_attributes = glutin::context::ContextAttributesBuilder::new()
-            .build(Some(raw_window_handle));
+        let context_attributes =
+            glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
 
         let fallback_context_attributes = glutin::context::ContextAttributesBuilder::new()
             .with_context_api(glutin::context::ContextApi::Gles(None))
@@ -62,20 +63,28 @@ impl System {
 
         let gl_display = gl_config.display();
         let not_current_gl_context = unsafe {
-            gl_display.create_context(&gl_config, &context_attributes).unwrap_or_else(|_| {
-                gl_display.create_context(&gl_config, &fallback_context_attributes)
-                .unwrap()
-            })
+            gl_display
+                .create_context(&gl_config, &context_attributes)
+                .unwrap_or_else(|_| {
+                    gl_display
+                        .create_context(&gl_config, &fallback_context_attributes)
+                        .unwrap()
+                })
         };
 
-        let attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
-            .build(
-                raw_window_handle,
-                NonZeroU32::new(width.cast()).unwrap(),
-                NonZeroU32::new(height.cast()).unwrap()
-            );
+        let attrs =
+            glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
+                .build(
+                    raw_window_handle,
+                    NonZeroU32::new(width.cast()).unwrap(),
+                    NonZeroU32::new(height.cast()).unwrap(),
+                );
 
-        let surface = unsafe { gl_display.create_window_surface(&gl_config, &attrs).unwrap() };
+        let surface = unsafe {
+            gl_display
+                .create_window_surface(&gl_config, &attrs)
+                .unwrap()
+        };
         let current_context = not_current_gl_context.make_current(&surface).unwrap();
         let display = glium::Display::from_context_surface(current_context, surface).unwrap();
 
@@ -121,7 +130,7 @@ impl System {
             },
         ]);
 
-        let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
+        let renderer = Renderer::new(&mut imgui, &display).expect("Failed to initialize renderer");
 
         Self {
             event_loop,
@@ -145,47 +154,57 @@ impl System {
         } = self;
         let mut last_frame = Instant::now();
 
-        event_loop.run(move |event, elwt| match event {
-            Event::NewEvents(_) => {
-                let now = Instant::now();
-                imgui.io_mut().update_delta_time(now - last_frame);
-                last_frame = now;
-            }
-            Event::AboutToWait => {
-                platform.prepare_frame(imgui.io_mut(), &window).expect("Failed to prepare frame");
-                window.request_redraw();
-            }
-            Event::WindowEvent { event: WindowEvent::RedrawRequested, .. } => {
-                let ui = imgui.frame();
-
-                let mut run = true;
-                run_ui(&mut run, ui);
-                if !run {
-                    elwt.exit();
+        event_loop
+            .run(move |event, elwt| match event {
+                Event::NewEvents(_) => {
+                    let now = Instant::now();
+                    imgui.io_mut().update_delta_time(now - last_frame);
+                    last_frame = now;
                 }
+                Event::AboutToWait => {
+                    platform
+                        .prepare_frame(imgui.io_mut(), &window)
+                        .expect("Failed to prepare frame");
+                    window.request_redraw();
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::RedrawRequested,
+                    ..
+                } => {
+                    let ui = imgui.frame();
 
-                let mut target = display.draw();
-                target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
-                platform.prepare_render(ui, &window);
+                    let mut run = true;
+                    run_ui(&mut run, ui);
+                    if !run {
+                        elwt.exit();
+                    }
 
-                let draw_data = imgui.render();
+                    let mut target = display.draw();
+                    target.clear_color_srgb(0.0, 0.0, 0.0, 1.0);
+                    platform.prepare_render(ui, &window);
 
-                renderer
-                    .render(&mut target, draw_data)
-                    .expect("Rendering failed");
-                target.finish().expect("Failed to swap buffers");
-            }
-            Event::WindowEvent { event: WindowEvent::Resized(new_size), .. } => {
-                display.resize((new_size.width, new_size.height));
-                platform.handle_event(imgui.io_mut(), &window, &event);
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => elwt.exit(),
-            event => {
-                platform.handle_event(imgui.io_mut(), &window, &event);
-            }
-        }).unwrap();
+                    let draw_data = imgui.render();
+
+                    renderer
+                        .render(&mut target, draw_data)
+                        .expect("Rendering failed");
+                    target.finish().expect("Failed to swap buffers");
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(new_size),
+                    ..
+                } => {
+                    display.resize((new_size.width, new_size.height));
+                    platform.handle_event(imgui.io_mut(), &window, &event);
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                } => elwt.exit(),
+                event => {
+                    platform.handle_event(imgui.io_mut(), &window, &event);
+                }
+            })
+            .unwrap();
     }
 }
