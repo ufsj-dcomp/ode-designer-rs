@@ -27,7 +27,7 @@ RUN cp -r ./squashfs-root $PYTHON_BASE_APPIMAGE_PATH
 
 # ------------------------------------------------------------------------------
 
-FROM ghcr.io/rust-lang/rust:nightly-buster-slim AS setup
+FROM ghcr.io/syndelis/rust:nightly-buster-slim AS setup
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
