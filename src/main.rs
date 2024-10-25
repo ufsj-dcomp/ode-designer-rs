@@ -37,11 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     style::set_imnodes_style(nodeseditor.get_style());
 
-    // SAFETY: The initialization of this value at the startup code is always
-    // safe to do. However, using this value will only ever be safe while the
-    // application isn't multithreaded or at least not the GUI part, which
-    // honestly doesn't need to be.
-    unsafe { initialize_id_generator(nodeseditor.new_identifier_generator()) };
+    initialize_id_generator(nodeseditor.new_identifier_generator());
 
     let _link_detach = nodeseditor.push(AttributeFlag::EnableLinkDetachWithDragClick);
     // let _link_creation = nodeseditor.push(AttributeFlag::EnableLinkCreationOnSnap);
