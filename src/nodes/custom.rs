@@ -152,16 +152,13 @@ impl NodeImpl for CustomFunctionNode {
             return None;
         };
 
-        let Some(spec) = app
+        let spec = app
             .extensions
             .iter()
             .flat_map(|ext| ext.nodes.iter())
-            .find(|node_spec| &node_spec.function.name == operation)
-        else {
-            return None;
-        };
+            .find(|node_spec| &node_spec.function.name == operation)?;
 
-        build_from_composition(node_id, frag, |name, composition, expr_wrapper| {
+        build_from_composition(node_id, frag, |name, _composition, _expr_wrapper| {
             Self::from_spec(node_id, name.to_owned(), Rc::clone(spec))
         })
     }

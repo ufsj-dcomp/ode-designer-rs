@@ -9,20 +9,22 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct InputPin {
     pub id: InputPinId,
-    node_id: NodeId,
     pub sign: Sign,
     pub linked_to: Option<OutputPinId>,
     label: Option<String>,
     draw_sign: bool,
+    #[expect(unused)]
+    node_id: NodeId,
 }
 
 #[derive(Debug, Clone)]
 pub struct OutputPin {
     pub id: OutputPinId,
-    node_id: NodeId,
     pub sign: Sign,
     pub linked_to: Vec<InputPinId>,
     label: Option<String>,
+    #[expect(unused)]
+    node_id: NodeId,
 }
 
 impl InputPin {

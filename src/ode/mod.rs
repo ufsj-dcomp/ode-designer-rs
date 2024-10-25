@@ -3,7 +3,7 @@ mod ga;
 pub mod ga_json;
 pub mod odesystem;
 use crate::ode::odesystem::solve;
-use ga_json::GA_Argument;
+use ga_json::GAArgument;
 use ode_solvers::DVector;
 
 use self::{
@@ -34,8 +34,8 @@ impl ParameterEstimation {
     pub fn estimate_parameters(
         &mut self,
         csv_data: CSVData,
-        all_args: Vec<GA_Argument>,
-        args_selected_params: Vec<GA_Argument>,
+        all_args: Vec<GAArgument>,
+        args_selected_params: Vec<GAArgument>,
         mut ode_system: OdeSystem,
     ) {
         self.ga = GA::new(
@@ -52,12 +52,10 @@ impl ParameterEstimation {
 
         let mut indexes: Vec<usize> = vec![];
         for label in csv_data.labels.iter() {
-            let mut pop_index: usize = 0;
-            for key in ode_system.equations.keys() {
+            for (idx, key) in ode_system.equations.keys().enumerate() {
                 if label.trim() == key.trim() {
-                    indexes.push(pop_index);
+                    indexes.push(idx);
                 }
-                pop_index += 1;
             }
         }
 
@@ -86,8 +84,8 @@ impl ParameterEstimation {
                 values.clone(),
             );
 
-            if ode_result.len() == 0 {
-                //error
+            if ode_result.is_empty() {
+                eprintln!("Error: ode_result is empty. Defaulting to 1000.0");
                 return 1000.0;
             }
 
@@ -119,10 +117,11 @@ impl ParameterEstimation {
 
             let sum: f64 = errors.iter().sum();
             if sum.is_nan() {
-                return 1000.0;
+                eprintln!("Error: sum of errors is NaN. Defaulting to 1000.0");
+                1000.0
+            } else {
+                sum.sqrt()
             }
-
-            return sum.sqrt();
         }) {
             Ok(c) => {
                 println!("The best individual is {:?}", c);

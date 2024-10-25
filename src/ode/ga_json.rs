@@ -1,12 +1,7 @@
-use anyhow;
-use std::{
-    fs::File,
-    io::{BufReader, BufWriter, Error},
-    path::Path,
-};
+#![allow(dead_code)] // A lot of stuff is WIP here
 
 #[derive(Debug, Clone, Default)]
-pub struct GA_Metadata {
+pub struct GAMetadata {
     pub name: String,
     pub start_time: f64,
     pub delta_time: f64,
@@ -19,17 +14,14 @@ pub struct GA_Metadata {
 
 //initial condition
 #[derive(Debug, Clone, Default)]
-pub struct GA_Argument {
+pub struct GAArgument {
     pub name: String,
     pub value: f64,
 }
 
-impl GA_Argument {
+impl GAArgument {
     pub fn new(name: String, value: f64) -> Self {
-        Self {
-            name: name,
-            value: value,
-        }
+        Self { name, value }
     }
 }
 
@@ -43,17 +35,13 @@ pub struct Bound {
 
 impl Bound {
     pub fn new(name: String, min: f64, max: f64) -> Self {
-        Self {
-            name: name,
-            min: min,
-            max: max,
-        }
+        Self { name, min, max }
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ConfigData {
-    pub metadata: GA_Metadata,
-    pub arguments: Vec<GA_Argument>, //manter o vetor ordenado
+    pub metadata: GAMetadata,
+    pub arguments: Vec<GAArgument>, //manter o vetor ordenado
     pub bounds: Vec<Bound>,
 }

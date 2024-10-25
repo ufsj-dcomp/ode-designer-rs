@@ -49,14 +49,14 @@ pub struct Locale {
 #[derive(Debug)]
 pub struct FormattedText<'a>(parking_lot::MappedRwLockReadGuard<'a, String>);
 
-impl<'a> std::ops::Deref for FormattedText<'a> {
+impl std::ops::Deref for FormattedText<'_> {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         self.0.as_str()
     }
 }
 
-impl<'a> AsRef<str> for FormattedText<'a> {
+impl AsRef<str> for FormattedText<'_> {
     fn as_ref(&self) -> &str {
         &self.0
     }

@@ -21,8 +21,8 @@ pub struct PlotInfo {
 pub struct PlotLayout {
     pub rows: u32,
     pub cols: u32,
+    #[expect(unused)]
     pub number_of_tabs: u32,
-    pub active_tabs: Vec<u32>,
 }
 
 impl CSVData {
@@ -74,7 +74,6 @@ impl PlotLayout {
             rows: r,
             cols: c,
             number_of_tabs: n_tabs,
-            active_tabs: vec![],
         }
     }
 }

@@ -10,10 +10,9 @@ use crate::locale::Locale;
 use crate::nodes::{NodeImpl, Term};
 
 use crate::ode::csvdata::CSVData;
-use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
+use crate::ode::ga_json::{Bound, ConfigData, GAArgument, GAMetadata};
 use crate::ode::odesystem::OdeSystem;
 use crate::ode::ParameterEstimation;
-
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -38,6 +37,7 @@ impl Parameter {
 }
 #[derive(Default, Debug, Clone)]
 pub struct MetadataFields {
+    #[expect(unused)]
     pub name: String,
     pub start_time: f32,
     pub delta_time: f32,
@@ -82,7 +82,7 @@ impl ParameterEstimationState {
                 .into_iter()
                 .map(|term| (term.id(), term))
                 .collect(),
-            ode_system: OdeSystem::new(),
+            ode_system: OdeSystem::default(),
             estimator: ParameterEstimation::default(),
             file_path: PathBuf::new(),
             metadata: default_metadata,
@@ -307,10 +307,10 @@ impl ParameterEstimationState {
                 Ok(csv_data) => {
                     self.populate_config_data();
 
-                    let mut args_selected_params: Vec<GA_Argument> = vec![];
+                    let mut args_selected_params: Vec<GAArgument> = vec![];
                     for (_id, parameter) in self.parameters.iter() {
                         if parameter.selected {
-                            args_selected_params.push(GA_Argument::new(
+                            args_selected_params.push(GAArgument::new(
                                 parameter.term.name().to_string(),
                                 parameter.term.initial_value,
                             ));
@@ -331,7 +331,7 @@ impl ParameterEstimationState {
     pub fn populate_config_data(&mut self) {
         let config_metadata = &self.metadata;
 
-        let metadata = GA_Metadata {
+        let metadata = GAMetadata {
             name: String::from("GA"),
             start_time: config_metadata.start_time as f64,
             delta_time: config_metadata.delta_time as f64,
@@ -342,18 +342,15 @@ impl ParameterEstimationState {
             max_iterations: config_metadata.max_iterations as usize,
         };
 
-        let mut arguments: Vec<GA_Argument> = vec![];
+        let mut arguments: Vec<GAArgument> = vec![];
         let mut bounds: Vec<Bound> = vec![];
 
         for (_id, term) in self.populations.iter() {
-            arguments.push(GA_Argument::new(
-                term.name().to_string(),
-                term.initial_value,
-            ));
+            arguments.push(GAArgument::new(term.name().to_string(), term.initial_value));
         }
 
         for (_id, parameter) in self.parameters.iter() {
-            arguments.push(GA_Argument::new(
+            arguments.push(GAArgument::new(
                 parameter.term.name().to_string(),
                 parameter.term.initial_value,
             ));

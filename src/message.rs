@@ -44,10 +44,6 @@ pub struct MessageQueue {
 }
 
 impl MessageQueue {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn with_tag(tag: usize) -> Self {
         Self {
             messages: vec![],
@@ -69,10 +65,6 @@ impl MessageQueue {
 
     pub fn push_tagged(&mut self, message: Message, tag: usize) {
         self.messages.push(TaggedMessage { tag, message });
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &TaggedMessage> {
-        self.messages.iter()
     }
 }
 

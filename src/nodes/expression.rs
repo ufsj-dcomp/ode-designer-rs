@@ -197,7 +197,7 @@ impl NodeImpl for Expression {
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
-        app: &App,
+        _app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         if !matches!(
             frag,

@@ -92,7 +92,7 @@ impl System {
         imgui.io_mut().config_flags |= imgui::ConfigFlags::DOCKING_ENABLE;
         imgui.set_ini_filename(None);
 
-        let mut platform = WinitPlatform::init(&mut imgui);
+        let mut platform = WinitPlatform::new(&mut imgui);
         platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Default);
 
         // Fixed font size. Note imgui_winit_support uses "logical

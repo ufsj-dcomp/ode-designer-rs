@@ -115,13 +115,9 @@ impl NodeImpl for Assigner {
     }
 
     fn to_model_fragment(&self, app: &crate::core::App) -> Option<ModelFragment> {
-        let Some(linked_pin_id) = self.input.linked_to else {
-            return None;
-        };
-
         let node_id = app
             .output_pins
-            .get(&linked_pin_id)
+            .get(&self.input.linked_to?)
             .expect("The node must exist, otherwise this should have been unlinked");
 
         let node = app
@@ -145,7 +141,7 @@ impl NodeImpl for Assigner {
     fn try_from_model_fragment(
         node_id: NodeId,
         frag: &ModelFragment,
-        app: &App,
+        _app: &App,
     ) -> Option<(Self, Option<PendingOperations>)> {
         let ModelFragment::Equation(eq) = frag else {
             return None;

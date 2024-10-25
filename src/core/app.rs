@@ -1,8 +1,7 @@
 use std::borrow::{Borrow, Cow};
-use std::cell::{Ref, RefCell};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -11,8 +10,6 @@ use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
 use implot::{ImVec4, PlotUi};
 use odeir::models::ode::OdeModel;
-use odeir::Argument;
-use once_cell::sync::Lazy;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
 use unic_langid::LanguageIdentifier;
@@ -24,22 +21,20 @@ use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
-    PendingOperations, Term,
+    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations, Term,
 };
 use crate::ode::csvdata;
-use crate::ode::ga_json::{Bound, ConfigData, GA_Argument, GA_Metadata};
-use crate::ode::odesystem::{create_ode_system, OdeSystem};
+use crate::ode::odesystem::create_ode_system;
 use crate::pins::Pin;
 use crate::utils::{localized_error, ModelFragment, VecConversion};
 
-use imgui::{DragDropFlags, Key, StyleVar, TabItem, TabItemFlags, Ui};
+use imgui::{Key, StyleVar, TabItem, Ui};
 
 use crate::core::plot::PlotInfo;
 use crate::core::plot::PlotLayout;
 
-use super::adjust_params::{self, Parameter, ParameterEstimationState};
-use super::plot::{self, CSVData};
+use super::adjust_params::ParameterEstimationState;
+use super::plot::CSVData;
 use super::python::execute_python_code;
 use super::side_bar::SideBarState;
 use super::widgets;
@@ -425,7 +420,7 @@ impl AppState {
 
 impl App {
     fn is_model_valid(&self) -> bool {
-        let population_ids: HashSet<_> = self.get_all_population_ids();
+        let population_ids = self.get_all_population_ids();
 
         let has_terms = self
             .nodes
@@ -671,31 +666,30 @@ impl App {
                         opened = true;
                     }
 
-                    if self.is_model_valid() {
-                        if ui
+                    if self.is_model_valid()
+                        && ui
                             .tab_item_with_opened(
                                 locale.get("tab-parameter-estimation"),
                                 &mut opened,
                             )
                             .is_some()
-                        {
-                            if let Some(param_state) = &mut self.parameter_estimation_state {
-                                param_state.draw_tables(ui, locale);
-                                if ui.button(locale.get("plot-results")) {
-                                    match param_state.load_real_data() {
-                                        Ok(real_data) => {
-                                            let estimated_params =
-                                                param_state.get_estimated_parameters();
-                                            self.plot_results(
-                                                locale,
-                                                estimated_params,
-                                                Some(real_data),
-                                            );
-                                        }
-                                        Err(err) => {
-                                            localized_error!(locale, "error-csv-read");
-                                            eprintln!("{err}");
-                                        }
+                    {
+                        if let Some(param_state) = &mut self.parameter_estimation_state {
+                            param_state.draw_tables(ui, locale);
+                            if ui.button(locale.get("plot-results")) {
+                                match param_state.load_real_data() {
+                                    Ok(real_data) => {
+                                        let estimated_params =
+                                            param_state.get_estimated_parameters();
+                                        self.plot_results(
+                                            locale,
+                                            estimated_params,
+                                            Some(real_data),
+                                        );
+                                    }
+                                    Err(err) => {
+                                        localized_error!(locale, "error-csv-read");
+                                        eprintln!("{err}");
                                     }
                                 }
                             }
@@ -1152,7 +1146,7 @@ impl App {
             .into_values()
             .map(Into::<ModelFragment>::into)
             .chain(equations.into_iter().map(Into::<ModelFragment>::into))
-            .map(|frag| Node::build_from_fragment(frag, &self))
+            .map(|frag| Node::build_from_fragment(frag, self))
             .collect::<Result<_, _>>()?;
 
         let pending_ops: Vec<PendingOperations> = nodes_and_ops
@@ -1296,7 +1290,7 @@ impl App {
             });
 
         if let Some(ref mut sim_state) = self.simulation_state {
-            sim_state.plot.update_locale(&locale);
+            sim_state.plot.update_locale(locale);
         }
     }
 }

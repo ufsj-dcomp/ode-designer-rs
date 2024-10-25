@@ -36,7 +36,7 @@ impl Format {
                 FormatPart::Dynamic(arg_spec) => match arg_spec {
                     ArgumentSpecifier::Indexed(idx) => display_args
                         .get(*idx - 1)
-                        .map(Clone::clone)
+                        .cloned()
                         .unwrap_or_else(|| "_".to_string()),
                     ArgumentSpecifier::Named(_) => {
                         todo!("Named parameters are still not supported")

@@ -2,7 +2,7 @@ use imgui::Ui;
 
 use crate::{
     locale::Locale,
-    nodes::{Node, NodeImpl, NodeTypeRepresentation},
+    nodes::{Node, NodeTypeRepresentation},
 };
 
 use odeir::models::ode;

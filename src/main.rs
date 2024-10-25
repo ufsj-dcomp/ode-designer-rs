@@ -1,6 +1,5 @@
 #![feature(map_many_mut)]
 #![feature(try_blocks)]
-#![feature(lazy_cell)]
 #![feature(int_roundings)]
 #![feature(let_chains)]
 #![feature(iter_collect_into)]
@@ -50,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_level = log::Level::Info;
 
     core::notification::NotificationLogger::new()
-        .with_max_log_level(log_level.into())
+        .with_max_log_level(log_level)
         .init();
 
     let plot_ctx = implot::Context::create();

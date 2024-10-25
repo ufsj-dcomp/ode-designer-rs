@@ -8,7 +8,7 @@ use std::{
     path::Path,
 };
 
-use super::ga_json::GA_Argument;
+use super::ga_json::GAArgument;
 use crate::nodes::Term;
 
 pub type State = DVector<f64>;
@@ -20,19 +20,12 @@ pub struct OdeSystem {
 }
 
 impl OdeSystem {
-    pub fn new() -> Self {
-        Self {
-            equations: BTreeMap::new(),
-            context: ExprContext::new(),
-        }
-    }
-
-    pub fn set_context(&mut self, args: Vec<GA_Argument>) {
+    pub fn set_context(&mut self, args: Vec<GAArgument>) {
         args.iter()
             .for_each(|arg| self.context.set_var(arg.name.clone(), arg.value));
     }
 
-    pub fn update_context(&mut self, args: Vec<GA_Argument>, values: Vec<f64>) {
+    pub fn update_context(&mut self, args: Vec<GAArgument>, values: Vec<f64>) {
         args.iter()
             .zip(values)
             .for_each(|(arg, value)| self.context.set_var(arg.name.clone(), value));
@@ -48,18 +41,25 @@ impl OdeSystem {
     }
 }
 
+impl Default for OdeSystem {
+    fn default() -> Self {
+        Self {
+            equations: BTreeMap::new(),
+            context: ExprContext::new(),
+        }
+    }
+}
+
 impl ode_solvers::System<f64, State> for OdeSystem {
     fn system(&mut self, _t: f64, y: &State, dydt: &mut State) {
         self.update_context_with_state(y);
 
-        let mut i: usize = 0;
-        for equation in self.equations.values_mut() {
+        for (i, equation) in self.equations.values_mut().enumerate() {
             equation.set_context(self.context.clone());
 
             if let Ok(value) = equation.eval() {
                 dydt[i] = value;
             }
-            i += 1;
         }
     }
 }
@@ -70,7 +70,7 @@ pub fn solve(
     t_ini: f64,
     t_final: f64,
     dt: f64,
-    args: Vec<GA_Argument>,
+    args: Vec<GAArgument>,
     values: Vec<f64>,
 ) -> Vec<State> {
     ode_system.update_context(args, values);
@@ -78,18 +78,16 @@ pub fn solve(
     let mut solver = Dop853::new(ode_system, t_ini, t_final, dt, y.clone(), 1.0e-8, 1.0e-8);
 
     match solver.integrate() {
-        Ok(_stats) => {
-            return solver.y_out().to_vec();
-        }
-        Err(e) => {
-            println!("An error occured: {}", e);
-            return vec![];
+        Ok(_stats) => solver.y_out().to_vec(),
+        Err(err) => {
+            eprintln!("Error integrating system: {err}");
+            vec![]
         }
     }
 }
 
 pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -> OdeSystem {
-    let mut ode_system = OdeSystem::new();
+    let mut ode_system = OdeSystem::default();
 
     for term in terms.into_iter() {
         ode_system
@@ -116,7 +114,7 @@ pub fn create_ode_system(input: String, terms: impl IntoIterator<Item = Term>) -
     ode_system
 }
 
-pub fn save(times: &Vec<f64>, states: &Vec<State>, filename: &Path) {
+pub fn save(times: &[f64], states: &[State], filename: &Path) {
     // Create or open file
     let file = match File::create(filename) {
         Err(e) => {

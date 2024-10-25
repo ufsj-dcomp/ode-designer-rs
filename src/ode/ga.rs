@@ -1,7 +1,7 @@
 use anyhow::Error;
 use quicksort::quicksort_by;
 use rand::Rng;
-use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::cmp::Ordering;
 use std::fmt;
 use std::fs::File;
@@ -36,10 +36,10 @@ impl Chromosome {
     }
 
     pub fn get_values(&self) -> Vec<f64> {
-        return self.values.clone();
+        self.values.clone()
     }
 
-    fn mutation(&mut self, mutation_rate: f64, bounds: &Vec<Bound>) {
+    fn mutation(&mut self, mutation_rate: f64, bounds: &[Bound]) {
         let mut rng = rand::thread_rng();
         let c_index: usize = rng.gen_range(0..self.values.len());
         let mut p: f64 = rng.gen_range(0.0..=1.0);
@@ -72,7 +72,7 @@ impl fmt::Display for Chromosome {
             write!(f, "{}, ", v)?;
         }
 
-        write!(f, "] ]\n")
+        writeln!(f, "] ]")
     }
 }
 
@@ -92,7 +92,7 @@ impl GA {
             mutation_rate: mut_rate,
             crossover_rate: cross_rate,
             population: vec![],
-            bounds: bounds,
+            bounds,
         }
     }
 
@@ -242,7 +242,7 @@ impl GA {
             i += 1;
         }
 
-        GA::to_disk::<String>(
+        GA::to_disk(
             Path::new(&String::from("./src/ode/result/ga_iterations.txt")),
             solutions,
         )
@@ -251,7 +251,7 @@ impl GA {
         Ok(best)
     }
 
-    pub fn to_disk<P: AsRef<Path>>(path: &Path, data: Vec<String>) -> anyhow::Result<(), Error> {
+    pub fn to_disk<P: AsRef<Path>>(path: P, data: Vec<String>) -> anyhow::Result<(), Error> {
         let mut file: File = match File::create(path) {
             Ok(f) => f,
             Err(e) => return Err(e.into()),

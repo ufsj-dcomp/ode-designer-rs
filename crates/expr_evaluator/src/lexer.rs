@@ -1,23 +1,23 @@
 use std::collections::HashMap;
-use std::{io};
 use std::fs::File;
-use std::io::{prelude::*, BufReader, BufWriter};
-use std::path::Path; 
+use std::io;
+use std::io::{prelude::*, BufWriter};
+use std::path::Path;
 
-use std::str;
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 use std::io::Error;
+use std::str;
 
-#[derive(Debug,PartialEq,Clone,Serialize,Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum ReservedWords {
     Function,
     Main,
     Let,
     Int,
-    Float, 
+    Float,
     Char,
-    If, 
+    If,
     Else,
     While,
     Print,
@@ -25,8 +25,8 @@ pub enum ReservedWords {
     Return,
 }
 
-#[derive(Debug,PartialEq,Clone,Serialize,Deserialize)]
-pub enum Punctuation {    
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum Punctuation {
     Arrow,
     Dot,
     Colon,
@@ -38,7 +38,7 @@ pub enum Punctuation {
     RParen,
 }
 
-#[derive(Debug,PartialEq,Clone,Serialize,Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Operators {
     Assign,
     Equal,
@@ -53,17 +53,17 @@ pub enum Operators {
     Division,
     Arrow,
 }
-#[derive(Debug,PartialEq,Clone,Serialize,Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum TokenKind {
     Identifier(String),
     IntConst(i32),
     FloatConst(f64),
-    CharConst(String),    
+    CharConst(String),
     FormattedString(String),
     ReservedWords(ReservedWords),
     Punctuation(Punctuation),
     Operators(Operators),
-    Error(String)
+    Error(String),
 }
 
 impl From<String> for TokenKind {
@@ -90,9 +90,9 @@ impl From<f64> for TokenKind {
     }
 }
 
-#[derive(Debug,PartialEq,Clone,Serialize,Deserialize)]
-pub struct Token {    
-    pub start: usize, 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct Token {
+    pub start: usize,
     pub end: usize,
     pub line_number: usize,
     pub token_type: TokenKind,
@@ -104,20 +104,22 @@ impl Token {
             start: start,
             end: end,
             line_number: ln,
-            token_type: token_type
+            token_type: token_type,
         }
     }
 }
 
-//peek next char withou consumming it
 pub fn peek_next_char(data: &str) -> char {
     match data.chars().peekable().next() {
         Some(c) => c,
-        None => ' '
+        None => ' ',
     }
 }
 
-fn execute_predicate<F>(data: &str, mut pred: F) -> Result<(&str,usize), usize>  where F: FnMut(char) -> bool {
+fn execute_predicate<F>(data: &str, mut pred: F) -> Result<(&str, usize), usize>
+where
+    F: FnMut(char) -> bool,
+{
     let mut current_index = 0;
 
     for ch in data.chars() {
@@ -133,46 +135,77 @@ fn execute_predicate<F>(data: &str, mut pred: F) -> Result<(&str,usize), usize> 
     if current_index == 0 {
         Err(0)
     } else {
-        Ok((&data[..current_index],current_index))
+        Ok((&data[..current_index], current_index))
     }
 }
 
-fn tokenize_ident_reservedword(data: &str) -> Result<(TokenKind,usize),usize> {
-    let mut reserved_workds: HashMap<String,TokenKind> = HashMap::new();    
-    reserved_workds.insert(String::from("fn"),TokenKind::ReservedWords(ReservedWords::Function));
-    reserved_workds.insert(String::from("let"),TokenKind::ReservedWords(ReservedWords::Let));
-    reserved_workds.insert(String::from("int"),TokenKind::ReservedWords(ReservedWords::Int));
-    reserved_workds.insert(String::from("float"),TokenKind::ReservedWords(ReservedWords::Float));
-    reserved_workds.insert(String::from("char"),TokenKind::ReservedWords(ReservedWords::Char));
-    reserved_workds.insert(String::from("if"),TokenKind::ReservedWords(ReservedWords::If));
-    reserved_workds.insert(String::from("else"),TokenKind::ReservedWords(ReservedWords::Else));
-    reserved_workds.insert(String::from("while"),TokenKind::ReservedWords(ReservedWords::While));
-    reserved_workds.insert(String::from("print"),TokenKind::ReservedWords(ReservedWords::Print));
-    reserved_workds.insert(String::from("println"),TokenKind::ReservedWords(ReservedWords::Println));
-    reserved_workds.insert(String::from("return"),TokenKind::ReservedWords(ReservedWords::Return));
-    
+fn tokenize_ident_reservedword(data: &str) -> Result<(TokenKind, usize), usize> {
+    let mut reserved_workds: HashMap<String, TokenKind> = HashMap::new();
+    reserved_workds.insert(
+        String::from("fn"),
+        TokenKind::ReservedWords(ReservedWords::Function),
+    );
+    reserved_workds.insert(
+        String::from("let"),
+        TokenKind::ReservedWords(ReservedWords::Let),
+    );
+    reserved_workds.insert(
+        String::from("int"),
+        TokenKind::ReservedWords(ReservedWords::Int),
+    );
+    reserved_workds.insert(
+        String::from("float"),
+        TokenKind::ReservedWords(ReservedWords::Float),
+    );
+    reserved_workds.insert(
+        String::from("char"),
+        TokenKind::ReservedWords(ReservedWords::Char),
+    );
+    reserved_workds.insert(
+        String::from("if"),
+        TokenKind::ReservedWords(ReservedWords::If),
+    );
+    reserved_workds.insert(
+        String::from("else"),
+        TokenKind::ReservedWords(ReservedWords::Else),
+    );
+    reserved_workds.insert(
+        String::from("while"),
+        TokenKind::ReservedWords(ReservedWords::While),
+    );
+    reserved_workds.insert(
+        String::from("print"),
+        TokenKind::ReservedWords(ReservedWords::Print),
+    );
+    reserved_workds.insert(
+        String::from("println"),
+        TokenKind::ReservedWords(ReservedWords::Println),
+    );
+    reserved_workds.insert(
+        String::from("return"),
+        TokenKind::ReservedWords(ReservedWords::Return),
+    );
+
     // identifiers can't start with a number
     match data.chars().next() {
         Some(ch) if ch.is_digit(10) => panic!("Identifiers can't start with a number"),
         None => panic!("EOF not expected"),
-        _ => {},
+        _ => {}
     }
 
-    let (s, bytes_read) = execute_predicate(data, |ch| 
-            ch == '_' || ch.is_alphanumeric())?;
-    
+    let (s, bytes_read) = execute_predicate(data, |ch| ch == '_' || ch.is_alphanumeric())?;
+
     let tok: TokenKind;
-    if reserved_workds.contains_key(s){
+    if reserved_workds.contains_key(s) {
         tok = reserved_workds.get(s).unwrap().clone();
-    }
-    else {
+    } else {
         tok = TokenKind::Identifier(s.to_string());
     }
     Ok((tok, bytes_read))
 }
 
 /// Tokenize a numeric literal.
-fn tokenize_number(data: &str) -> Result<(TokenKind, usize),usize> {
+fn tokenize_number(data: &str) -> Result<(TokenKind, usize), usize> {
     let mut seen_dot = false;
 
     let (decimal, bytes_read) = execute_predicate(data, |c| {
@@ -194,157 +227,142 @@ fn tokenize_number(data: &str) -> Result<(TokenKind, usize),usize> {
     Ok((TokenKind::FloatConst(n), bytes_read))
 }
 
-pub fn tokenize_assing_or_equal(data: &str) -> Result<(TokenKind, usize),usize> {
+pub fn tokenize_assing_or_equal(data: &str) -> Result<(TokenKind, usize), usize> {
     let tok: (TokenKind, usize);
     let mut seen_equal = false;
     let mut count = 0;
-    let (_str,_bytes_read) = execute_predicate(data, |c| {
-        if count == 2{
+    let (_str, _bytes_read) = execute_predicate(data, |c| {
+        if count == 2 {
             seen_equal = true;
             false
-        }
-        else if c == '=' {            
+        } else if c == '=' {
             count += 1;
             true
-        }
-        else {
+        } else {
             false
         }
     })?;
-    if seen_equal{
+    if seen_equal {
         tok = (TokenKind::Operators(Operators::Equal), 2);
-    }
-    else {
+    } else {
         tok = (TokenKind::Operators(Operators::Assign), 1);
-    }    
+    }
     Ok(tok)
 }
 
-pub fn tokenize_minus_or_arrow(data: &str) -> Result<(TokenKind, usize),usize> {
+pub fn tokenize_minus_or_arrow(data: &str) -> Result<(TokenKind, usize), usize> {
     let tok: (TokenKind, usize);
     let mut seen_arrow = false;
     let mut count = 0;
-    let (_str,_bytes_read) = execute_predicate(data, |c| {
+    let (_str, _bytes_read) = execute_predicate(data, |c| {
         if c == '-' {
             count += 1;
             true
-        }
-        else if count == 1 && c == '>' {
+        } else if count == 1 && c == '>' {
             seen_arrow = true;
             false
-        }
-        else {
+        } else {
             false
         }
     })?;
-    if seen_arrow{
+    if seen_arrow {
         tok = (TokenKind::Operators(Operators::Arrow), 2);
-    }
-    else {
+    } else {
         tok = (TokenKind::Operators(Operators::Minus), 1);
-    }    
+    }
     Ok(tok)
 }
 
-pub fn tokenize_less_or_lessthan(data: &str) -> Result<(TokenKind, usize),usize> {
+pub fn tokenize_less_or_lessthan(data: &str) -> Result<(TokenKind, usize), usize> {
     let tok: (TokenKind, usize);
     let mut seen_equal = false;
     let mut count = 0;
-    let (_str,_bytes_read) = execute_predicate(data, |c| {
+    let (_str, _bytes_read) = execute_predicate(data, |c| {
         if c == '<' {
             count += 1;
             true
-        }
-        else if count == 1 && c == '=' {
+        } else if count == 1 && c == '=' {
             seen_equal = true;
             false
-        }
-        else {
+        } else {
             false
         }
     })?;
-    if seen_equal{
+    if seen_equal {
         tok = (TokenKind::Operators(Operators::LessThanEqual), 2);
-    }
-    else {
+    } else {
         tok = (TokenKind::Operators(Operators::LessThan), 1);
-    }    
+    }
     Ok(tok)
 }
 
-pub fn tokenize_greater_or_greaterthan(data: &str) -> Result<(TokenKind, usize),usize> {
+pub fn tokenize_greater_or_greaterthan(data: &str) -> Result<(TokenKind, usize), usize> {
     let tok: (TokenKind, usize);
     let mut seen_equal = false;
     let mut count = 0;
-    let (_str,_bytes_read) = execute_predicate(data, |c| {
+    let (_str, _bytes_read) = execute_predicate(data, |c| {
         if c == '>' {
             count += 1;
             true
-        }
-        else if count == 1 && c == '=' {
+        } else if count == 1 && c == '=' {
             seen_equal = true;
             false
-        }
-        else {
+        } else {
             false
         }
     })?;
-    if seen_equal{
+    if seen_equal {
         tok = (TokenKind::Operators(Operators::GreaterThanEqual), 2);
-    }
-    else {
+    } else {
         tok = (TokenKind::Operators(Operators::GreaterThan), 1);
-    }    
+    }
     Ok(tok)
 }
 
-pub fn tokenize_char(data: &str) -> Result<(TokenKind, usize),usize> {
-    
+pub fn tokenize_char(data: &str) -> Result<(TokenKind, usize), usize> {
     let mut count = 0;
-    let (str,bytes_read) = execute_predicate(data, |c| {
+    let (str, bytes_read) = execute_predicate(data, |c| {
         if c == '\'' && count == 0 {
             count += 1;
             true
-        }
-        else if count == 1 && c != '\'' {
+        } else if count == 1 && c != '\'' {
             true
-        }
-        else {
+        } else {
             false
         }
     })?;
-    
-    Ok((TokenKind::CharConst(str[1..2].to_string()),bytes_read+1))
+
+    Ok((TokenKind::CharConst(str[1..2].to_string()), bytes_read + 1))
 }
 
-pub fn tokenize_formatted_string(data: &str) -> Result<(TokenKind, usize),usize> {
+pub fn tokenize_formatted_string(data: &str) -> Result<(TokenKind, usize), usize> {
     let mut count: i32 = 0;
     let (lexema, bytes_read) = execute_predicate(data, |c| {
         //consome os caracteres enquanto for diferente de " (fecha aspas duplas)
         if c == '"' && count == 0 {
             count = 1;
             true
-        } 
-        else if c == '"' && count == 1 {
+        } else if c == '"' && count == 1 {
             count = 2;
-            false 
-        } 
-        else {
+            false
+        } else {
             true
         }
     })?;
-       
-    Ok((TokenKind::FormattedString(lexema[1..].to_string()), bytes_read+1))
+
+    Ok((
+        TokenKind::FormattedString(lexema[1..].to_string()),
+        bytes_read + 1,
+    ))
 }
 
 /// Try to lex a single token from the input stream.
-pub fn tokenize_single_token(data: &str) -> Result<(TokenKind, usize),usize> {
-    
+pub fn tokenize_single_token(data: &str) -> Result<(TokenKind, usize), usize> {
     let next = match data.chars().next() {
         Some(c) => c,
         None => panic!("Error"),
     };
-    
+
     let (tok, length) = match next {
         '.' => (TokenKind::Punctuation(Punctuation::Dot), 1),
         ':' => (TokenKind::Punctuation(Punctuation::Colon), 1),
@@ -359,16 +377,17 @@ pub fn tokenize_single_token(data: &str) -> Result<(TokenKind, usize),usize> {
         '*' => (TokenKind::Operators(Operators::Multiplication), 1),
         '/' => (TokenKind::Operators(Operators::Division), 1),
         '<' => tokenize_less_or_lessthan(data).expect("Couldn't tokenize the less than operator"),
-        '>' => tokenize_greater_or_greaterthan(data).expect("Couldn't tokenize the greater than operator"),
+        '>' => tokenize_greater_or_greaterthan(data)
+            .expect("Couldn't tokenize the greater than operator"),
         '\'' => tokenize_char(data).expect("Couldn't tokenize a char const"),
         '0'..='9' => tokenize_number(data).expect("Couldn't tokenize a number"),
         '=' => tokenize_assing_or_equal(data).expect("Couldn't tokenize assign or equal!"),
         '"' => tokenize_formatted_string(data).expect("Couldn't tokenize a formatted string"),
         c @ '_' | c if c.is_alphabetic() => tokenize_ident_reservedword(data)
-                                        .expect("Couldn't tokenize an identifier or reserved word"),
-        other => (TokenKind::Error(format!("Unkown char {}", other)),1),
+            .expect("Couldn't tokenize an identifier or reserved word"),
+        other => (TokenKind::Error(format!("Unkown char {}", other)), 1),
     };
-    
+
     Ok((tok, length))
 }
 
@@ -394,7 +413,11 @@ fn skip_comments(src: &str) -> usize {
 
 fn skip_until<'a>(mut src: &'a str, pattern: &str) -> &'a str {
     while !src.is_empty() && !src.starts_with(pattern) {
-        let next_char_size = src.chars().next().expect("The string isn't empty").len_utf8();
+        let next_char_size = src
+            .chars()
+            .next()
+            .expect("The string isn't empty")
+            .len_utf8();
         src = &src[next_char_size..];
     }
 
@@ -428,18 +451,18 @@ impl<'a> Tokenizer<'a> {
         Tokenizer {
             current_index: 0,
             remaining_text: src,
-            line_number: 0
+            line_number: 0,
         }
     }
 
-    fn next_token(&mut self) -> Option<(TokenKind,usize,usize)> {
+    fn next_token(&mut self) -> Option<(TokenKind, usize, usize)> {
         self.skip_whitespace();
-        
+
         if self.remaining_text.is_empty() {
             None
         } else {
             let start: usize = self.current_index;
-            let tok: (TokenKind, usize) = self._next_token().expect("Couldn't read the next token");            
+            let tok: (TokenKind, usize) = self._next_token().expect("Couldn't read the next token");
             let end: usize = self.current_index;
             Some((tok.0, start, end))
         }
@@ -450,11 +473,11 @@ impl<'a> Tokenizer<'a> {
         self.chomp(skipped);
     }
 
-    fn _next_token(&mut self) -> Result<(TokenKind,usize),usize> {
+    fn _next_token(&mut self) -> Result<(TokenKind, usize), usize> {
         let (tok, bytes_read) = tokenize_single_token(self.remaining_text)?;
         self.chomp(bytes_read);
 
-        Ok((tok,bytes_read))
+        Ok((tok, bytes_read))
     }
 
     fn chomp(&mut self, num_bytes: usize) {
@@ -463,16 +486,16 @@ impl<'a> Tokenizer<'a> {
     }
 }
 
-/// Turn a string of valid code into a list of tokens, including the 
+/// Turn a string of valid code into a list of tokens, including the
 /// location of that token's start and end point in the original source code.
-/// Note the token indices represent the half-open interval `[start, end)`, 
+/// Note the token indices represent the half-open interval `[start, end)`,
 /// equivalent to `start .. end` in Rust.
 pub fn tokenize(src: &str, line_number: usize) -> Vec<Token> {
     let mut tokenizer: Tokenizer<'_> = Tokenizer::new(src);
     let mut tokens: Vec<Token> = Vec::new();
 
     while let Some(tok) = tokenizer.next_token() {
-        let token = Token::new( tok.1, tok.2,  line_number, tok.0);
+        let token = Token::new(tok.1, tok.2, line_number, tok.0);
         tokens.push(token);
     }
 
@@ -480,42 +503,43 @@ pub fn tokenize(src: &str, line_number: usize) -> Vec<Token> {
 }
 
 fn read_lines<P>(path: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
+where
+    P: AsRef<Path>,
+{
     let file = match File::open(&path) {
         Err(why) => panic!("Could not open file. Error cause: {}", why),
-        Ok(file) => file
+        Ok(file) => file,
     };
     Ok(io::BufReader::new(file).lines())
-} 
+}
 
-pub fn tokenize_file<P: AsRef<Path>>(path: P) -> Vec<Token> {    
-    let mut tokens: Vec<Token> = vec![];    
+pub fn tokenize_file<P: AsRef<Path>>(path: P) -> Vec<Token> {
+    let mut tokens: Vec<Token> = vec![];
     if let Ok(lines) = read_lines(path) {
-
         let mut line_number: usize = 1;
-        
+
         for line in lines {
-            if let Ok(v) = line {                
-                tokens.extend_from_slice(&tokenize(&v, line_number));                
+            if let Ok(v) = line {
+                tokens.extend_from_slice(&tokenize(&v, line_number));
             }
             line_number += 1;
         }
     }
     tokens
-} 
+}
 
-pub fn tokenize_string(str: String) -> Vec<Token> {    
-    let mut tokens: Vec<Token> = vec![];    
+pub fn tokenize_string(str: String) -> Vec<Token> {
+    let mut tokens: Vec<Token> = vec![];
     let mut line_number: usize = 1;
-    
+
     for line in str.lines() {
         tokens.extend_from_slice(&tokenize(line, line_number));
         line_number += 1;
     }
     tokens
-} 
+}
 
-pub fn save_tokens<P: AsRef<Path>>(tokens: &Vec<Token>, path: P) -> anyhow::Result<(),Error> {
+pub fn save_tokens<P: AsRef<Path>>(tokens: &Vec<Token>, path: P) -> anyhow::Result<(), Error> {
     let file: File = match File::create(path) {
         Ok(f) => f,
         Err(e) => return Err(e),

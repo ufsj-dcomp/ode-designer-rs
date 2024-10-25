@@ -3,6 +3,7 @@ use imnodes::ImNodesStyle;
 
 pub const DIM_RED: [f32; 4] = [0.58, 0.28, 0.28, 1.];
 
+#[expect(unused)]
 pub fn set_raikiri_style(style: &mut Style) {
     // My tweaks
     style.popup_rounding = 4.0;
