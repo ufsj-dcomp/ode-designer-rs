@@ -25,9 +25,6 @@ pub mod ode;
 pub mod pins;
 pub mod utils;
 
-#[cfg(debug_assertions)]
-pub mod debug;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
 
@@ -69,8 +66,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut plot_ctx.get_plot_ui(),
             &mut locale,
         );
-        #[cfg(debug_assertions)]
-        debug::draw(ui);
     });
     Ok(())
 }
