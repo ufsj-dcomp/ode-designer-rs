@@ -18,11 +18,11 @@ Through a visually intuitive graphical user interface (GUI), ODE-Designer allows
 
 ### Node-based editor
 
-![Imagem do editor de nós no software, contendo os nós 'Var', 'Const', 'grow' e 'dVar/dt', que constroem a EDO dVar/dt = Var*Const](readme/demo-nodes.png)
+![Image from the node editor in the software, containing the nodes 'Var', 'Const', 'grow' and 'dVar/dt', which construct the ODE dVar/dt = Var*Const](readme/demo-nodes.png)
 
 ### Plotting
 
-![Plotagem da EDO dVar/dt = Var*Const nos tempos 41 até 50, para os valores iniciais Var = 1 e Const = 2](readme/demo-simulation.png)
+![Plotting of the ODE dVar/dt = Var*Const from times 38 to 50, for the initial values Var = 1 and Const = 2](readme/demo-simulation.png)
 
 ### Python code export and pdf export
 
@@ -46,8 +46,8 @@ def variable_names() -> list[str]:
 def system(t: np.float64, y: np.ndarray, *constants) -> np.ndarray:
     Var, = y
     Const, = constants
-    
-    dVar_dt = Var*Const 
+
+    dVar_dt = Var*Const
 
     return np.array([dVar_dt])
 
@@ -73,15 +73,15 @@ def power(x, y):
 
 By importing it in the *Manage Extensions* menu, you can use the defined nodes as if they were native, as in the image below.
 
-![O editor de nós incluindo os nós customizados de seno e potência](readme/demo-with-extensions-nodes.png)
+![Showcase of the custom nodes 'sin' and 'pow' in the node editor](readme/demo-with-extensions-nodes.png)
 
 The code can be used to simulate just like native nodes.
 
-![Plotagem das EDOs utilizando nós customizados](readme/demo-with-extensions-simulation.png)
+![Plotting of the previous ODEs utilizing custom nodes](readme/demo-with-extensions-simulation.png)
 
 ## How to install
 
-It is recommended to use the executables available in *Releases* on GitHub. [This link](https://github.com/Syndelis/ode-designer-rs/releases/latest) can be used to always redirect to the latest version.
+It is recommended to use the executables available in *Releases* on GitHub. [This link](https://github.com/ufsj-dcomp/ode-designer-rs/releases/latest) can be used to always redirect to the latest version.
 
 ### Linux
 
@@ -125,14 +125,13 @@ The Windows distribution consists of a ZIP that can be extracted and its content
 
 ### Using Docker
 
-To compile and use the software and its full potential, you can use the provided Docker image. The dependencies are only `docker` itself and the `docker-buildx` plugin.
+You can use the provided Dockerfile to build your own AppImage with no build tools installed directly on your system. Simply run:
 
 ```sh
-$ docker buildx build -t ode-designer-appimage-builder .
-$ docker run -v ./container-target:/ode-designer/target/ ode-designer-appimage-builder
+$ docker build -t ode-designer-appimage-builder --output=. .
 ```
 
-After this execution, the AppImage should be available in `.container-target/appimage/ode-designer-rs.AppImage`. This AppImage, as well as those found in *Releases*, have Python and the `scipy` and `matplotlib` dependencies for code generation, interactive simulation and PDF export.
+After this execution, the AppImage should be available in `./ode-designer.AppImage`. This AppImage, as well as those found in *Releases*, include Python and the `scipy` and `matplotlib` dependencies for code generation, interactive simulation and PDF export.
 
 ### Manually
 
@@ -142,18 +141,18 @@ To compile and run the software outside of the AppImage, the Rust toolchain (nig
 $ cargo run
 ```
 
-Or 
+Or
 
 ```sh
 $ cargo build --release
 $ ./target/release/ode-designer-rs
 ```
 
-If anything goes wrong, try 
+If anything goes wrong, try
 
 ```sh
 $ git submodule update --init --recursive
 $ git submodule update --recursive --remote
 ```
 
-Then, recompile and run. 
+Then, recompile and run.
