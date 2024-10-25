@@ -88,7 +88,9 @@ pub struct SimulationState {
     pub colors: Vec<ImVec4>,
     pub set_focus_to_tab: bool,
     real_data: Option<csvdata::CSVData>,
+    tab_locale_parameter: HashMap<&'static str, FluentValue<'static>>,
 }
+
 #[derive(PartialEq)]
 pub enum TabAction {
     Open,
@@ -112,6 +114,7 @@ impl SimulationState {
             colors: COLORS.to_owned(),
             set_focus_to_tab: true,
             real_data: Default::default(),
+            tab_locale_parameter: HashMap::from([("idx", 0.into())]),
         }
     }
 
@@ -123,19 +126,15 @@ impl SimulationState {
         locale: &mut Locale,
     ) -> TabAction {
         let [content_width, content_height] = ui.content_region_avail();
-    
         let _line_weight = implot::push_style_var_f32(&implot::StyleVar::LineWeight, 2.0);
-    
         let mut opened = true;
-    
+
         let mut flags = imgui::TabItemFlags::empty();
-    
+
         if set_focus {
             flags.set(imgui::TabItemFlags::SET_SELECTED, true);
         }
-    
-        static mut ARGS: Lazy<HashMap<&'static str, FluentValue>> = Lazy::new(HashMap::new);
-    
+
         imgui::TabItem::new(locale.get("tab-all-plots"))
             .opened(&mut opened)
             .flags(flags)
@@ -163,7 +162,7 @@ impl SimulationState {
                                 implot::PlotLine::new(label).plot(&self.plot.data.time, line);
                                 color_token.pop();
                             });
-    
+
                         if let Some(ref real_data) = self.real_data {
                             let color_token = implot::push_style_color(
                                 &implot::PlotColorElement::MarkerFill,
@@ -179,21 +178,18 @@ impl SimulationState {
                         }
                     });
             });
-    
+
         let populations_per_tab = (self.plot_layout.cols * self.plot_layout.rows) as usize;
         let individual_plot_size = [
             content_width / self.plot_layout.cols as f32,
             content_height / self.plot_layout.rows as f32,
         ];
-    
-        for (tab_idx, tab_populations) in self.plot.data.lines.chunks(populations_per_tab).enumerate() {
-            // Safety: this variable is local to this function, which is not run
-            // in parallel or anything of the sort (since self is mutable).
-            // Therefore, it's safe to access this static variable and mutate it
-            unsafe {
-                ARGS.insert("idx", tab_idx.into());
-            }
-            imgui::TabItem::new(locale.fmt("tab-idx", unsafe { &ARGS }))
+
+        for (tab_idx, tab_populations) in
+            self.plot.data.lines.chunks(populations_per_tab).enumerate()
+        {
+            self.tab_locale_parameter.insert("idx", tab_idx.into());
+            imgui::TabItem::new(locale.fmt("tab-idx", &self.tab_locale_parameter))
                 .opened(&mut opened)
                 .build(ui, || {
                     tab_populations
@@ -217,7 +213,7 @@ impl SimulationState {
                                     );
                                     implot::PlotLine::new(label).plot(&self.plot.data.time, line);
                                     color_token.pop();
-    
+
                                     if let Some(ref real_data) = self.real_data {
                                         let color_token = implot::push_style_color(
                                             &implot::PlotColorElement::MarkerFill,
@@ -227,25 +223,26 @@ impl SimulationState {
                                             1.0,
                                         );
                                         real_data.lines.iter().for_each(|line| {
-                                            implot::PlotScatter::new("Real Data").plot(&real_data.time, line);
+                                            implot::PlotScatter::new("Real Data")
+                                                .plot(&real_data.time, line);
                                         });
                                         color_token.pop();
                                     }
                                 });
-    
+
                             if idx & 1 == 0 {
                                 ui.same_line();
                             }
                         });
                 });
         }
-    
+
         if opened {
             TabAction::Open
         } else {
             TabAction::Close
         }
-    }    
+    }
 }
 
 #[derive(Default)]
@@ -576,7 +573,12 @@ impl App {
         }
     }
 
-    fn plot_results(&mut self, locale: &Locale, estimated_params: Vec<(String, f64)>, real_data: Option<csvdata::CSVData>) {
+    fn plot_results(
+        &mut self,
+        locale: &Locale,
+        estimated_params: Vec<(String, f64)>,
+        real_data: Option<csvdata::CSVData>,
+    ) {
         let params_str = estimated_params
             .into_iter()
             .map(|(name, value)| format!("{}={}", name, value))
@@ -682,15 +684,19 @@ impl App {
                                 if ui.button(locale.get("plot-results")) {
                                     match param_state.load_real_data() {
                                         Ok(real_data) => {
-                                            let estimated_params = param_state.get_estimated_parameters();
-                                            self.plot_results(locale, estimated_params, Some(real_data));
+                                            let estimated_params =
+                                                param_state.get_estimated_parameters();
+                                            self.plot_results(
+                                                locale,
+                                                estimated_params,
+                                                Some(real_data),
+                                            );
                                         }
                                         Err(err) => {
                                             localized_error!(locale, "error-csv-read");
                                             eprintln!("{err}");
                                         }
                                     }
-                                
                                 }
                             }
                         }
@@ -789,8 +795,9 @@ impl App {
                         self.input_pins.get(input_pin_id)?,
                         self.output_pins.get(output_pin_id)?,
                     ];
-                    let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids) else {
-                        return None
+                    let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids)
+                    else {
+                        return None;
                     };
                     if !input_node.should_link(input_pin_id) {
                         // Poor man's early return
@@ -816,8 +823,9 @@ impl App {
                     self.input_pins.get(input_pin_id)?,
                     self.output_pins.get(output_pin_id)?,
                 ];
-                let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids) else {
-                    return None
+                let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids)
+                else {
+                    return None;
                 };
                 input_node
                     .get_input_mut(input_pin_id)?
