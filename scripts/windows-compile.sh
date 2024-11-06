@@ -2,9 +2,21 @@
 set -e
 
 die() {
-    echo Error: $@
+    echo -e Error: $@
     exit 1
 }
+
+if ! python -m pefile > /dev/null 2>&1 ; then
+    die 'Missing python library `pefile`. Please install it.'
+fi
+
+if ! which zip > /dev/null 2>&1; then
+    die 'Missing program `zip`. Please install it.'
+fi
+
+if ! which x86_64-w64-mingw32-gcc > /dev/null 2>&1; then
+    die 'Missing the `mingw-64` environment. Please install it.'
+fi
 
 # build information
 buildtype=debug
