@@ -100,7 +100,7 @@ pub struct TextFields {
 impl SimulationState {
     pub fn from_csv(csv_content: String, locale: &Locale) -> Self {
         let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
-
+        
         let pane_count = csv_data.population_count().div_ceil(4);
 
         Self {

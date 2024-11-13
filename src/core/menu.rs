@@ -129,6 +129,7 @@ impl App {
 
                     match execute_python_code(&mut command) {
                         Ok(output) => {
+                            
                             self.simulation_state = Some(SimulationState::from_csv(output, locale));
                             if let Some(mut simulation_state) = self.simulation_state.clone() {
                                 if !self.text_fields.x_label.is_empty() {
@@ -143,7 +144,7 @@ impl App {
                             }
                         }
                         Err(err) => {
-                            localized_error!(locale, "error-python-exec");
+                            localized_error!(locale, "error-python-exec", "reason" => err.to_string());
                             eprintln!("{err}")
                         }
                     }
