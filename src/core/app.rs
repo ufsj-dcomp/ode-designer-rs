@@ -741,7 +741,19 @@ impl App {
                     }
                 }
             },
-            _ => (),            
+            Node::Expression(node) => {
+                let name = node.name().trim();
+                if name.is_empty() {
+                    return None; 
+                }
+            },  
+            Node::Assigner(node) => {
+                let name = node.name().trim();
+                if name.is_empty() {
+                    return None; 
+                }
+            },     
+            _ => ()     
         }
 
         let node_id = node.id();

@@ -58,10 +58,7 @@ impl App {
                     .shortcut("Ctrl + O")
                     .build()
                 {
-                    if let Err(err) = self.load_state() {
-                        localized_error!(locale, "error-csv-read");
-                        eprintln!("{err}");
-                    }
+                    let _ = self.load_state();
                 }
 
                 if ui
