@@ -21,7 +21,7 @@ use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations, Term,
+    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations, Term
 };
 use crate::ode::csvdata;
 use crate::ode::odesystem::create_ode_system;
@@ -315,7 +315,11 @@ impl AppState {
                             .get(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
-                        let node_id = app.add_node(Node::build_from_ui(name.clone(), node_type));
+                        let Some(node_id) = app.add_node(Node::build_from_ui(name.clone(), node_type)) else { 
+                            localized_error!(locale, "error-invalid-term-name", "ident_name" => &*name); 
+                            return StateAction::Keep; 
+                        };
+
                         app.queue.push(Message::SetNodePos {
                             node_id,
                             screen_space_pos: *add_at_screen_space_pos,
@@ -642,7 +646,10 @@ impl App {
                     let tab_model = TabItem::new(locale.get("tab-model"));
                     tab_model.build(ui, || {
                         if let Some(node) = self.sidebar_state.draw(ui, &self.node_types, locale) {
-                            self.add_node(node);
+                            let name = node.name().to_owned();
+                            if self.add_node(node).is_none() {
+                                localized_error!(locale, "error-invalid-term-name", "ident_name" => name);
+                            }
                         }
                         self.draw_main_tab(ui, context, plot_ui, locale);
                     });
@@ -720,7 +727,23 @@ impl App {
         }
     }
 
-    pub fn add_node(&mut self, node: Node) -> NodeId {
+    pub fn add_node(&mut self, node: Node) -> Option<NodeId> {
+        match &node {
+            Node::Term(term) => {
+                let name = term.name().trim();
+                if name.is_empty() {
+                    return None; 
+                }
+                else {
+                    match name.as_bytes()[0] {
+                        b'0'..=b'9' => return None,
+                        _ => () 
+                    }
+                }
+            },
+            _ => (),            
+        }
+
         let node_id = node.id();
 
         if let Node::Term(term) = &node
@@ -738,7 +761,7 @@ impl App {
         }
 
         self.nodes.insert(node_id, node);
-        node_id
+        Some(node_id)
     }
 
     pub fn get_node(&self, id: NodeId) -> Option<&Node> {
@@ -1152,7 +1175,7 @@ impl App {
         let pending_ops: Vec<PendingOperations> = nodes_and_ops
             .into_iter()
             .filter_map(|(node, ops)| {
-                self.add_node(node);
+                self.add_node(node).unwrap();
                 ops
             })
             .collect();
@@ -1408,7 +1431,7 @@ mod tests {
         fn with_nodes<const N: usize>(nodes: [Node; N]) -> App {
             let mut app = App::default();
             nodes.into_iter().for_each(|node| {
-                app.add_node(node);
+                app.add_node(node).unwrap();
             });
 
             app
