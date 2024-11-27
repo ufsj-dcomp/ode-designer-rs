@@ -26,7 +26,7 @@ fluent_templates::static_loader! {
 const FLUENT_FILE_CONTENTS: &[&str] = &list_files!(include_str, "../locales/en/*.ftl");
 
 /// Result of the concatenation of all English Fluent Files' contents
-const FLUENT_UNITS: &str = konst::string::str_concat!(FLUENT_FILE_CONTENTS);
+const FLUENT_UNITS: &str = konst::string::str_join!("\n", FLUENT_FILE_CONTENTS);
 
 /// Contains a static array of words available to be used in translations,
 /// parsed from the English Fluent units. Given a line `word = ...`, extracts
