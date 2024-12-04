@@ -58,7 +58,7 @@ impl App {
                     .shortcut("Ctrl + O")
                     .build()
                 {
-                    let _ = self.load_state();
+                    let _ = self.load_state();                    
                 }
 
                 if ui
