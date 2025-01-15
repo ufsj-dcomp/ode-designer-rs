@@ -1,0 +1,40 @@
+on:
+  push:
+    paths:
+      - "docs/**"
+
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: latest
+
+      - name: Build mdBook
+        shell: bash
+        run: mdbook build
+
+      - name: Publish Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: book/
+
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
