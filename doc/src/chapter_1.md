@@ -1,6 +1,6 @@
-# ODE-Designer
+# ODE Designer
 
-## How to install
+## Installation
 
 It is recommended to use the executables available in *Releases* on GitHub. [This link](https://github.com/ufsj-dcomp/ode-designer-rs/releases/latest) can be used to always redirect to the latest version.
 
