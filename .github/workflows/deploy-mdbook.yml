@@ -1,7 +1,8 @@
 on:
   push:
     paths:
-      - "docs/**"
+      - doc/**
+      - .github/workflow/deploy-mdbook.yml
 
   workflow_dispatch:
 
@@ -28,12 +29,12 @@ jobs:
 
       - name: Build mdBook
         shell: bash
-        run: mdbook build
+        run: mdbook build doc
 
       - name: Publish Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
-          path: book/
+          path: doc/book/
 
       - name: Publish to GitHub Pages
         id: deployment
