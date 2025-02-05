@@ -1,0 +1,600 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.05,
+    "end_time": 50.0,
+    "positions": {
+      "C": {
+        "x": 345.0,
+        "y": 1233.0
+      },
+      "C_decay": {
+        "x": 726.0,
+        "y": 1379.0
+      },
+      "C_eq": {
+        "x": 1231.0,
+        "y": 1367.0
+      },
+      "C_prod": {
+        "x": 1072.0,
+        "y": 1245.0
+      },
+      "D": {
+        "x": 346.0,
+        "y": 208.0
+      },
+      "D_elim": {
+        "x": 762.1546630859375,
+        "y": 141.49130249023438
+      },
+      "E": {
+        "x": 347.0,
+        "y": 832.0
+      },
+      "I": {
+        "x": 330.0,
+        "y": 534.0
+      },
+      "I_death": {
+        "x": 1229.0,
+        "y": 490.0
+      },
+      "I_elim_T": {
+        "x": 1047.0,
+        "y": 491.0
+      },
+      "I_eq": {
+        "x": 1393.0,
+        "y": 590.0
+      },
+      "I_plus_V": {
+        "x": 821.0,
+        "y": 1179.0
+      },
+      "T": {
+        "x": 336.0,
+        "y": 641.0
+      },
+      "T_death": {
+        "x": 1175.0,
+        "y": 1015.0
+      },
+      "T_eq": {
+        "x": 1309.0,
+        "y": 1126.0
+      },
+      "T_mig": {
+        "x": 736.0,
+        "y": 979.0
+      },
+      "V": {
+        "x": 344.0,
+        "y": 934.0
+      },
+      "V_elim": {
+        "x": 1238.0,
+        "y": 828.0
+      },
+      "V_eq": {
+        "x": 1375.0,
+        "y": 815.0
+      },
+      "a": {
+        "x": 1011.0,
+        "y": 400.0
+      },
+      "beta": {
+        "x": 744.1546630859375,
+        "y": 310.4913330078125
+      },
+      "beta_C": {
+        "x": 346.0,
+        "y": 1348.0
+      },
+      "constant_1": {
+        "x": 345.9929504394531,
+        "y": 1138.452880859375
+      },
+      "constant_2": {
+        "x": 319.1546630859375,
+        "y": 412.4913330078125
+      },
+      "dCdt": {
+        "x": 1488.0,
+        "y": 1419.0
+      },
+      "dDdt": {
+        "x": 1533.0,
+        "y": 281.0
+      },
+      "dEdt": {
+        "x": 845.0,
+        "y": 746.0
+      },
+      "dIdt": {
+        "x": 1662.0,
+        "y": 658.0
+      },
+      "dTdt": {
+        "x": 1569.0,
+        "y": 1162.0
+      },
+      "dVdt": {
+        "x": 1542.0,
+        "y": 842.0
+      },
+      "damage": {
+        "x": 787.0,
+        "y": 451.0
+      },
+      "damage_I": {
+        "x": 634.0,
+        "y": 347.0
+      },
+      "damage_eq": {
+        "x": 1209.0,
+        "y": 242.0
+      },
+      "damage_prod": {
+        "x": 973.1546630859375,
+        "y": 74.4913330078125
+      },
+      "infection": {
+        "x": 618.0,
+        "y": 727.0
+      },
+      "k_E": {
+        "x": 346.0,
+        "y": 751.0
+      },
+      "k_I": {
+        "x": 829.0,
+        "y": 640.0
+      },
+      "k_V": {
+        "x": 1010.0,
+        "y": 793.0
+      },
+      "m_C": {
+        "x": 338.0,
+        "y": 1462.0
+      },
+      "m_D": {
+        "x": 331.1546630859375,
+        "y": 309.4913024902344
+      },
+      "m_T": {
+        "x": 965.0,
+        "y": 932.0
+      },
+      "s_T": {
+        "x": 343.0,
+        "y": 1041.0
+      },
+      "t_aux": {
+        "x": 613.0,
+        "y": 1102.0
+      }
+    },
+    "extension_files": [
+      "demo-extension.py",
+      "extensao_competicao.py"
+    ]
+  },
+  "arguments": [
+    {
+      "name": "D",
+      "value": 0.0
+    },
+    {
+      "name": "constant_1",
+      "value": 1.0
+    },
+    {
+      "name": "damage_prod",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "beta",
+          "contribution": "+"
+        },
+        {
+          "name": "damage",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "T_death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_T",
+          "contribution": "+"
+        },
+        {
+          "name": "T",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "beta",
+      "value": 0.05
+    },
+    {
+      "name": "k_I",
+      "value": 0.05
+    },
+    {
+      "name": "constant_2",
+      "value": 2.0
+    },
+    {
+      "name": "T",
+      "value": 10.0
+    },
+    {
+      "name": "beta_C",
+      "value": 0.02
+    },
+    {
+      "name": "s_T",
+      "value": 0.08
+    },
+    {
+      "name": "m_D",
+      "value": 0.1
+    },
+    {
+      "name": "T_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "T_mig",
+          "contribution": "+"
+        },
+        {
+          "name": "T_death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "C_decay",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_C",
+          "contribution": "+"
+        },
+        {
+          "name": "C",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "t_aux",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "constant_1",
+          "contribution": "+"
+        },
+        {
+          "name": "C",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "m_T",
+      "value": 0.3
+    },
+    {
+      "name": "I",
+      "value": 0.0
+    },
+    {
+      "name": "C_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "C_prod",
+          "contribution": "+"
+        },
+        {
+          "name": "C_decay",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "I_death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "a",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "V",
+      "value": 10.0
+    },
+    {
+      "name": "k_V",
+      "value": 0.2
+    },
+    {
+      "name": "I_elim_T",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "k_I",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        },
+        {
+          "name": "T",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "m_C",
+      "value": 0.6
+    },
+    {
+      "name": "a",
+      "value": 0.05
+    },
+    {
+      "name": "E",
+      "value": 5000.0
+    },
+    {
+      "name": "V_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "I_death",
+          "contribution": "+"
+        },
+        {
+          "name": "V_elim",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "T_mig",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "s_T",
+          "contribution": "+"
+        },
+        {
+          "name": "t_aux",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "D_elim",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_D",
+          "contribution": "+"
+        },
+        {
+          "name": "D",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "infection",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "k_E",
+          "contribution": "-"
+        },
+        {
+          "name": "E",
+          "contribution": "+"
+        },
+        {
+          "name": "V",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "I_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "infection",
+          "contribution": "-"
+        },
+        {
+          "name": "I_elim_T",
+          "contribution": "-"
+        },
+        {
+          "name": "I_death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "C",
+      "value": 0.0
+    },
+    {
+      "name": "I_plus_V",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "I",
+          "contribution": "+"
+        },
+        {
+          "name": "V",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "k_E",
+      "value": 0.0004
+    },
+    {
+      "name": "V_elim",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "k_V",
+          "contribution": "+"
+        },
+        {
+          "name": "V",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "C_prod",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "beta_C",
+          "contribution": "+"
+        },
+        {
+          "name": "T",
+          "contribution": "+"
+        },
+        {
+          "name": "I_plus_V",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "damage",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "damage_I",
+          "contribution": "+"
+        },
+        {
+          "name": "T",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "damage_I",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "constant_2",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "damage_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "damage_prod",
+          "contribution": "+"
+        },
+        {
+          "name": "D_elim",
+          "contribution": "-"
+        }
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "name": "dVdt",
+      "operates_on": "V",
+      "argument": "V_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dTdt",
+      "operates_on": "T",
+      "argument": "T_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dIdt",
+      "operates_on": "I",
+      "argument": "I_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dCdt",
+      "operates_on": "C",
+      "argument": "C_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dDdt",
+      "operates_on": "D",
+      "argument": "damage_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "dEdt",
+      "operates_on": "E",
+      "argument": "infection",
+      "contribution": "+"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ pub fn rgb(r: u8, g: u8, b: u8) -> [f32; 4] {
 pub fn input_num(ui: &Ui, label: &str, value: &mut f64) -> bool {
     let _width = ui.push_item_width(72.0);
     ui.input_scalar(label, value)
-        .display_format("%.8lf")
+        .display_format("%.5lf")
         .build()
 }
 

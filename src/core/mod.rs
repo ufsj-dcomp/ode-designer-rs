@@ -100,7 +100,7 @@ impl System {
         // scaling factor. Meaning, 13.0 pixels should look the same size
         // on two different screens, and thus we do not need to scale this
         // value (as the scaling is handled by winit)
-        let font_size = 13.0f32;
+        let font_size = 14.0f32;
         let nerdfont_size = font_size;
 
         let nerdfont = include_bytes!(concat!(

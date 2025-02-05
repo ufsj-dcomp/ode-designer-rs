@@ -144,7 +144,7 @@ impl Node {
     }
 
     /// Displays the node, but also handles the surrounding functionality like: implementing a
-    /// "close" button, relays messages and app state, and node renaming.
+    /// "close" button, relays messages, app state, and node renaming.
     pub fn process_node(
         &mut self,
         ui: &Ui,
