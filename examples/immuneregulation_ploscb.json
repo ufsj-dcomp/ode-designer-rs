@@ -1,0 +1,554 @@
+{
+  "metadata": {
+    "name": "TODO",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.01,
+    "end_time": 100.0,
+    "positions": {
+      "AC": {
+        "x": 997.3880615234375,
+        "y": 759.99072265625
+      },
+      "AC decay": {
+        "x": 1690.0,
+        "y": 831.0
+      },
+      "AC eq": {
+        "x": 1866.0,
+        "y": 723.0
+      },
+      "AC ode": {
+        "x": 2114.0,
+        "y": 790.0
+      },
+      "Ac prod": {
+        "x": 1695.0,
+        "y": 635.0
+      },
+      "CH": {
+        "x": 327.3880615234375,
+        "y": 975.99072265625
+      },
+      "CH regulation": {
+        "x": 1292.0,
+        "y": 1193.0
+      },
+      "CH+TD": {
+        "x": 869.0,
+        "y": 508.0
+      },
+      "CH_Decay": {
+        "x": 752.0,
+        "y": 1300.0
+      },
+      "Ch ode": {
+        "x": 2029.0,
+        "y": 1341.0
+      },
+      "Ch prod": {
+        "x": 756.0,
+        "y": 1115.0
+      },
+      "Ch_eq": {
+        "x": 1596.0,
+        "y": 1275.0
+      },
+      "Mreg": {
+        "x": 340.3880615234375,
+        "y": 1432.99072265625
+      },
+      "Mreg death": {
+        "x": 802.0,
+        "y": 1724.0
+      },
+      "Mreg eq": {
+        "x": 1024.0,
+        "y": 1621.0
+      },
+      "Mreg migration": {
+        "x": 802.0,
+        "y": 1522.0
+      },
+      "Mreg ode": {
+        "x": 1302.0,
+        "y": 1680.0
+      },
+      "N": {
+        "x": 395.3880615234375,
+        "y": 463.99072265625
+      },
+      "N migration": {
+        "x": 1272.0,
+        "y": 406.0
+      },
+      "N ode": {
+        "x": 1953.3387451171875,
+        "y": 136.5135498046875
+      },
+      "N_damage": {
+        "x": 620.3880615234375,
+        "y": 114.99072265625
+      },
+      "N_death": {
+        "x": 824.9998779296875,
+        "y": 194.0
+      },
+      "N_eq": {
+        "x": 1452.0,
+        "y": 67.0
+      },
+      "N_migration": {
+        "x": 1107.0,
+        "y": 325.0
+      },
+      "TD": {
+        "x": 239.3880615234375,
+        "y": 590.99072265625
+      },
+      "TD elimination": {
+        "x": 762.0,
+        "y": 812.0
+      },
+      "TD ode": {
+        "x": 1260.0,
+        "y": 985.0
+      },
+      "TD_eq": {
+        "x": 948.0,
+        "y": 900.0
+      },
+      "alpha": {
+        "x": 1014.0,
+        "y": 646.0
+      },
+      "beta_AC": {
+        "x": 1394.0,
+        "y": 580.0
+      },
+      "beta_N": {
+        "x": 371.3880615234375,
+        "y": 312.99072265625
+      },
+      "beta_ch": {
+        "x": 330.0,
+        "y": 1107.0
+      },
+      "gamma": {
+        "x": 466.0,
+        "y": 1587.0
+      },
+      "k": {
+        "x": 211.0,
+        "y": 714.0
+      },
+      "m_AC": {
+        "x": 1368.0,
+        "y": 858.0
+      },
+      "m_N": {
+        "x": 717.0,
+        "y": 4.0
+      },
+      "m_ch": {
+        "x": 346.0,
+        "y": 1212.0
+      },
+      "m_mreg": {
+        "x": 463.0,
+        "y": 1700.0
+      },
+      "s_N": {
+        "x": 834.0,
+        "y": 385.0
+      }
+    },
+    "extension_files": [
+      "inhibition.py"
+    ]
+  },
+  "arguments": [
+    {
+      "name": "TD_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "N_damage",
+          "contribution": "+"
+        },
+        {
+          "name": "TD elimination",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "s_N",
+      "value": 0.5
+    },
+    {
+      "name": "CH",
+      "value": 0.0
+    },
+    {
+      "name": "CH+TD",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "TD",
+          "contribution": "+"
+        },
+        {
+          "name": "CH",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N migration",
+      "operation": "inhibition",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "N_migration",
+          "contribution": "+"
+        },
+        {
+          "name": "alpha",
+          "contribution": "+"
+        },
+        {
+          "name": "AC",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N_damage",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "beta_N",
+          "contribution": "+"
+        },
+        {
+          "name": "N",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "TD elimination",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "TD",
+          "contribution": "+"
+        },
+        {
+          "name": "Mreg",
+          "contribution": "+"
+        },
+        {
+          "name": "k",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "m_N",
+      "value": 0.3
+    },
+    {
+      "name": "beta_ch",
+      "value": 0.5
+    },
+    {
+      "name": "AC",
+      "value": 0.0
+    },
+    {
+      "name": "N_migration",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "s_N",
+          "contribution": "+"
+        },
+        {
+          "name": "CH+TD",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "beta_AC",
+      "value": 0.5
+    },
+    {
+      "name": "N_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "N_damage",
+          "contribution": "-"
+        },
+        {
+          "name": "N_death",
+          "contribution": "-"
+        },
+        {
+          "name": "N migration",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "gamma",
+      "value": 0.2
+    },
+    {
+      "name": "Ac prod",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "beta_AC",
+          "contribution": "+"
+        },
+        {
+          "name": "Mreg",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "m_ch",
+      "value": 0.4
+    },
+    {
+      "name": "beta_N",
+      "value": 0.6
+    },
+    {
+      "name": "Mreg migration",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "gamma",
+          "contribution": "+"
+        },
+        {
+          "name": "N",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "Mreg",
+      "value": 0.0
+    },
+    {
+      "name": "CH_Decay",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_ch",
+          "contribution": "+"
+        },
+        {
+          "name": "CH",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "m_AC",
+      "value": 0.3
+    },
+    {
+      "name": "CH regulation",
+      "operation": "inhibition",
+      "style": "Prefixed",
+      "composition": [
+        {
+          "name": "Ch prod",
+          "contribution": "+"
+        },
+        {
+          "name": "alpha",
+          "contribution": "+"
+        },
+        {
+          "name": "AC",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N_death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_N",
+          "contribution": "+"
+        },
+        {
+          "name": "N",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "AC decay",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "AC",
+          "contribution": "+"
+        },
+        {
+          "name": "m_AC",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "Ch_eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "CH regulation",
+          "contribution": "+"
+        },
+        {
+          "name": "CH_Decay",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "Ch prod",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "beta_ch",
+          "contribution": "+"
+        },
+        {
+          "name": "N",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "N",
+      "value": 0.0
+    },
+    {
+      "name": "k",
+      "value": 0.15
+    },
+    {
+      "name": "Mreg death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "m_mreg",
+          "contribution": "+"
+        },
+        {
+          "name": "Mreg",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "Mreg eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "Mreg migration",
+          "contribution": "+"
+        },
+        {
+          "name": "Mreg death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "m_mreg",
+      "value": 0.02
+    },
+    {
+      "name": "AC eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "Ac prod",
+          "contribution": "+"
+        },
+        {
+          "name": "AC decay",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "TD",
+      "value": 10.0
+    },
+    {
+      "name": "alpha",
+      "value": 0.5
+    }
+  ],
+  "equations": [
+    {
+      "name": "N ode",
+      "operates_on": "N",
+      "argument": "N_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "Ch ode",
+      "operates_on": "CH",
+      "argument": "Ch_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "TD ode",
+      "operates_on": "TD",
+      "argument": "TD_eq",
+      "contribution": "+"
+    },
+    {
+      "name": "Mreg ode",
+      "operates_on": "Mreg",
+      "argument": "Mreg eq",
+      "contribution": "+"
+    },
+    {
+      "name": "AC ode",
+      "operates_on": "AC",
+      "argument": "AC eq",
+      "contribution": "+"
+    }
+  ]
+}

@@ -1,0 +1,398 @@
+{
+  "metadata": {
+    "name": "",
+    "type": "ode",
+    "start_time": 0.0,
+    "delta_time": 0.01,
+    "end_time": 50.0,
+    "positions": {
+      "E": {
+        "x": 203.0,
+        "y": 870.0
+      },
+      "E eq": {
+        "x": 1159.0,
+        "y": 978.0
+      },
+      "E ode": {
+        "x": 1310.0,
+        "y": 984.0
+      },
+      "I": {
+        "x": 190.0,
+        "y": 355.0
+      },
+      "I death": {
+        "x": 969.0,
+        "y": 445.0
+      },
+      "I eq": {
+        "x": 1230.0,
+        "y": 509.0
+      },
+      "I ode": {
+        "x": 1543.0,
+        "y": 599.0
+      },
+      "Pathogen death": {
+        "x": 930.0,
+        "y": 884.0
+      },
+      "R": {
+        "x": 187.0,
+        "y": 712.0
+      },
+      "R death": {
+        "x": 547.0,
+        "y": 726.0
+      },
+      "R eq": {
+        "x": 944.0,
+        "y": 691.0
+      },
+      "R ode": {
+        "x": 1084.0,
+        "y": 727.0
+      },
+      "S": {
+        "x": 182.0,
+        "y": 204.0
+      },
+      "S eq": {
+        "x": 889.0,
+        "y": 15.0
+      },
+      "S ode": {
+        "x": 1231.0,
+        "y": 113.0
+      },
+      "S_death": {
+        "x": 493.0,
+        "y": -135.0
+      },
+      "Transmission": {
+        "x": 516.0,
+        "y": 966.0
+      },
+      "b": {
+        "x": 669.0,
+        "y": -82.0
+      },
+      "bd": {
+        "x": 203.0,
+        "y": 86.0
+      },
+      "be": {
+        "x": 186.0,
+        "y": 538.0
+      },
+      "c": {
+        "x": 691.0,
+        "y": 843.0
+      },
+      "g": {
+        "x": 847.0,
+        "y": 265.0
+      },
+      "infection": {
+        "x": 562.0,
+        "y": 181.0
+      },
+      "infection_free_pathogen": {
+        "x": 530.0,
+        "y": 484.0
+      },
+      "n": {
+        "x": 205.0,
+        "y": -42.0
+      },
+      "p": {
+        "x": 225.0,
+        "y": 1026.0
+      },
+      "recover": {
+        "x": 1105.0,
+        "y": 306.0
+      }
+    },
+    "extension_files": [
+      "inhibition.py"
+    ]
+  },
+  "arguments": [
+    {
+      "name": "S_death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "n",
+          "contribution": "+"
+        },
+        {
+          "name": "S",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "infection",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "bd",
+          "contribution": "+"
+        },
+        {
+          "name": "S",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "c",
+      "value": 1.0
+    },
+    {
+      "name": "I death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "n",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "bd",
+      "value": 0.01
+    },
+    {
+      "name": "E eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "Transmission",
+          "contribution": "+"
+        },
+        {
+          "name": "Pathogen death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "p",
+      "value": 0.1
+    },
+    {
+      "name": "Pathogen death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "c",
+          "contribution": "+"
+        },
+        {
+          "name": "E",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "S",
+      "value": 1000.0
+    },
+    {
+      "name": "R",
+      "value": 0.0
+    },
+    {
+      "name": "R death",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "n",
+          "contribution": "+"
+        },
+        {
+          "name": "R",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "Transmission",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "p",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "infection_free_pathogen",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "be",
+          "contribution": "+"
+        },
+        {
+          "name": "S",
+          "contribution": "+"
+        },
+        {
+          "name": "E",
+          "contribution": "+"
+        }
+      ]
+    },
+    {
+      "name": "E",
+      "value": 0.0
+    },
+    {
+      "name": "S eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "b",
+          "contribution": "+"
+        },
+        {
+          "name": "infection",
+          "contribution": "-"
+        },
+        {
+          "name": "infection_free_pathogen",
+          "contribution": "-"
+        },
+        {
+          "name": "S_death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "be",
+      "value": 0.01
+    },
+    {
+      "name": "g",
+      "value": 6.0
+    },
+    {
+      "name": "R eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "recover",
+          "contribution": "+"
+        },
+        {
+          "name": "R death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "n",
+      "value": 0.1
+    },
+    {
+      "name": "I",
+      "value": 1.0
+    },
+    {
+      "name": "b",
+      "value": 100.0
+    },
+    {
+      "name": "I eq",
+      "operation": "+",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "infection",
+          "contribution": "+"
+        },
+        {
+          "name": "infection_free_pathogen",
+          "contribution": "+"
+        },
+        {
+          "name": "recover",
+          "contribution": "-"
+        },
+        {
+          "name": "I death",
+          "contribution": "-"
+        }
+      ]
+    },
+    {
+      "name": "recover",
+      "operation": "*",
+      "style": "Infixed",
+      "composition": [
+        {
+          "name": "g",
+          "contribution": "+"
+        },
+        {
+          "name": "I",
+          "contribution": "+"
+        }
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "name": "S ode",
+      "operates_on": "S",
+      "argument": "S eq",
+      "contribution": "+"
+    },
+    {
+      "name": "E ode",
+      "operates_on": "E",
+      "argument": "E eq",
+      "contribution": "+"
+    },
+    {
+      "name": "I ode",
+      "operates_on": "I",
+      "argument": "I eq",
+      "contribution": "+"
+    },
+    {
+      "name": "R ode",
+      "operates_on": "R",
+      "argument": "R eq",
+      "contribution": "+"
+    }
+  ]
+}

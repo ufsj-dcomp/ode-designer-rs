@@ -53,6 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let plot_ctx = implot::Context::create();
+    plot_ctx.use_classic_colors();
 
     system.main_loop(move |_, ui| {
         app.draw(

@@ -8,7 +8,7 @@ use std::process::Command;
 use fluent_bundle::FluentValue;
 use imnodes::{InputPinId, LinkId, NodeId, OutputPinId};
 
-use implot::{ImVec4, PlotUi};
+use implot::{ImVec4, PlotFlags, PlotUi};
 use odeir::models::ode::OdeModel;
 use rfd::FileDialog;
 use strum::{VariantArray, VariantNames};
@@ -135,9 +135,10 @@ impl SimulationState {
             .flags(flags)
             .build(ui, || {
                 implot::Plot::new(&self.plot.title)
+                    //.with_legend_location()
                     .size([content_width, content_height])
                     .x_label(&self.plot.xlabel)
-                    .y_label(&self.plot.ylabel)
+                    .y_label(&self.plot.ylabel)                    
                     .build(plot_ui, || {
                         self.plot
                             .data
