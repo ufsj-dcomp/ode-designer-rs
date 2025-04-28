@@ -21,7 +21,8 @@ use crate::extensions::Extension;
 use crate::locale::Locale;
 use crate::message::{Message, MessageQueue, SendData, TaggedMessage};
 use crate::nodes::{
-    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation, PendingOperations, Term
+    LinkEvent, Node, NodeImpl, NodeTypeRepresentation, NodeVariant, PendingOperation,
+    PendingOperations, Term,
 };
 use crate::ode::csvdata;
 use crate::ode::odesystem::create_ode_system;
@@ -100,7 +101,7 @@ pub struct TextFields {
 impl SimulationState {
     pub fn from_csv(csv_content: String, locale: &Locale) -> Self {
         let csv_data = CSVData::load_data(csv_content.as_bytes()).unwrap();
-        
+
         let pane_count = csv_data.population_count().div_ceil(4);
 
         Self {
@@ -138,7 +139,7 @@ impl SimulationState {
                     //.with_legend_location()
                     .size([content_width, content_height])
                     .x_label(&self.plot.xlabel)
-                    .y_label(&self.plot.ylabel)                    
+                    .y_label(&self.plot.ylabel)
                     .build(plot_ui, || {
                         self.plot
                             .data
@@ -316,9 +317,11 @@ impl AppState {
                             .get(*index)
                             .expect("User tried to construct an out-of-index node specialization");
 
-                        let Some(node_id) = app.add_node(Node::build_from_ui(name.clone(), node_type)) else { 
-                            localized_error!(locale, "error-invalid-term-name", "ident_name" => &*name); 
-                            return StateAction::Keep; 
+                        let Some(node_id) =
+                            app.add_node(Node::build_from_ui(name.clone(), node_type))
+                        else {
+                            localized_error!(locale, "error-invalid-term-name", "ident_name" => &*name);
+                            return StateAction::Keep;
                         };
 
                         app.queue.push(Message::SetNodePos {
@@ -733,28 +736,27 @@ impl App {
             Node::Term(term) => {
                 let name = term.name().trim();
                 if name.is_empty() {
-                    return None; 
-                }
-                else {
+                    return None;
+                } else {
                     match name.as_bytes()[0] {
                         b'0'..=b'9' => return None,
-                        _ => () 
+                        _ => (),
                     }
                 }
-            },
+            }
             Node::Expression(node) => {
                 let name = node.name().trim();
                 if name.is_empty() {
-                    return None; 
+                    return None;
                 }
-            },  
+            }
             Node::Assigner(node) => {
                 let name = node.name().trim();
                 if name.is_empty() {
-                    return None; 
+                    return None;
                 }
-            },     
-            _ => ()     
+            }
+            _ => (),
         }
 
         let node_id = node.id();
@@ -821,18 +823,26 @@ impl App {
                         contribution,
                         ..
                     } = &link;
-                    let node_ids = [
-                        self.input_pins.get(input_pin_id)?,
-                        self.output_pins.get(output_pin_id)?,
-                    ];
-                    let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids)
-                    else {
+                    let input_node_id = self.input_pins.get(input_pin_id)?;
+                    let output_node_id = self.output_pins.get(output_pin_id)?;
+
+                    if input_node_id == output_node_id {
+                        // Se os dois IDs forem iguais, não é possível pegar duas refs mutáveis diferentes
                         return None;
-                    };
+                    }
+
+                    // Pegamos primeiro um dos nós mutavelmente
+                    let input_node_ptr = self.nodes.get_mut(input_node_id)? as *mut Node;
+                    let output_node_ptr = self.nodes.get_mut(output_node_id)? as *mut Node;
+
+                    // Usamos ponteiros brutos para contornar o empréstimo temporário (seguro porque já verificamos que são diferentes)
+                    let (input_node, output_node) =
+                        unsafe { (&mut *input_node_ptr, &mut *output_node_ptr) };
+
                     if !input_node.should_link(input_pin_id) {
-                        // Poor man's early return
                         None?
                     }
+
                     input_node
                         .get_input_mut(input_pin_id)?
                         .link_to((*output_pin_id, *contribution));
@@ -849,20 +859,27 @@ impl App {
                     ref output_pin_id,
                     ..
                 } = &link;
-                let node_ids = [
-                    self.input_pins.get(input_pin_id)?,
-                    self.output_pins.get(output_pin_id)?,
-                ];
-                let [Some(input_node), Some(output_node)] = self.nodes.get_many_mut(node_ids)
-                else {
+
+                let input_node_id = self.input_pins.get(input_pin_id)?;
+                let output_node_id = self.output_pins.get(output_pin_id)?;
+
+                if input_node_id == output_node_id {
                     return None;
-                };
+                }
+
+                let input_node_ptr = self.nodes.get_mut(input_node_id)? as *mut Node;
+                let output_node_ptr = self.nodes.get_mut(output_node_id)? as *mut Node;
+
+                let (input_node, output_node) =
+                    unsafe { (&mut *input_node_ptr, &mut *output_node_ptr) };
+
                 input_node
                     .get_input_mut(input_pin_id)?
                     .unlink(output_pin_id);
                 output_node
                     .get_output_mut(output_pin_id)?
                     .unlink(input_pin_id);
+
                 input_node.notify(LinkEvent::Pop(*input_pin_id))
             }
             Message::AttributeAssignerOperatesOn { assigner_id, value } => {
