@@ -2,10 +2,6 @@
 	path = crates/imnodes
 	url = https://github.com/Diegovsky/imnodes-rs
 	branch = ode-designer
-[submodule "crates/odeir"]
-	path = crates/odeir
-	url = https://github.com/syndelis/odeir
-	branch = master
 [submodule "crates/implot-rs"]
 	path = crates/implot-rs
 	url = https://github.com/syndelis/implot-rs
