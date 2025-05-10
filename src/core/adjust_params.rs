@@ -54,7 +54,7 @@ pub struct ParameterEstimationState {
     populations: BTreeMap<NodeId, Term>,
     pub ode_system: OdeSystem,
     pub estimator: ParameterEstimation,
-    file_path: PathBuf,
+    pub file_path: PathBuf,
     metadata: MetadataFields,
 }
 

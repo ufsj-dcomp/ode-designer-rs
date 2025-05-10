@@ -699,7 +699,7 @@ impl App {
                                         );
                                     }
                                     Err(err) => {
-                                        localized_error!(locale, "error-csv-read");
+                                        localized_error!(locale, "error-csv-read", "file" => param_state.file_path.display().to_string());
                                         eprintln!("{err}");
                                     }
                                 }
