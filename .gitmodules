@@ -10,3 +10,6 @@
 	path = crates/implot-rs
 	url = https://github.com/syndelis/implot-rs
 	branch = ode-designer
+[submodule "crates/list-files-macro-rs"]
+	path = crates/list-files-macro-rs
+	url = https://github.com/Syndelis/list-files-macro-rs
