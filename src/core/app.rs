@@ -823,24 +823,22 @@ impl App {
                         contribution,
                         ..
                     } = &link;
+
                     let input_node_id = self.input_pins.get(input_pin_id)?;
                     let output_node_id = self.output_pins.get(output_pin_id)?;
 
+                    // HashMap::get_disjoint_mut will panick if keys overlap
                     if input_node_id == output_node_id {
-                        // Se os dois IDs forem iguais, não é possível pegar duas refs mutáveis diferentes
                         return None;
                     }
 
-                    // Pegamos primeiro um dos nós mutavelmente
-                    let input_node_ptr = self.nodes.get_mut(input_node_id)? as *mut Node;
-                    let output_node_ptr = self.nodes.get_mut(output_node_id)? as *mut Node;
-
-                    // Usamos ponteiros brutos para contornar o empréstimo temporário (seguro porque já verificamos que são diferentes)
-                    let (input_node, output_node) =
-                        unsafe { (&mut *input_node_ptr, &mut *output_node_ptr) };
+                    let [Some(input_node), Some(output_node)] = self.nodes.get_disjoint_mut([input_node_id, output_node_id])
+                    else {
+                        return None;
+                    };
 
                     if !input_node.should_link(input_pin_id) {
-                        None?
+                        return None;
                     }
 
                     input_node
