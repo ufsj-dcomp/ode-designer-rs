@@ -1,0 +1,134 @@
+{
+    "metadata": {
+        "name": "TODO",
+        "type": "ode",
+        "start_time": 0.0,
+        "delta_time": 0.1,
+        "end_time": 10.0,
+        "positions": {
+
+        }
+    },
+    "arguments": [
+        {
+            "name": "alpha",
+            "value": 1.1
+        },
+        {
+            "name": "beta",
+            "value": 0.9
+        },
+        {
+            "name": "gamma",
+            "value": 1.0
+        },
+        {
+            "name": "omega",
+            "value": 0.8
+        },
+        {
+            "name": "x",
+            "value": 100.0
+        },
+        {
+            "name": "y",
+            "value": 50.0
+        },
+        {
+            "name": "alpha_x",
+            "operation": "*",
+            "composition": [
+                {
+                    "name": "alpha",
+                    "contribution": "+"
+                },
+                {
+                    "name": "x",
+                    "contribution": "+"
+                }
+            ]
+        },
+        {
+            "name": "beta_xy",
+            "operation": "*",
+            "composition": [
+                {
+                    "name": "beta",
+                    "contribution": "+"
+                },
+                {
+                    "name": "y",
+                    "contribution": "+"
+                },
+                {
+                    "name": "x",
+                    "contribution": "+"
+                }
+            ]
+        },
+        {
+            "name": "dx",
+            "operation": "-",
+            "composition": [
+                {
+                    "name": "alpha_x",
+                    "contribution": "+"
+                },
+                {
+                    "name": "beta_xy",
+                    "contribution": "+"
+                }
+            ]
+        },
+        {
+            "name": "dy",
+            "operation": "+",
+            "composition": [
+                {
+                    "name": "gamma_y",
+                    "contribution": "-"
+                },
+                {
+                    "name": "omega_xy",
+                    "contribution": "+"
+                }
+            ]
+        },
+        {
+            "name": "gamma_y",
+            "operation": "*",
+            "composition": [
+                {
+                    "name": "gamma",
+                    "contribution": "+"
+                },
+                {
+                    "name": "y",
+                    "contribution": "+"
+                }
+            ]
+        },
+        {
+            "name": "omega_xy",
+            "operation": "*",
+            "composition": [
+                {
+                    "name": "omega",
+                    "contribution": "+"
+                },
+                {
+                    "name": "x",
+                    "contribution": "+"
+                },
+                {
+                    "name": "y",
+                    "contribution": "+"
+                }
+            ]
+        }
+    ],
+    "equations": {
+        "x": "dx",
+        "y": "dy"
+    }
+}

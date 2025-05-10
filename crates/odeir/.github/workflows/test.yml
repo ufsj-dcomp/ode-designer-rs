@@ -1,0 +1,24 @@
+name: Unit Tests
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  lib_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: "true"
+
+      - name: Use Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+
+      - name: Run Tests
+        run: cargo +nightly test
+

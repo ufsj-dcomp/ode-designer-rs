@@ -1,0 +1,3 @@
+[submodule "tests/lib/catch2"]
+	path = tests/lib/catch2
+	url = https://github.com/syndelis/catch2

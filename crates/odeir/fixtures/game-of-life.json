@@ -1,0 +1,95 @@
+{
+    "metadata": {
+        "name": "Conway's Game of Life",
+        "type": "cellular-automata",
+        "positions": { }
+    },
+    "arguments": [
+        {
+            "name": "dead",
+            "value": 0.5
+        },
+        {
+            "name": "alive",
+            "value": 0.5
+        },
+        {
+            "name": "reproduction",
+            "composition": [
+                {
+                    "name": "alive",
+                    "contribution": "+"
+                },
+                {
+                    "value": 3,
+                    "contribution": "+"
+                }
+            ],
+            "operation": "=="
+        },
+        {
+            "name": "overpopulation",
+            "composition": [
+                {
+                    "name": "alive",
+                    "contribution": "+"
+                },
+                {
+                    "value": 3,
+                    "contribution": "+"
+                }
+            ],
+            "operation": ">"
+        },
+        {
+            "name": "underpopulation",
+            "composition": [
+                {
+                    "name": "alive",
+                    "contribution": "+"
+                },
+                {
+                    "value": 2,
+                    "contribution": "+"
+                }
+            ],
+            "operation": "<"
+        },
+        {
+            "name": "dead_equation",
+            "composition": [
+                {
+                    "name": "overpopulation",
+                    "contribution": "+"
+                },
+                {
+                    "name": "underpopulation",
+                    "contribution": "+"
+                },
+                {
+                    "name": "reproduction",
+                    "contribution": "-"
+                }
+            ],
+            "operation": "+"
+        },
+        {
+            "name": "alive_equation",
+            "composition": [
+                {
+                    "value": 1,
+                    "contribution": "+"
+                },
+                {
+                    "name": "dead_equation",
+                    "contribution": "+"
+                }
+            ],
+            "operation": "-"
+        }
+    ],
+    "equations": {
+        "dead": "dead_equation",
+        "alive": "alive_equation"
+    }
+}

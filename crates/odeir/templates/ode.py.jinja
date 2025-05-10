@@ -1,0 +1,103 @@
+import argparse, contextlib, sys, os
+import scipy
+import numpy as np
+np.seterr(divide="raise")
+
+{% if extensions -%}
+# User extensions
+def node(func=None, format=None):
+    if func is None and format is not None:
+        def inner(inners_func):
+            return inners_func
+
+        return inner
+
+    else:
+        return func
+
+{% for ext in extensions -%}
+{{- ext -}}
+{%- endfor -%}
+{%- endif %}
+
+def initial_values() -> np.ndarray:
+    {% for arg in populations -%}
+        {{- arg.name }}_0 = {{ arg.value }}
+    {% endfor -%}
+
+    return np.array((
+        {% for arg in populations -%}
+            {{- arg.name }}_0,
+        {% endfor -%}
+    ))
+
+
+def constants() -> list:
+    {% for constant in constants -%}
+        {{- constant.name }} = {{ constant.value }}
+    {% endfor -%}
+
+    return [
+        {% for constant in constants -%}
+            {{- constant.name }},
+        {% endfor -%}
+    ]
+
+
+def constants_with_names() -> list:
+    constants_list = [
+        {% for constant in constants -%}
+            ("{{- constant.name }}", {{ constant.value }}),
+        {% endfor -%}
+    ]
+    return constants_list
+
+
+def variable_names() -> list[str]:
+    return [
+        {% for arg in populations -%}
+            "{{- arg.name }}",
+        {% endfor -%}
+    ]
+
+
+def system(t: np.float64, y: np.ndarray, *constants) -> np.ndarray:
+    # populations
+    {% for arg in populations -%}
+        {{- arg.name }}, {%- endfor %} = y
+
+    {%- if constants %}
+    # constants
+    {% for arg in constants -%}
+    {{- arg.name }},
+{%- endfor %} = constants
+    {% endif -%}
+
+{%- macro display_composite(arg) %}
+    {%- if arg.style == "Prefixed" -%} {{ arg.operation }}({%- endif -%}
+    {%- for comp in arg.composition -%}
+        {%- if comp.contribution|trim != '+' -%} {{ comp.contribution }} {% endif -%}
+        {%- if comp.value is defined -%} {{ comp.value }}
+        {%- else -%}
+            {%- set a = model.arguments[comp.name] -%}
+            {%- if a.value is defined -%} {{- a.name }}
+            {%- else -%} ({{- display_composite(a) -}})
+            {%- endif -%}
+        {%- endif -%}
+        {%- if not loop.last -%}
+            {%- if arg.style == "Prefixed" -%},{%- else -%}{{ arg.operation }}{%- endif -%}
+        {%- else -%}
+        {%- if arg.style == "Prefixed" -%}){%- endif -%}
+        {%- endif -%}
+    {%- endfor %} {% endmacro -%}
+
+{% for pop in populations %}
+    {%- set comp = model.arguments[equations[pop.name].argument] %}
+    d{{ pop.name }}_dt = {{ display_composite(comp) }}
+{%- endfor %}
+
+    return np.array([
+    {%- for arg in populations -%}
+            d{{ arg.name }}_dt {%- if not loop.last %}, {%- endif -%} {% endfor %}])
+
+# includes! "ode-support.py"

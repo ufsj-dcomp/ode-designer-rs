@@ -1,0 +1,45 @@
+name: Rust Linting
+
+on:
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - '**.rs'
+      - '**.toml'
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Use Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+      
+      - name: Rustfmt Check + Annotations
+        uses: Syndelis/rustfmt-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Use Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+      
+      - name: Run Clippy Check
+        uses: actions-rs-plus/clippy-check@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features

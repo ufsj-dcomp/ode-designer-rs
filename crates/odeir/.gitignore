@@ -1,0 +1,7 @@
+/target
+*.diff
+tests/fixtures/*.h*
+tests/test
+tests/obj/
+
+**/__pycache__/

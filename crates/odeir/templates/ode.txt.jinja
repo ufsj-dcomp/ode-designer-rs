@@ -1,0 +1,22 @@
+{%- macro display_composite(arg) %}
+    {%- if arg.style == "Prefixed" -%} {{ arg.operation }}({%- endif -%}
+    {%- for comp in arg.composition -%}
+        {%- if comp.contribution|trim != '+' -%} {{ comp.contribution }} {% endif -%}
+        {%- if comp.value is defined -%} {{ comp.value }}
+        {%- else -%}
+            {%- set a = model.arguments[comp.name] -%}
+            {%- if a.value is defined -%} {{- a.name }}
+            {%- else -%} ({{- display_composite(a) -}})
+            {%- endif -%}
+        {%- endif -%}
+        {%- if not loop.last -%}
+            {%- if arg.style == "Prefixed" -%},{%- else -%}{{ arg.operation }}{%- endif -%}
+        {%- else -%}
+        {%- if arg.style == "Prefixed" -%}){%- endif -%}
+        {%- endif -%}
+    {%- endfor %} {% endmacro -%}
+
+{% for pop in populations %}
+    {%- set comp = model.arguments[equations[pop.name].argument] %}
+    {{ pop.name }} = {{ display_composite(comp) }}
+{%- endfor %}
