@@ -46,6 +46,8 @@ When executed, ODE-Designer automatically generates Python code, leveraging the 
 
 Upon simulation completion, ODE-Designer opens new tabs to display the results. The first tab presents a combined population plot, while subsequent tabs provide individual population dynamics. The tab-based interface enables seamless switching between model construction, simulation results, and additional functionalities such as parameter estimation. 
 
+## Current functionalities 
+
 ### Node-based editor
 
 ![Image from the node editor in the software, containing the nodes 'Var', 'Const', 'grow' and 'dVar/dt', which construct the ODE dVar/dt = Var*Const](readme/demo-nodes.png)
