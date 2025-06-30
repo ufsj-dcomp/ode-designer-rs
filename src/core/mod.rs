@@ -100,8 +100,8 @@ impl System {
         // scaling factor. Meaning, 13.0 pixels should look the same size
         // on two different screens, and thus we do not need to scale this
         // value (as the scaling is handled by winit)
-        let font_size = 14.0f32;
-        let nerdfont_size = font_size;
+        let font_size: f32 = 14.0f32;
+        let nerdfont_size = font_size - 1.0;
 
         let nerdfont = include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -119,11 +119,14 @@ impl System {
         ];
 
         imgui.fonts().add_font(&[
-            FontSource::DefaultFontData { config: None },
+            FontSource::DefaultFontData { config: Some(FontConfig {
+                    size_pixels: nerdfont_size,  ..Default::default() }) 
+                },
             FontSource::TtfData {
-                data: nerdfont,
+                data: nerdfont,            
                 size_pixels: nerdfont_size,
                 config: Some(FontConfig {
+                    size_pixels: nerdfont_size,
                     glyph_ranges: FontGlyphRanges::from_slice(NERDFONT_RANGE),
                     ..Default::default()
                 }),

@@ -200,7 +200,7 @@ impl GA {
             //println!("iteration {:?}: ", i);
             let mut p_size: usize = self.population.len();
 
-            for _j in 0..(p_size / 5) {
+            for _j in 0..(p_size / 4) {
                 let parents: (&Chromosome, &Chromosome) = self.select_parents();
 
                 let mut new_individuals: (Chromosome, Chromosome) = self.crossover(parents);
@@ -216,8 +216,7 @@ impl GA {
             let count: usize = p_newsize - p_size;
             p_size = p_newsize;
 
-            //mutate and calculate fitness of each individual of new population
-            for id in count..p_newsize {
+            for id in 1..p_newsize {
                 self.population[id].mutation(self.mutation_rate, &self.bounds);
 
                 self.population[id].fitness = fitness_function(self.population[id].values.clone());

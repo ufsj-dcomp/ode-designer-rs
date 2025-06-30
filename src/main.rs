@@ -27,7 +27,7 @@ pub mod utils;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     color_eyre::install().unwrap();
 
-    let mut system = System::make_window("ODE-Designer", (1024.0, 768.0));
+    let mut system = System::make_window("ODE-Designer", (1278.0, 768.0));
 
     style::set_eel_style(system.imgui.style_mut());
 
@@ -53,7 +53,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let plot_ctx = implot::Context::create();
-    plot_ctx.use_classic_colors();
+    //plot_ctx.use_classic_colors();
+    plot_ctx.use_light_colors();
 
     system.main_loop(move |_, ui| {
         app.draw(

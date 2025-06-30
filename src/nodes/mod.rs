@@ -126,7 +126,7 @@ impl Node {
     /// Broadcasts messages from a node. Essentially, relays all messages sent by [`NodeImpl::send_data`] to the output pins.
     pub fn broadcast_data(&self) -> Vec<Message> {
         let Some(outputs) = self.outputs() else {
-            log::warn!("Tried broadcasting data to node without any output pins");
+            //log::warn!("Tried broadcasting data to node without any output pins");
             return vec![];
         };
         let data = self.send_data();

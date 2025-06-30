@@ -22,6 +22,30 @@ Expressions are constructed by combining terms and other expressions within the 
 
 Once a model is constructed, users can interact with the software in multiple ways: they can execute simulations directly within the GUI, generate PDF reports containing the simulation results, or export the corresponding Python code representation. Both GUI-based simulations and those executed via exported Python code leverage the solve\_ivp method from the scientific computing library Scipy.
 
+### Model building and simulation workflow on ODE-Designer
+
+Upon launching ODE-Designer, the initial interface presents an empty node editor along with a side menu for creating different node types as shown in the figure below. Nodes can be added to the editor either via this menu or through the context menu accessed by right-clicking.
+
+![Initial Screen](readme/initial_screen.jpg)
+
+Model building in ODE-Designer follows a structured workflow:
+
+<ul>
+  <li><strong>Creating Term Nodes:</strong> The first step involves defining term nodes for each variable, parameter, and constant in the model.</li>
+  <li><strong>Constructing Expression Nodes:</strong> Expression nodes define mathematical operations and interaction terms. These nodes progressively build up the full right-hand side expressions for each ODE. </li>
+  <li><strong>Assigning ODEs to Variables:</strong> Finally, assigner nodes associate each constructed expression with its corresponding variable, completing the model definition.</li>
+</ul> 
+
+The Predator-Prey model built on ODE-Designer is presented in the figure below. 
+
+![Predator-Prey model](readme/predator_prey.jpg)
+
+Once the model is constructed, users specify simulation parameters, including initial time, time step (temporal discretization), and simulation duration, via the sidebar. Optional settings allow users to label the x and y axes for visualization.
+
+When executed, ODE-Designer automatically generates Python code, leveraging the SciPy library to numerically solve the system. Simulation results are stored in a CSV file and visualized within the GUI using the [ImPlot library](https://github.com/epezent/implot).  
+
+Upon simulation completion, ODE-Designer opens new tabs to display the results. The first tab presents a combined population plot, while subsequent tabs provide individual population dynamics. The tab-based interface enables seamless switching between model construction, simulation results, and additional functionalities such as parameter estimation. 
+
 ### Node-based editor
 
 ![Image from the node editor in the software, containing the nodes 'Var', 'Const', 'grow' and 'dVar/dt', which construct the ODE dVar/dt = Var*Const](readme/demo-nodes.png)
