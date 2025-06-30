@@ -14,7 +14,13 @@ The main objective of ODE-Designer is to facilitate the creation, implementation
 
 Through a visually intuitive graphical user interface (GUI), ODE-Designer allows users to conceptualize and ``draw'' mathematical models, while the software automatically generates the requisite implementation, simulation, and result visualization code. A distinguished feature of the software is the model's visual representation. It is designed to be intuitive and easy to use.
 
-## Current functionalities
+## Description of the software
+
+Model construction in ODE-Designer involves creating nodes and establishing connections between them. These connections are made through pins, which come in two types: (a) input pins and (b) output pins. Input pins receive values from other nodes, while output pins transmit values. Connections are always unidirectional, linking an output pin from a source node to an input pin on a destination node.
+
+Expressions are constructed by combining terms and other expressions within the software. An Assigner node holds a single expression, representing the right-hand side of an ODE. The name Assigner denotes a node that receives an expression and assigns it to a target variable. The input expression is a right-hand side of an ODE. 
+
+Once a model is constructed, users can interact with the software in multiple ways: they can execute simulations directly within the GUI, generate PDF reports containing the simulation results, or export the corresponding Python code representation. Both GUI-based simulations and those executed via exported Python code leverage the solve\_ivp method from the scientific computing library Scipy.
 
 ### Node-based editor
 
