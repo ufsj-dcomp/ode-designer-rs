@@ -16,6 +16,20 @@ Through a visually intuitive graphical user interface (GUI), ODE-Designer allows
 
 ## Description of the software
 
+The software developed in this work features a GUI that utilizes a node-based editor, as illustrated in Figure Initial Screen below. The nodes represent abstractions of commonly used components in ODEs, such as constants, variables, and mathematical expressions. 
+
+ODE-Designer implementation is divided into two core modules: a) the GUI module and b) the intermediate representation (IR) module. The GUI module handles window rendering, node editor actions and events, user interactions, and plot management. The IR module focuses on defining the JSON representation of models, saving and loading models, and generating Python code using templates. The codebase of ODE-Designer is designed to be modular, easy to maintain, and extendable. The software architecture is organized in the following main submodules:
+
+<ul>
+    <li><strong>Application submodule:</strong> Responsible for rendering the node editor and its components, managing global state, and controlling auxiliary windows (plotting tabs, extension manager, context menu).
+    <li><strong>Nodes submodule:</strong> Manages the logic behind different node types, including how they are drawn in the GUI. It provides methods for receiving and sending messages to notify state changes and trigger necessary GUI updates.
+    <li><strong>Extension submodule:</strong> Implements structures for parsing and loading custom node
+definitions (Python functions).
+    <li><strong>Expression submodule:</strong> Defines a tree structure representing the mathematical model’s expressions. It also provides structures used during message passing to communicate partial model changes.
+    <li><strong>Messaging submodule:</strong> Implements the communication structure used by other modules within the application.
+
+ODE-Designer is implemented in the Rust programming language (https://www.rust-lang.org/). Rust was chosen due to its performance, comparable to C++, and its rich ecosystem of libraries that simplify model serialization and template-based code generation.
+
 Model construction in ODE-Designer involves creating nodes and establishing connections between them. These connections are made through pins, which come in two types: (a) input pins and (b) output pins. Input pins receive values from other nodes, while output pins transmit values. Connections are always unidirectional, linking an output pin from a source node to an input pin on a destination node.
 
 Expressions are constructed by combining terms and other expressions within the software. An Assigner node holds a single expression, representing the right-hand side of an ODE. The name Assigner denotes a node that receives an expression and assigns it to a target variable. The input expression is a right-hand side of an ODE. 
