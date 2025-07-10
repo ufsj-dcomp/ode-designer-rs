@@ -27,6 +27,7 @@ ODE-Designer implementation is divided into two core modules: a) the GUI module 
 definitions (Python functions).
     <li><strong>Expression submodule:</strong> Defines a tree structure representing the mathematical model’s expressions. It also provides structures used during message passing to communicate partial model changes.
     <li><strong>Messaging submodule:</strong> Implements the communication structure used by other modules within the application.
+</ul>
 
 ODE-Designer is implemented in the Rust programming language (https://www.rust-lang.org/). Rust was chosen due to its performance, comparable to C++, and its rich ecosystem of libraries that simplify model serialization and template-based code generation.
 
