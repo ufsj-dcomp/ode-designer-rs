@@ -1,4 +1,4 @@
-use imgui::Ui;
+use imgui::{Ui, StyleVar};
 
 use crate::{
     locale::{Locale, LANGUAGES},
@@ -114,6 +114,31 @@ impl App {
             ui.menu(locale.get("run"), || {
                 self.draw_input_label(ui);
 
+                // Toggle dark theme
+
+                ui.separator();
+
+                let text = locale.get("dark-theme");
+                let text_width = ui.calc_text_size(text)[0];
+                let checkbox_size = 16.0; 
+                let spacing = 8.0;
+                let total_width = text_width + spacing + checkbox_size;
+
+                let window_width = ui.content_region_avail()[0];
+                let start_x = (window_width - total_width) / 2.0;
+                ui.set_cursor_pos([start_x, ui.cursor_pos()[1]]);
+
+                ui.text(text);
+                ui.same_line_with_spacing(0.0, spacing);
+
+                let mut dark_theme_toggle = self.dark_theme;
+                let _style = ui.push_style_var(StyleVar::FramePadding([2.0, 2.0]));
+                if ui.checkbox("##dark_theme", &mut dark_theme_toggle) {
+                    self.dark_theme = dark_theme_toggle;
+                }
+
+                ui.separator();
+
                 if ui.menu_item(locale.get("run")) {
                     let py_code = self.generate_code();
 
@@ -137,6 +162,7 @@ impl App {
                                     simulation_state.plot.ylabel =
                                         self.text_fields.y_label.to_string();
                                 }
+                                simulation_state.plot.bg_color = self.dark_theme;
                                 self.simulation_state = Some(simulation_state);
                             }
                         }
