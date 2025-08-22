@@ -15,6 +15,7 @@ pub struct PlotInfo {
     pub xlabel: String,
     pub ylabel: String,
     pub data: CSVData,
+    pub bg_color: bool,
 }
 
 #[derive(Default, Clone)]
@@ -85,6 +86,7 @@ impl PlotInfo {
             title: String::from(""),
             xlabel: locale.get("default-x-label").to_owned(),
             ylabel: locale.get("default-y-label").to_owned(),
+            bg_color: false,
         }
     }
 
