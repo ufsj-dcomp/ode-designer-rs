@@ -4,7 +4,7 @@
 
 To credit the software, please cite our PLOS ONE paper: 
 
-Citation: dos Santos BLM, Castro DAS, da Paz SFC, Pinheiro DJC, de Melo Quintela B, Lobosco M, et al. (2025) An open-source software for building and simulating ordinary differential equation models in biology. PLoS One 20(8): e0329148. https://doi.org/10.1371/journal.pone.0329148. 
+<b>Citation</b>: dos Santos BLM, Castro DAS, da Paz SFC, Pinheiro DJC, de Melo Quintela B, Lobosco M, et al. (2025) An open-source software for building and simulating ordinary differential equation models in biology. PLoS One 20(8): e0329148. https://doi.org/10.1371/journal.pone.0329148. 
 
 ```
 @article{10.1371/journal.pone.0329148,
