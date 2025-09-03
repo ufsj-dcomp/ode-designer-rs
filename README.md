@@ -1,5 +1,28 @@
 # ODE-Designer
 
+## How to cite this work 
+
+To credit the software, please cite our PLOS ONE paper: 
+
+Citation: dos Santos BLM, Castro DAS, da Paz SFC, Pinheiro DJC, de Melo Quintela B, Lobosco M, et al. (2025) An open-source software for building and simulating ordinary differential equation models in biology. PLoS One 20(8): e0329148. https://doi.org/10.1371/journal.pone.0329148. 
+
+```
+@article{10.1371/journal.pone.0329148,
+    doi = {10.1371/journal.pone.0329148},
+    author = {dos Santos, Brenno Lemos Melquiades AND Castro, Diego Augusto Silva AND da Paz, Sávio Francisco Cirino AND Pinheiro, Davi Jannotti Coelho AND de Melo Quintela, Bárbara AND Lobosco, Marcelo AND Pigozzo, Alexandre Bittencourt},
+    journal = {PLOS ONE},
+    publisher = {Public Library of Science},
+    title = {An open-source software for building and simulating ordinary differential equation models in biology},
+    year = {2025},
+    month = {08},
+    volume = {20},
+    url = {https://doi.org/10.1371/journal.pone.0329148},
+    pages = {1-18},
+    abstract = {Mathematical and computational modeling are transforming biological research by enabling detailed exploration of complex systems. However, building computational models of biological phenomena often demands expertise in mathematical modeling and programming, creating barriers for researchers without such backgrounds. Existing software tools for computational modeling are frequently complex, overly general, or proprietary, limiting their accessibility and usability. To overcome these challenges, we present ODE-Designer, an open-source software tool that facilitates the construction and simulation of Ordinary Differential Equation (ODE) models in biology. A central feature of ODE-Designer is its intuitive visual interface, designed to be user-friendly and accessible. The software includes a graphical user interface with a node-based editor that allows users to create models without writing code. It supports model simulation and automatically generates the corresponding code, enabling efficient model exploration and aiding students in understanding core modeling principles. We propose that ODE-Designer serves as a valuable resource for both research and education in computational biology, improving accessibility and promoting a quantitative perspective in biological research. The software is freely available at: https://github.com/ufsj-dcomp/ode-designer-rs/.},
+    number = {8},
+}
+```
+
 ## Introduction
 
 Below are the description of the software, how to install it, and a brief introduction on how to use it.
