@@ -131,6 +131,33 @@ impl SimulationState {
             flags.set(imgui::TabItemFlags::SET_SELECTED, true);
         }
 
+        let bg_color = if self.plot.bg_color {
+            (0.5, 0.5, 0.5, 1.0)
+        } else {
+            (1.0, 1.0, 1.0, 1.0)
+        };
+        let _bg_color_token = implot::push_style_color(
+            &implot::PlotColorElement::PlotBg,
+            bg_color.0,
+            bg_color.1,
+            bg_color.2,
+            bg_color.3,
+        );
+        let _plot_border_color = implot::push_style_color(
+            &implot::PlotColorElement::FrameBg,
+            bg_color.0,
+            bg_color.1,
+            bg_color.2,
+            bg_color.3,
+        );
+        let _legend_border_color = implot::push_style_color(
+            &implot::PlotColorElement::LegendBackground,
+            bg_color.0,
+            bg_color.1,
+            bg_color.2,
+            bg_color.3,
+        );
+
         imgui::TabItem::new(locale.get("tab-all-plots"))
             .opened(&mut opened)
             .flags(flags)
@@ -234,6 +261,10 @@ impl SimulationState {
                 });
         }
 
+        _bg_color_token.pop();
+        _plot_border_color.pop();
+        _legend_border_color.pop();
+
         if opened {
             TabAction::Open
         } else {
@@ -257,6 +288,7 @@ pub struct App {
     pub extensions: Vec<Extension>,
     pub text_fields: TextFields,
     pub parameter_estimation_state: Option<ParameterEstimationState>,
+    pub dark_theme: bool,
 }
 
 pub enum AppState {
@@ -1315,6 +1347,16 @@ impl App {
 
     pub fn clear_state(&mut self) {
         self.nodes.clear();
+
+        let fixed = [
+            "\u{f0ae7} Term",
+            "\u{ebb6} Expression",
+            "\u{f0272} Assigner",
+        ];
+
+        self.node_types
+            .retain(|node_type| fixed.contains(&node_type.name.as_str()));
+
         self.input_pins.clear();
         self.output_pins.clear();
         self.links.clear();
