@@ -1,5 +1,5 @@
-use std::sync::atomic::AtomicU8;
 use std::sync::OnceLock;
+use std::sync::atomic::AtomicU8;
 use std::{
     sync::Mutex,
     time::{Duration, Instant},
@@ -175,7 +175,7 @@ impl NotificationLogger {
     /// This function panics if it has already been called or if a logger has already been set.
     pub fn init(self) {
         log::set_max_level(self.max_log_level.to_level_filter());
-        let logger = NOTIFICATION.try_insert(self).unwrap();
+        let logger = NOTIFICATION.get_or_init(|| self);
         log::set_logger(logger).unwrap();
     }
 }

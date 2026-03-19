@@ -1,11 +1,4 @@
-#![feature(map_many_mut)]
-#![feature(try_blocks)]
-#![feature(int_roundings)]
-#![feature(let_chains)]
-#![feature(iter_collect_into)]
-#![feature(once_cell_try_insert)]
-
-use core::{initialize_id_generator, style, System};
+use core::{System, initialize_id_generator, style};
 
 use core::App;
 use imnodes::AttributeFlag;

@@ -27,7 +27,7 @@ use crate::nodes::{
 use crate::ode::csvdata;
 use crate::ode::odesystem::create_ode_system;
 use crate::pins::Pin;
-use crate::utils::{localized_error, ModelFragment, VecConversion};
+use crate::utils::{ModelFragment, VecConversion, localized_error};
 
 use imgui::{Key, StyleVar, TabItem, Ui};
 
@@ -371,7 +371,7 @@ impl AppState {
             }
             AppState::AttributingAssignerOperatesOn {
                 attribute_to,
-                ref mut search_query,
+                search_query,
             } => {
                 ui.open_popup("PopulationChooser");
 
@@ -690,7 +690,7 @@ impl App {
                         self.draw_main_tab(ui, context, plot_ui, locale);
                     });
 
-                    if let Some(ref mut simulation_state) = &mut self.simulation_state {
+                    if let Some(simulation_state) = &mut self.simulation_state {
                         let tab_action = simulation_state.draw_tabs(
                             ui,
                             plot_ui,
@@ -848,45 +848,47 @@ impl App {
                 if self.get_link(&link.input_pin_id).is_some() {
                     return None;
                 }
-                try {
-                    let Link {
-                        ref input_pin_id,
-                        ref output_pin_id,
-                        contribution,
-                        ..
-                    } = &link;
 
-                    let input_node_id = self.input_pins.get(input_pin_id)?;
-                    let output_node_id = self.output_pins.get(output_pin_id)?;
+                let Link {
+                    input_pin_id,
+                    output_pin_id,
+                    contribution,
+                    ..
+                } = &link;
 
-                    // HashMap::get_disjoint_mut will panick if keys overlap
-                    if input_node_id == output_node_id {
-                        return None;
-                    }
+                let input_node_id = self.input_pins.get(input_pin_id)?;
+                let output_node_id = self.output_pins.get(output_pin_id)?;
 
-                    let [Some(input_node), Some(output_node)] = self.nodes.get_disjoint_mut([input_node_id, output_node_id])
-                    else {
-                        return None;
-                    };
-
-                    if !input_node.should_link(input_pin_id) {
-                        return None;
-                    }
-
-                    input_node
-                        .get_input_mut(input_pin_id)?
-                        .link_to((*output_pin_id, *contribution));
-                    output_node
-                        .get_output_mut(output_pin_id)?
-                        .link_to(*input_pin_id);
-                    self.links.push(link);
-                    output_node.broadcast_data()
+                // HashMap::get_disjoint_mut will panick if keys overlap
+                if input_node_id == output_node_id {
+                    return None;
                 }
+
+                let [Some(input_node), Some(output_node)] =
+                    self.nodes.get_disjoint_mut([input_node_id, output_node_id])
+                else {
+                    return None;
+                };
+
+                if !input_node.should_link(input_pin_id) {
+                    return None;
+                }
+
+                input_node
+                    .get_input_mut(input_pin_id)?
+                    .link_to((*output_pin_id, *contribution));
+
+                output_node
+                    .get_output_mut(output_pin_id)?
+                    .link_to(*input_pin_id);
+
+                self.links.push(link);
+                Some(output_node.broadcast_data())
             }
             Message::RemoveLink(link) => {
                 let Link {
-                    ref input_pin_id,
-                    ref output_pin_id,
+                    input_pin_id,
+                    output_pin_id,
                     ..
                 } = &link;
 
@@ -925,7 +927,9 @@ impl App {
                     .get_mut(&assigner_id)
                     .expect("An assigner with this ID must exist, as it asked to open the modal")
                 else {
-                    panic!("This node must be an assigner. If not, how could the modal have been opened?");
+                    panic!(
+                        "This node must be an assigner. If not, how could the modal have been opened?"
+                    );
                 };
 
                 if let Some(param_state) = &mut self.parameter_estimation_state {
@@ -1399,7 +1403,7 @@ mod tests {
 
     use super::App;
     use crate::{
-        core::{initialize_id_generator, GeneratesId},
+        core::{GeneratesId, initialize_id_generator},
         exprtree::{ExpressionNode, Operation, Sign},
         locale::Locale,
         message::Message,

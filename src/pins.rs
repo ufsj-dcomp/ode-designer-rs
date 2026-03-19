@@ -2,7 +2,7 @@ use imgui::{StyleColor, Ui};
 use imnodes::{InputPinId, NodeId, OutputPinId};
 
 use crate::{
-    core::{widgets::rgb, GeneratesId},
+    core::{GeneratesId, widgets::rgb},
     exprtree::{ExpressionNode, Sign},
 };
 
@@ -215,13 +215,12 @@ impl Pin for OutputPin {
     }
 
     fn unlink(&mut self, pin_id: &Self::LinkedToIdType) -> bool {
-        let o: Option<_> = {
-            try {
-                let i = self.linked_to.iter().position(|id| id == pin_id)?;
-                self.linked_to.swap_remove(i);
-            }
-        };
-        o.is_some()
+        if let Some(idx) = self.linked_to.iter().position(|id| id == pin_id) {
+            self.linked_to.swap_remove(idx);
+            true
+        } else {
+            false
+        }
     }
 
     fn get_label(&self) -> Option<&str> {

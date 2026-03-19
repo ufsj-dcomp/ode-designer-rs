@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{is_not, tag},
     character::complete::digit1,
@@ -9,7 +10,6 @@ use nom::{
     combinator::recognize,
     multi::{many0, many0_count, many1},
     sequence::{pair, preceded},
-    IResult,
 };
 
 #[derive(Debug, Clone)]
@@ -94,7 +94,7 @@ fn parse_dollar_preceded_element(input: &str) -> IResult<&str, FormatPart> {
         }),
         map(many0(is_not("$ ")), |vc| {
             let mut s = String::from("$");
-            vc.into_iter().collect_into(&mut s);
+            s.extend(vc);
             FormatPart::Static(s)
         }),
     ))(input)
