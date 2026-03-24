@@ -78,7 +78,7 @@ impl NodeImpl for Assigner {
             self.expr_node.resolution.reset();
         }
 
-        false
+        true
     }
 
     fn draw(&mut self, ui: &imgui::Ui, locale: &Locale) -> bool {

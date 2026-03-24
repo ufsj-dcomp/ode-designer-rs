@@ -162,7 +162,11 @@ impl App {
                                     simulation_state.plot.ylabel =
                                         self.text_fields.y_label.to_string();
                                 }
+
                                 simulation_state.plot.bg_color = self.dark_theme;
+                                //if self.dark_theme {
+                                    
+                                //}
                                 self.simulation_state = Some(simulation_state);
                             }
                         }

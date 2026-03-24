@@ -64,7 +64,7 @@
       }
     },
     "extension_files": [
-      "extensao_competicao.py"
+      "competition_extension_node.py"
     ]
   },
   "arguments": [

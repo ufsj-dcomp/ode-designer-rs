@@ -1,4 +1,3 @@
-import math
 
 @node
 def limited_growth(n1, n2, w1, w2):
